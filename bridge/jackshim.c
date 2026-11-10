@@ -397,6 +397,7 @@ static void *audio_main(void *arg)
         int n;
         while ((n = hw_midi_read(raw, sizeof raw)) > 0)
             for (int i = 0; i < n; i++) mpc_midi_byte(raw[i]);
+        mapping_tick();
 
         if (il) memset(il->audio, 0, sizeof il->audio);
         if (ir) memset(ir->audio, 0, sizeof ir->audio);

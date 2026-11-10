@@ -107,6 +107,28 @@ int main(int argc, char **argv)
     usleep(100000);
     CHECK(*frames > 1000, "A: audio loop is running");
 
+#ifdef RETRIG_TEST
+    {   /* the drum repeat in knob mode: only while a pad is held and the encoder is turning */
+        send((unsigned char[]){ 0x99, 37, 90 }, 3);
+        send((unsigned char[]){ 0x89, 37, 0 }, 3);                    /* last drum = note 68 */
+        send((unsigned char[]){ 0x90, 0x00, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x00, 0x00 }, 3);               /* knob mode on */
+        send((unsigned char[]){ 0x99, 42, 80 }, 3);                   /* hold pad 3 */
+        int before = ngot;
+        for (int i = 0; i < 10; i++) { send((unsigned char[]){ 0xB0, 0x64, 0x01 }, 3); usleep(170000); }
+        CHECK(ngot - before >= 10, "R: turning in knob mode repeats the last drum about every 0.4 s");
+        usleep(1200000);
+        int after = ngot;
+        usleep(1000000);
+        CHECK(ngot == after, "R: no repeats once the encoder stops");
+        int hits = 0, offs = 0;
+        for (int i = before; i < ngot; i++) if (got[i][0] == 0x9F && got[i][1] == 68 && got[i][2] == 100) hits++;
+        for (int i = before; i < ngot; i++) if (got[i][0] == 0x8F && got[i][1] == 68) offs++;
+        CHECK(hits >= 3 && hits <= 7 && offs == hits, "R: 3-7 repeats, and every repeat gets its note-off");
+        printf(failures ? "FAILED\n" : "ALL PASSED\n");
+        return failures ? 1 : 0;
+    }
+#endif
     /* pad 1 (bottom left) down / up -> Move pad note 68 */
     send((unsigned char[]){ 0x99, 37, 90 }, 3);
     send((unsigned char[]){ 0x89, 37, 0 }, 3);

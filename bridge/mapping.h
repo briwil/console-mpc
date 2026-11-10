@@ -64,6 +64,8 @@ static int step_mode, right_bank, knob_mode;
 static int pad_knob[16];                    /* knob mode: which Move knob (0-7) each held pad is touching, -1 none */
 static int knob_stamp[16], knob_clock;      /* ... and the order they were pressed (the last one wins) */
 static int shift_held, stop_target = -1;     /* STOP: stops playback (Play) while playing, else Back; Shift + STOP = Back */
+static long tick_n, last_turn = -100000, retrig_at, retrig_off;   /* one tick per audio period (about 2.9 ms) */
+static int last_drum = -1, retrig_on;       /* the last drum pad played, and its Move note while it is being retriggered */
 static int pad_target[16];                  /* Move note each MPC pad is holding down (-1 none) */
 static int knob_last[5] = { -1, -1, -1, -1, -1 };   /* K1 K2 K3 VOL FADER */
 static uint8_t move_pad[32];                /* Console's colour (velocity) for each Move pad, row*8+col */
@@ -206,10 +208,30 @@ static void mpc_pad_event(int idx, int vel, int on)
     if (on) {
         int note = step_mode ? 16 + idx : 68 + (idx / 4) * 8 + (idx % 4) + (right_bank ? 4 : 0);
         pad_target[idx] = note;
+        if (!step_mode) last_drum = note;
         send3(0x9F, note, vel > 0 ? vel : 100);
     } else if (pad_target[idx] >= 0) {
         send3(0x8F, pad_target[idx], 0);
         pad_target[idx] = -1;
+    }
+}
+
+/* While a knob-mode pad is held and the encoder is being turned (and the sequence is not playing), the last drum
+   you played sounds again about every 0.4 s, so you can hear the parameter change. Called once per audio period. */
+#define RETRIG_EVERY 140                     /* ticks: about 0.4 s */
+#define RETRIG_LEN 35                        /* about 0.1 s */
+#define RETRIG_WHILE 230                     /* keeps going this long after the last turn: about 0.7 s */
+static void mapping_tick(void)
+{
+    tick_n++;
+#ifdef NO_RETRIG
+    return;
+#endif
+    if (retrig_on && tick_n >= retrig_off) { send3(0x8F, retrig_on, 0); retrig_on = 0; }
+    if (!knob_mode || last_drum < 0 || move_btn[85] || held_knob() < 0 || tick_n - last_turn > RETRIG_WHILE) return;
+    if (!retrig_on && tick_n >= retrig_at) {
+        send3(0x9F, last_drum, 100);
+        retrig_on = last_drum; retrig_off = tick_n + RETRIG_LEN; retrig_at = tick_n + RETRIG_EVERY;
     }
 }
 
@@ -243,6 +265,7 @@ static void mpc_cc_event(int cc, int val)
     case 0x14: knob_clicks(4, val, 78); break;            /* FADER -> knob 8 */
     case 0x64: {                                          /* encoder: relative already */
         int k = held_knob();                              /* a knob-mode pad held: that knob; else the jog wheel */
+        if (k >= 0) last_turn = tick_n;
         for (int i = 0; i < (k >= 0 ? KNOB_STEP : 1); i++)   /* the MPC encoder is slow next to a Move knob: several clicks per notch */
             send3(0xBF, k >= 0 ? 71 + k : 14, val == 0x7F ? 127 : 1);
         break;
