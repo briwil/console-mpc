@@ -180,6 +180,27 @@ static int hw_midi_open(void)
 #endif
 }
 
+/* Debug log: only if the file /tmp/mpcbridge.log exists (touch it first). Lines: "I <hex bytes>" from the MPC, "O <hex bytes>" to it. */
+#ifndef HOST_TEST
+static int dbgfd = -2;
+static void dbg(char dir, const uint8_t *b, int n)
+{
+    if (dbgfd == -2) dbgfd = open("/tmp/mpcbridge.log", O_WRONLY_ | 02000);
+    if (dbgfd < 0) return;
+    char line[200];
+    int k = 0;
+    line[k++] = dir;
+    for (int i = 0; i < n && k < 190; i++) {
+        static const char hx[] = "0123456789ABCDEF";
+        line[k++] = ' '; line[k++] = hx[b[i] >> 4]; line[k++] = hx[b[i] & 15];
+    }
+    line[k++] = '\n';
+    write(dbgfd, line, (unsigned long)k);
+}
+#else
+static void dbg(char dir, const uint8_t *b, int n) { (void)dir; (void)b; (void)n; }
+#endif
+
 static int hw_midi_read(uint8_t *b, int max)
 {
 #ifdef HOST_TEST
@@ -192,6 +213,7 @@ static int hw_midi_read(uint8_t *b, int max)
     return n;
 #else
     long r = read(midifd, b, (unsigned long)max);
+    if (r > 0) dbg('I', b, (int)r);
     return r > 0 ? (int)r : 0;
 #endif
 }
@@ -205,6 +227,7 @@ static void hw_midi_write(const uint8_t *b, int n)
         fputc('\n', host_log);
     }
 #else
+    dbg('O', b, n);
     int off = 0, spins = 0;
     while (off < n && spins < 200) {
         long r = write(midifd, b + off, (unsigned long)(n - off));
