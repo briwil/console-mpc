@@ -17,6 +17,7 @@ systemctl unset-environment LD_PRELOAD 2>/dev/null
 systemctl stop ac50.service
 sleep 1
 rm -f "$C/STOP"
+rm -f "$C/app.pid"        # a leftover note from an earlier run makes Console think another copy is running
 while :; do
   "$C/python/bin/python3" "$C/move/app.py" > "$C/app.log" 2>&1 &
   PID=$!
