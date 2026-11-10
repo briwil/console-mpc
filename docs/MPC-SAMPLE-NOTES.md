@@ -33,7 +33,7 @@ ALSA card 2 (`hw:2,0`, AK4558 over I2S): stereo, 44100 Hz, S32_LE, interleaved; 
 ## Control surface
 Card 0 (`/dev/snd/midiC0D0`) is the control surface, a serial port (`ttyS3`, 0xFE670000) exposed as a
 MIDI device by `snd-serial-generic`. Card 1 is the MIDI DIN (`ttyS0`); `ttyS2` is the kernel console.
-The stock app opens the port once for reading (with ALSA timestamp framing) and once for writing; only one
+The stock app opens the port once for reading (with ALSA timestamp framing, which **the kernel keeps after the app stops**: a new reader gets 32-byte frames unless it switches framing off with SNDRV_RAWMIDI_IOCTL_PARAMS, mode 0, as bridge/jackshim.c does) and once for writing; only one
 writer can have it, so stop the app first. The surface needs no start-up handshake: it sends events as soon
 as you touch it. (At boot the firmware tool asks "who are you?" with a MIDI Identity Request,
 `F0 7E 00 06 01 F7`, and gets an Akai reply, manufacturer 0x47.)
@@ -49,7 +49,7 @@ as you touch it. (At boot the firmware tool asks "who are you?" with a MIDI Iden
 Button notes: SHIFT 0x31, PLAY 0x52, STOP 0x51, SEQ RECORD 0x50, SAMPLE RECORD 0x49, ERASE 0x09, SAMPLE 0x06,
 SEQ 0x07, MUTE 0x2B, PAD BANK 0x23, PAD FX 0x01, KNOB FX 0x00, TAP TEMPO 0x35, B1 0x0C, B2 0x0D, B3 0x0E,
 16 LEVELS 0x28, CHOP 0x4B, NOTE REPEAT 0x0B, encoder push 0x6F, PLUS 0x36, MINUS 0x37.
-Two more lights are set by the stock app (0x24 and 0x4A) that we have not matched to a button yet.
+**SAMPLE SELECT = 0x24** (found in the byte log). One more light set by the stock app (0x4A) is still not matched to a button.
 
 ### Lights
 - Pads: SysEx `F0 47 7F 5C 65 00 04 <pad 0-15> <R> <G> <B> F7`, colours 0-127 per channel. Pad number is the
