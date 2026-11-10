@@ -6,3 +6,7 @@ test/stubs/
 test/undef*.txt
 test/midi_out.txt
 test/audio.raw
+bridge/*.o
+bridge/stubs/
+bridge/undef*.txt
+bridge/libjack_mpc.so
