@@ -46,6 +46,48 @@ def _glyph(ch):
     return g
 
 
+_fonts = {}
+_masks = {}
+FONT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "fonts", "BarlowCondensed-Medium.ttf")
+FONT_CANDIDATES = [os.environ.get("CONSOLE_FONT", ""),
+                   "/data/UserData/console/move/fonts/BarlowCondensed-Medium.ttf",
+                   "/home/claude/briwil/console-move/move/fonts/BarlowCondensed-Medium.ttf"]
+
+
+def _font(size):
+    if size in _fonts:
+        return _fonts[size]
+    f = None
+    try:
+        from PIL import ImageFont
+        for path in FONT_CANDIDATES:
+            if path and os.path.exists(path):
+                f = ImageFont.truetype(path, size)
+                top = f.getbbox("H")[1]                          # where the capital letters start below the line's top
+                f.cap_pad = top
+                break
+    except Exception:
+        f = None
+    _fonts[size] = f
+    return f
+
+
+def _mask(font, s):
+    """The text as an anti-aliased alpha array (cached: the same words come up every frame)."""
+    key = (id(font), s)
+    m = _masks.get(key)
+    if m is None:
+        from PIL import Image, ImageDraw
+        w = int(font.getlength(s)) + 2
+        if len(_masks) > 600:
+            _masks.clear()
+        im = Image.new("L", (max(1, w), font.size + 6), 0)
+        ImageDraw.Draw(im).text((0, 0), s, font=font, fill=255)
+        m = np.asarray(im, np.float32) / 255.0
+        _masks[key] = m
+    return m
+
+
 class Canvas:
     def __init__(self):
         self.px = np.empty((H, W, 3), np.uint8)
@@ -61,7 +103,28 @@ class Canvas:
             self.px[y0:y1, x0:x1] = c
 
     def text(self, x, y, s, c=FG, scale=1):
-        for ch in str(s).upper():
+        """Smooth text (Barlow Condensed, anti-aliased) if the font file is there, else the 5 x 7 pixel font.
+        (x, y) is the top of the capital letters, the same place the pixel font had them; scale 2 = big."""
+        s = str(s).upper()
+        font = _font(12 if scale == 1 else 22 if scale == 2 else 12 * scale)
+        if font is None:
+            return self._pixel_text(x, y, s, c, scale)
+        a = _mask(font, s)
+        if a is None:
+            return
+        y0 = y - font.cap_pad
+        if y0 < 0:
+            a, y0 = a[-y0:], 0                                   # (the font's blank top rows may fall off the screen)
+        h, w = a.shape
+        x1, y1 = min(W, x + w), min(H, y0 + h)
+        if x < 0 or x1 <= x or y1 <= y0:
+            return
+        a = a[:y1 - y0, :x1 - x][..., None]
+        region = self.px[y0:y1, x:x1].astype(np.float32)
+        self.px[y0:y1, x:x1] = (region * (1 - a) + np.array(c, np.float32) * a).astype(np.uint8)
+
+    def _pixel_text(self, x, y, s, c, scale):
+        for ch in s:
             g = _glyph(ch)
             if scale > 1:
                 g = np.kron(g, np.ones((scale, scale), bool))
@@ -72,7 +135,10 @@ class Canvas:
 
     @staticmethod
     def width(s, scale=1):
-        return len(str(s)) * 6 * scale
+        font = _font(12 if scale == 1 else 22 if scale == 2 else 12 * scale)
+        if font is None:
+            return len(str(s)) * 6 * scale
+        return int(font.getlength(str(s).upper()) + 0.5)
 
     def bytes(self, seq):
         return b"CNAT" + int(seq & 0xFFFFFFFF).to_bytes(4, "little") + self.px.tobytes()
@@ -170,7 +236,7 @@ def draw_tape(T):
             c.rect(19, top + 2, 2, LANE_H - 7, RED)
         muted = not e.audible(n)
         if muted:
-            c.text(12, top + 16, "M", DIM)
+            c.text(7, top + 17, "M", DIM)
         c.rect(x0, top + LANE_H - 2, x1 - x0, 1, (40, 46, 52))
         ch = e.chans(n)[0]
         boxes = e.regions[ch]
