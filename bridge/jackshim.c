@@ -258,7 +258,7 @@ static void mpc_pad_light(int pad, int r, int g, int b)
 
 static void mpc_btn_light(int note, int on)
 {
-    uint8_t m[3] = { 0xB0, (uint8_t)note, (uint8_t)(on ? 0x7F : 0x00) };
+    uint8_t m[3] = { 0xB0, (uint8_t)note, (uint8_t)(on ? 0x02 : 0x00) };   /* 0 off, 1 lit, 2 brighter (7F is not "on" for most buttons) */
     hw_midi_write(m, 3);
 }
 

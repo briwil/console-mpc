@@ -54,8 +54,8 @@ Two more lights are set by the stock app (0x24 and 0x4A) that we have not matche
 ### Lights
 - Pads: SysEx `F0 47 7F 5C 65 00 04 <pad 0-15> <R> <G> <B> F7`, colours 0-127 per channel. Pad number is the
   index into the note list above (0 = pad 1). Confirmed: a request for red lit the pad red.
-- Buttons: CC on channel 1 with the **same number as the button's note**; value 0 = off, 0x7F = on (the stock app
-  also uses 1, 2 and 3 for dimmer states). After the stock app stops, all button lights are on.
+- Buttons: CC on channel 1 with the **same number as the button's note**; value 0 = off, 1 = lit, 2 = brighter, 3 = dimmer states. **Use 2 for "on"**: with 0x7F only some buttons (e.g.
+  Play, Sample Record) light, the rest stay dark. After the stock app stops, all button lights are on.
 
 ## Tools in this repo
 - `test/mpc_test.c`: stops the app and exercises everything above (screen, a tone per pad, pad and

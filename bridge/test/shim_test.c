@@ -163,7 +163,7 @@ int main(int argc, char **argv)
     int red = system("grep -q 'MPC<- F0 47 7F 5C 65 00 04 00 7F 00 00 F7' /tmp/shim_test_leds.txt");
     (void)cmd;
     CHECK(red == 0, "A: Move pad 68 colour 127 -> MPC pad 1 red (SysEx)");
-    int play = system("grep -q 'MPC<- B0 52 7F' /tmp/shim_test_leds.txt");
+    int play = system("grep -q 'MPC<- B0 52 02' /tmp/shim_test_leds.txt");
     CHECK(play == 0, "A: Move Play light -> MPC PLAY button light on");
     int idle = system("grep -q 'MPC<- F0 47 7F 5C 65 00 04 05 00 06 0E F7' /tmp/shim_test_leds.txt");
     CHECK(idle == 0, "A: unlit pads show the faint idle blue");

@@ -452,7 +452,7 @@ static void pad_idle(int pad)
 
 static void btn_led(int note, int on)
 {
-    uint8_t m[3] = { 0xB0, (uint8_t)note, (uint8_t)(on ? 0x7F : 0x00) };
+    uint8_t m[3] = { 0xB0, (uint8_t)note, (uint8_t)(on ? 0x02 : 0x00) };
     midi_send(m, 3);
 }
 
