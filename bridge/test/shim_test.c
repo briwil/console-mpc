@@ -128,17 +128,32 @@ int main(int argc, char **argv)
     /* encoder */
     send((unsigned char[]){ 0xB0, 0x64, 0x7F }, 3);
     CHECK(expect(13, 0xBF, 14, 127), "A: encoder down -> jog wheel left");
-    /* KNOB FX: K1 now Move knob 4 (CC 74) */
+    /* KNOB FX latches knob mode: pads 1-8 = knobs 1-8 (touch + encoder), pads 9-16 silent, no pad held = jog */
     send((unsigned char[]){ 0x90, 0x00, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x00, 0x00 }, 3);
-    send((unsigned char[]){ 0xB0, 0x10, 24 }, 3);
-    CHECK(expect(14, 0xBF, 74, 1) && ngot == 15, "A: KNOB FX -> K1 is Move knob 4");
+    send((unsigned char[]){ 0x99, 42, 80 }, 3);                       /* pad 3 down */
+    send((unsigned char[]){ 0xB0, 0x64, 0x01 }, 3);
+    send((unsigned char[]){ 0xB0, 0x64, 0x7F }, 3);
+    send((unsigned char[]){ 0x89, 42, 0 }, 3);
+    CHECK(expect(14, 0x9F, 2, 127) && expect(15, 0xBF, 73, 1) && expect(16, 0xBF, 73, 127) && expect(17, 0x8F, 2, 0),
+          "A: knob mode: hold pad 3 -> touch knob 3, encoder turns Move knob 3 (CC 73), release ends the touch");
+    send((unsigned char[]){ 0x99, 47, 80 }, 3);                       /* pad 10: silent */
+    send((unsigned char[]){ 0x89, 47, 0 }, 3);
+    send((unsigned char[]){ 0xB0, 0x64, 0x01 }, 3);                   /* no pad held: jog wheel */
+    CHECK(ngot == 19 && expect(18, 0xBF, 14, 1), "A: knob mode: pad 10 silent; encoder alone = jog wheel");
+    send((unsigned char[]){ 0x99, 37, 80 }, 3);                       /* pad 1 held, then KNOB FX off: touch ends */
+    send((unsigned char[]){ 0x90, 0x00, 0x7F }, 3);
+    send((unsigned char[]){ 0x80, 0x00, 0x00 }, 3);
+    send((unsigned char[]){ 0x89, 37, 0 }, 3);
+    CHECK(expect(19, 0x9F, 0, 127) && expect(20, 0x8F, 0, 0) && ngot == 21, "A: leaving knob mode ends a touch; no stray pad note-off");
+    send((unsigned char[]){ 0xB0, 0x10, 24 }, 3);                     /* K1: 23 -> 24 = one click right on knob 1 */
+    CHECK(expect(21, 0xBF, 71, 1) && ngot == 22, "A: K1 is always Move knob 1");
     /* SEQ: step mode; pad 5 -> step 20 (note 16 + 4) */
     send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
     send((unsigned char[]){ 0x99, 40, 80 }, 3);
     send((unsigned char[]){ 0x89, 40, 0 }, 3);
-    CHECK(expect(15, 0x9F, 20, 80) && expect(16, 0x8F, 20, 0), "A: step mode: pad 5 -> step button 5 (note 20)");
+    CHECK(expect(22, 0x9F, 20, 80) && expect(23, 0x8F, 20, 0), "A: step mode: pad 5 -> step button 5 (note 20)");
     /* SEQ again, PAD BANK: pad 1 -> right half, note 72 */
     send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
@@ -146,13 +161,13 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x80, 0x23, 0x00 }, 3);
     send((unsigned char[]){ 0x99, 37, 70 }, 3);
     send((unsigned char[]){ 0x89, 37, 0 }, 3);
-    CHECK(expect(17, 0x9F, 72, 70) && expect(18, 0x8F, 72, 0), "A: PAD BANK: pad 1 -> right half (note 72)");
+    CHECK(expect(24, 0x9F, 72, 70) && expect(25, 0x8F, 72, 0), "A: PAD BANK: pad 1 -> right half (note 72)");
     /* released after a mode change still releases the right note */
     send((unsigned char[]){ 0x99, 37, 70 }, 3);
     send((unsigned char[]){ 0x90, 0x23, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x23, 0x00 }, 3);
     send((unsigned char[]){ 0x89, 37, 0 }, 3);
-    CHECK(expect(19, 0x9F, 72, 70) && expect(20, 0x8F, 72, 0), "A: note-off matches note-on after a bank change");
+    CHECK(expect(26, 0x9F, 72, 70) && expect(27, 0x8F, 72, 0), "A: note-off matches note-on after a bank change");
 
     /* lights and screen */
     sent_lights = 1;

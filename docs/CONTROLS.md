@@ -8,7 +8,8 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | Pads 1-16 | The left 4x4 pads (the drums) |
 | PAD BANK (latching) | Pads become the right 4x4 (chromatic) |
 | SEQ (latching) | Pads become the 16 step buttons |
-| K1, K2, K3 | Move knobs 1-3; KNOB FX (latching) cycles to 4-6, then 7-8 |
+| K1, K2, K3 | Move knobs 1-3 (always) |
+| KNOB FX (latching) | Knob mode: pads 1-8 = Move knobs 1-8. Hold a pad and turn the encoder; pads 9-16 are silent. No pad held: the encoder is the jog wheel again |
 | FADER | Move knob 8 |
 | MAIN VOLUME | Volume knob |
 | Encoder turn / push | Jog wheel turn / press |

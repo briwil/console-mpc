@@ -9,7 +9,8 @@
  * Layout summary:
  *   Pads 1-16      the left 4x4 of the Move's pads (the drums). PAD BANK toggles to the right 4x4.
  *   SEQ button     toggles "step mode": the 16 pads become the Move's 16 step buttons.
- *   KNOB FX        cycles which Move knobs K1-K3 control: 1-3, 4-6, 7-8.  FADER = Move knob 8.
+ *   KNOB FX        latches KNOB MODE: pads 1-8 become Move knobs 1-8 (hold a pad, turn the encoder; pads 9-16 are silent).
+ *                  Without a pad held the encoder is the jog wheel. K1-K3 are always Move knobs 1-3.  FADER = Move knob 8.
  *   MAIN VOLUME    = Move volume knob.   Encoder = jog wheel (push = jog press).
  */
 #ifndef MAPPING_H
@@ -59,7 +60,9 @@ static const struct bmap BUTTONS[] = {
 static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47, 45, 43, 49, 55, 51, 53 };
 
 /* ---- state ---- */
-static int step_mode, right_bank, knob_bank;
+static int step_mode, right_bank, knob_mode;
+static int pad_knob[16];                    /* knob mode: which Move knob (0-7) each held pad is touching, -1 none */
+static int knob_stamp[16], knob_clock;      /* ... and the order they were pressed (the last one wins) */
 static int shift_held, stop_target = -1;     /* STOP: stops playback (Play) while playing, else Back; Shift + STOP = Back */
 static int pad_target[16];                  /* Move note each MPC pad is holding down (-1 none) */
 static int knob_last[5] = { -1, -1, -1, -1, -1 };   /* K1 K2 K3 VOL FADER */
@@ -97,6 +100,10 @@ static void refresh_pads(void)
         int r, g, b;
         colour_rgb(v, &r, &g, &b);
         if (v == 0) { r = 0; g = 6; b = 14; }                       /* idle: a faint blue so the pads can be found */
+        if (knob_mode) {                                            /* pads 1-8 = knobs 1-8; the touched one is bright */
+            if (i < 8) { if (pad_knob[i] >= 0) { r = 30; g = 127; b = 110; } else { r = 0; g = 40; b = 48; } }
+            else { r = 0; g = 1; b = 2; }
+        }
         int key = (r << 16) | (g << 8) | b;
         if (shown_rgb[i] != key) { shown_rgb[i] = key; mpc_pad_light(i, r, g, b); }
     }
@@ -113,12 +120,12 @@ static void refresh_buttons(void)
     for (int i = 0; i < NBUTTONS; i++) set_btn_light(BUTTONS[i].mpc, move_btn[BUTTONS[i].move] ? 1 : 0);
     set_btn_light(MPC_SEQ, step_mode);
     set_btn_light(MPC_PADBANK, right_bank);
-    set_btn_light(MPC_KNOBFX, knob_bank != 0);
+    set_btn_light(MPC_KNOBFX, knob_mode);
 }
 
 static void mapping_init(void)
 {
-    for (int i = 0; i < 16; i++) pad_target[i] = -1;
+    for (int i = 0; i < 16; i++) { pad_target[i] = -1; pad_knob[i] = -1; }
     refresh_pads();
     refresh_buttons();
 }
@@ -159,9 +166,39 @@ static void knob_clicks(int slot, int val, int move_cc)
     for (int i = 0; i < n; i++) send3(0xBF, move_cc, d > 0 ? 1 : 127);
 }
 
+/* the knob a held pad is touching (the pad pressed last), or -1 */
+static int held_knob(void)
+{
+    int best = -1, k = -1;
+    for (int i = 0; i < 16; i++)
+        if (pad_knob[i] >= 0 && knob_stamp[i] > best) { best = knob_stamp[i]; k = pad_knob[i]; }
+    return k;
+}
+
+static void release_knob_pads(void)
+{
+    for (int i = 0; i < 16; i++)
+        if (pad_knob[i] >= 0) { send3(0x8F, pad_knob[i], 0); pad_knob[i] = -1; }
+}
+
 static void mpc_pad_event(int idx, int vel, int on)
 {
     if (idx < 0 || idx > 15) return;
+    if (on && knob_mode) {
+        if (idx < 8) {
+            pad_knob[idx] = idx;
+            knob_stamp[idx] = ++knob_clock;
+            send3(0x9F, idx, 127);                      /* "knob touched": Console shows the value */
+            refresh_pads();
+        }
+        return;                                         /* pads 9-16: silent */
+    }
+    if (!on && pad_knob[idx] >= 0) {
+        send3(0x8F, pad_knob[idx], 0);                  /* touch ends */
+        pad_knob[idx] = -1;
+        refresh_pads();
+        return;
+    }
     if (on) {
         int note = step_mode ? 16 + idx : 68 + (idx / 4) * 8 + (idx % 4) + (right_bank ? 4 : 0);
         pad_target[idx] = note;
@@ -186,7 +223,7 @@ static void mpc_button_event(int note, int down)
     if (note == MPC_ENC_PUSH) { send3(0xBF, 3, down ? 127 : 0); return; }
     if (down && note == MPC_SEQ) { step_mode = !step_mode; refresh_pads(); refresh_buttons(); return; }
     if (down && note == MPC_PADBANK) { right_bank = !right_bank; refresh_pads(); refresh_buttons(); return; }
-    if (down && note == MPC_KNOBFX) { knob_bank = (knob_bank + 1) % 3; refresh_buttons(); return; }
+    if (down && note == MPC_KNOBFX) { release_knob_pads(); knob_mode = !knob_mode; refresh_pads(); refresh_buttons(); return; }
     if (note == MPC_SEQ || note == MPC_PADBANK || note == MPC_KNOBFX) return;
     for (int i = 0; i < NBUTTONS; i++)
         if (BUTTONS[i].mpc == note) { send3(0xBF, BUTTONS[i].move, down ? 127 : 0); return; }
@@ -195,16 +232,16 @@ static void mpc_button_event(int note, int down)
 static void mpc_cc_event(int cc, int val)
 {
     switch (cc) {
-    case 0x10: case 0x11: case 0x12: {
-        int idx = knob_bank * 3 + (cc - 0x10);
-        if (idx <= 7) knob_clicks(cc - 0x10, val, 71 + idx);
+    case 0x10: case 0x11: case 0x12:                      /* K1-K3 = Move knobs 1-3 */
+        knob_clicks(cc - 0x10, val, 71 + (cc - 0x10));
         break;
-    }
     case 0x13: knob_clicks(3, val, 79); break;            /* MAIN VOLUME -> volume knob */
     case 0x14: knob_clicks(4, val, 78); break;            /* FADER -> knob 8 */
-    case 0x64:                                            /* encoder: relative already */
-        send3(0xBF, 14, val == 0x7F ? 127 : 1);
+    case 0x64: {                                          /* encoder: relative already */
+        int k = held_knob();                              /* a knob-mode pad held: that knob; else the jog wheel */
+        send3(0xBF, k >= 0 ? 71 + k : 14, val == 0x7F ? 127 : 1);
         break;
+    }
     }
 }
 
