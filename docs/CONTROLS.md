@@ -18,10 +18,11 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | LOOP | Loop (the tape's loop in / out) |
 | PLUS / MINUS | Right / left arrow (settings pages, lane steps 17-32...) |
 | Shift + PLUS / MINUS | Move + / - (octave on a sound page, pattern +/-) |
-| PLAY, SEQ REC, SAMPLE REC | Play, Record, Sample |
+| PLAY, SEQ REC | Play, Record |
+| CHOP | Splice (Shift + CHOP: splice all) |
+| SAMPLE REC | not used yet |
 | STOP | While playing: stops playback. Otherwise: Back. Shift + STOP: always Back (saves and quits from the top level) |
 | ERASE, MUTE, TAP TEMPO, NOTE REPEAT, 16 LEVELS | Delete, Mute, Copy, Undo, Capture |
-| CHOP | not used yet |
 | SHIFT | Shift |
 
 Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit: Shift + STOP.

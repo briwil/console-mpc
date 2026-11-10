@@ -31,7 +31,7 @@ static const struct bmap BUTTONS[] = {
     { 0x31, 49 },   /* SHIFT          -> Shift   */
     { 0x52, 85 },   /* PLAY           -> Play    */
     { 0x50, 86 },   /* SEQ RECORD     -> Record  */
-    { 0x49, 118 },  /* SAMPLE RECORD  -> Sample  */
+    { 0x4B, 118 },  /* CHOP           -> Sample (= SPLICE in Console; Shift: splice all) */
     { 0x51, 51 },   /* STOP           -> Back    (Shift + Back quits Console) */
     { 0x09, 119 },  /* ERASE          -> Delete  */
     { 0x2B, 88 },   /* MUTE           -> Mute    */
