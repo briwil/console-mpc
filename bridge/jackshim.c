@@ -166,6 +166,8 @@ static void hw_audio_write(const int32_t *fr, int n)
 #endif
 }
 
+static void dbg(char dir, const uint8_t *b, int n);
+
 static int hw_midi_open(void)
 {
 #ifdef HOST_TEST
@@ -173,7 +175,18 @@ static int hw_midi_open(void)
 #else
     for (int tries = 0; tries < 25; tries++) {
         midifd = open("/dev/snd/midiC0D0", O_RDWR_ | O_NONBLOCK_);
-        if (midifd >= 0) return 0;
+        if (midifd >= 0) {
+            /* The stock app asks for timestamped records (32-byte frames) and the kernel remembers that after it
+               stops. We want plain MIDI bytes: SNDRV_RAWMIDI_IOCTL_PARAMS, stream = input, mode = 0 (no framing). */
+            uint64_t p[6];
+            memset(p, 0, sizeof p);
+            ((int *)p)[0] = 1;            /* stream: input */
+            p[1] = 4096;                  /* buffer_size */
+            p[2] = 1;                     /* avail_min */
+            int r = ioctl(midifd, 0xC0305710UL, p);
+            if (r != 0) { uint8_t e = (uint8_t)(-r); dbg('E', &e, 1); }
+            return 0;
+        }
         usleep(200000);
     }
     return -1;
