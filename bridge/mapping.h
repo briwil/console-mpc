@@ -173,6 +173,22 @@ static void knob_clicks(int slot, int val, int move_cc)
     for (int i = 0; i < n; i++) send3(0xBF, move_cc, d > 0 ? 1 : 127);
 }
 
+/* The MAIN VOLUME knob is absolute, Console's volume is 50 clicks of 2 % each (CC 79 relative). The first move syncs them
+   (50 clicks down = 0, then up to where the knob is); after that the knob always means the same volume. */
+#define VOL_CLICKS 50
+static int vol_est = -1;
+static void volume_knob(int val)
+{
+    int target = (val * VOL_CLICKS + 63) / 127;
+    if (vol_est < 0) {
+        for (int i = 0; i < VOL_CLICKS; i++) send3(0xBF, 79, 127);
+        vol_est = 0;
+    }
+    int d = target - vol_est;
+    for (int i = 0; i < (d < 0 ? -d : d); i++) send3(0xBF, 79, d > 0 ? 1 : 127);
+    vol_est = target;
+}
+
 /* the knob a held pad is touching (the pad pressed last), or -1 */
 static int held_knob(void)
 {
@@ -268,8 +284,8 @@ static void mpc_cc_event(int cc, int val)
     case 0x10: case 0x11: case 0x12:                      /* K1-K3 = Move knobs 1-3 */
         knob_clicks(cc - 0x10, val, 71 + (cc - 0x10));
         break;
-    case 0x13: knob_clicks(3, val, 79); break;            /* MAIN VOLUME -> volume knob */
-    case 0x14: knob_clicks(4, val, 78); break;            /* FADER -> knob 8 */
+    case 0x13: volume_knob(val); break;                   /* MAIN VOLUME -> Console's volume, absolute */
+    case 0x14: knob_clicks(4, val, 74); break;            /* FADER -> knob 4 (the lane's SHIFT) */
     case 0x64: {                                          /* encoder: relative already */
         int k = held_knob();                              /* a knob-mode pad held: that knob; else the jog wheel */
         if (k >= 0) last_turn = tick_n;

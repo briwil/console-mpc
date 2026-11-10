@@ -11,8 +11,8 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | Shift + SEQ | Pads become a step's settings: Move pads 1-32 in order (PAD BANK flips 1-16 / 17-32). SEQ again goes back to the steps |
 | K1, K2, K3 | Move knobs 1-3 (always) |
 | KNOB FX (latching) | Knob mode: pads 1-8 = Move knobs 1-8. Hold a pad and turn the encoder; pads 9-16 are silent. No pad held: the encoder is the jog wheel again |
-| FADER | Move knob 8 |
-| MAIN VOLUME | Volume knob |
+| FADER | Move knob 4 (lane shift, among others) |
+| MAIN VOLUME | Volume: absolute (the first time you touch it, Console is synced to the knob) |
 | Encoder turn / push | Jog wheel turn / press |
 | Sample Select (0x24) | Menu (Shift + Menu: export) |
 | Button 0x06 (panel name unknown) | Left arrow (guess) |

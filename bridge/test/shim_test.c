@@ -190,6 +190,21 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x80, 0x23, 0x00 }, 3);
     send((unsigned char[]){ 0x89, 37, 0 }, 3);
     CHECK(expect(26, 0x9F, 72, 70) && expect(27, 0x8F, 72, 0), "A: note-off matches note-on after a bank change");
+    {   /* MAIN VOLUME is absolute: the first move syncs (50 down), then up to the knob's place; later moves are the difference */
+        int b = ngot, down = 0, up = 0;
+        send((unsigned char[]){ 0xB0, 0x13, 127 }, 3);
+        for (int i = b; i < ngot; i++) { if (got[i][1] == 79 && got[i][2] == 127) down++; if (got[i][1] == 79 && got[i][2] == 1) up++; }
+        CHECK(down == 50 && up == 50, "A: MAIN VOLUME first move: 50 down, then 50 up (full)");
+        b = ngot; down = up = 0;
+        send((unsigned char[]){ 0xB0, 0x13, 64 }, 3);                  /* halfway: 25 down from 50 */
+        for (int i = b; i < ngot; i++) { if (got[i][1] == 79 && got[i][2] == 127) down++; if (got[i][1] == 79 && got[i][2] == 1) up++; }
+        CHECK(down == 25 && up == 0, "A: MAIN VOLUME to half: 25 clicks down");
+        b = ngot;
+        send((unsigned char[]){ 0xB0, 0x14, 10 }, 3);
+        send((unsigned char[]){ 0xB0, 0x14, 12 }, 3);
+        CHECK(ngot == b + 2 && got[b][1] == 74 && got[b + 1][1] == 74, "A: FADER = knob 4 (CC 74)");
+    }
+    int s0 = ngot;
     /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings); PAD BANK = 17-32; SEQ goes to steps */
     send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);
     send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
@@ -205,12 +220,12 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x89, 37, 0 }, 3);
     send((unsigned char[]){ 0x90, 0x23, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x23, 0x00 }, 3);                   /* bank back */
-    CHECK(expect(30, 0x9F, 68, 70) && expect(32, 0x9F, 76, 71) && expect(34, 0x9F, 84, 72), "A: Shift + SEQ: pads = Move pads in order (pad 1 = 68, pad 9 = 76, bank 2: 84)");
+    CHECK(expect(s0 + 2, 0x9F, 68, 70) && expect(s0 + 4, 0x9F, 76, 71) && expect(s0 + 6, 0x9F, 84, 72), "A: Shift + SEQ: pads = Move pads in order (pad 1 = 68, pad 9 = 76, bank 2: 84)");
     send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);                   /* SEQ: back to the steps */
     send((unsigned char[]){ 0x99, 37, 70 }, 3);
     send((unsigned char[]){ 0x89, 37, 0 }, 3);
-    CHECK(expect(36, 0x9F, 16, 70), "A: SEQ from the settings pads: step mode (pad 1 = step 1)");
+    CHECK(expect(s0 + 8, 0x9F, 16, 70), "A: SEQ from the settings pads: step mode (pad 1 = step 1)");
     send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);                   /* SEQ: normal pads again */
 
