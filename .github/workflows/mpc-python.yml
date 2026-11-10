@@ -26,8 +26,9 @@ jobs:
 
       - name: Assemble python/ and install numpy
         run: |
-          D=$(ls -d py/cpython-*-linux-aarch64-gnu | head -n 1)
+          D=$(readlink -f "$(ls -d py/cpython-*-linux-aarch64-gnu | head -n 1)")   # uv makes a symlink: use the real folder
           mv "$D" python
+          test -x python/bin/python3
           python/bin/python3 -c "import sys; print(sys.version)"
           python/bin/python3 -m ensurepip --upgrade || true
           python/bin/python3 -m pip install --no-cache-dir numpy
@@ -49,12 +50,15 @@ jobs:
           find python -name "*.so*" -type f -exec readelf -d {} \; 2>/dev/null | grep NEEDED | sort | uniq -c | sort -rn | head -n 30
 
       - name: Pack
-        run: tar czf mpc-python.tgz python && ls -l mpc-python.tgz
+        run: |
+          tar czf mpc-python.tgz python
+          ls -l mpc-python.tgz
+          test $(stat -c %s mpc-python.tgz) -gt 10000000
 
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete runtime-latest --yes --cleanup-tag || true
-          gh release create runtime-latest mpc-python.tgz --title "MPC runtime (Python ${PYVER} + numpy)" \
+          gh release delete runtime-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create runtime-latest mpc-python.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "MPC runtime (Python ${PYVER} + numpy)" \
             --notes "Relocatable Python with numpy for the MPC Sample (aarch64, glibc). Built by .github/workflows/mpc-python.yml."
