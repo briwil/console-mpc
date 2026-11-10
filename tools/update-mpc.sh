@@ -31,7 +31,7 @@ mpc() { ssh -p 2222 -i "$KEY" "$HOST" "$@"; }
 say "1/5  Is the MPC reachable, and is Console closed?"
 if [ "$DRY" = 0 ]; then
   mpc true || { say "Can't reach the MPC. Is the cable in, the SD card in, and the MPC fully started?"; exit 1; }
-  if [ "$(mpc "ps | grep -c '[m]ove/app.py'")" != 0 ]; then
+  if [ "$(mpc "ps | grep -c '[a]pp.py'")" != 0 ]; then
     say "Console is running on the MPC. Quit it first (Shift + STOP), then run this again."; exit 1
   fi
 fi

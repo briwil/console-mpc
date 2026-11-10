@@ -207,6 +207,24 @@ int main(int argc, char **argv)
     CHECK(idle == 0, "A: unlit pads show the faint idle blue");
     CHECK(screen[56 * 320 + 32] == 0x00F2EBDD && screen[(56 + 1) * 320 + 33] == 0x00F2EBDD, "A: screen pixel (0,0) drawn 2x2 at (32,56)");
     CHECK(screen[(56 + 127) * 320 + 32 + 255] == 0x00F2EBDD && screen[56 * 320 + 40] == 0, "A: pixel (127,63) drawn, others dark");
+    {   /* a native 320x240 frame from Console takes over the screen; deleting the file gives the Move screen back */
+        static unsigned char nat[8 + 320 * 240 * 3];
+        memcpy(nat, "CNAT", 4);
+        nat[4] = 1;
+        nat[8 + (10 * 320 + 20) * 3] = 200; nat[9 + (10 * 320 + 20) * 3] = 100; nat[10 + (10 * 320 + 20) * 3] = 50;
+        FILE *nf = fopen("/tmp/console-native.rgb", "wb"); fwrite(nat, 1, sizeof nat, nf); fclose(nf);
+        usleep(150000);
+        CHECK(screen[10 * 320 + 20] == 0x00C86432 && screen[56 * 320 + 32] == 0, "A: native frame replaces the Move screen (colour kept)");
+        nat[4] = 2;
+        nat[8 + (11 * 320 + 21) * 3] = 255;
+        nf = fopen("/tmp/console-native.rgb.tmp", "wb"); fwrite(nat, 1, sizeof nat, nf); fclose(nf);
+        rename("/tmp/console-native.rgb.tmp", "/tmp/console-native.rgb");
+        usleep(150000);
+        CHECK((screen[11 * 320 + 21] >> 16) == 255, "A: a new counter value shows the new native frame");
+        remove("/tmp/console-native.rgb");
+        usleep(250000);
+        CHECK(screen[10 * 320 + 20] == 0, "A: native file gone -> Move screen again");
+    }
     /* STOP: Play is lit (the core said so above) -> STOP presses Play; Shift + STOP = Back */
     send((unsigned char[]){ 0x90, 0x51, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x51, 0x00 }, 3);

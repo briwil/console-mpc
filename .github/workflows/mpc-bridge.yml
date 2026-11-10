@@ -7,7 +7,7 @@ name: Build MPC bridge
 on:
   push:
     branches: [main]
-    paths: ["bridge/**", "launcher/**"]
+    paths: ["bridge/**", "launcher/**", "mpcui/**"]
   workflow_dispatch:
 
 permissions:
@@ -36,7 +36,7 @@ jobs:
       - name: Pack
         run: |
           mkdir -p pack/mpc
-          cp bridge/libjack_mpc.so bridge/bridge_demo bridge/bootmenu launcher/*.sh pack/mpc/
+          cp bridge/libjack_mpc.so bridge/bridge_demo bridge/bootmenu launcher/*.sh mpcui/*.py pack/mpc/
           chmod +x pack/mpc/*
           tar czf mpc-bridge.tgz -C pack mpc
           ls -l mpc-bridge.tgz

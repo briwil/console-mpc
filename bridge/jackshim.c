@@ -25,6 +25,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <fcntl.h>
 #define EXPORT __attribute__((visibility("default")))
 #else
 #define EXPORT __attribute__((visibility("default")))
@@ -303,7 +304,7 @@ static void mpc_btn_light(int note, int on)
 /* The Move's screen as Console draws it: "MOVEDISP" + 1024 bytes, 8 strips of 128 bytes, bit 0 = top.
    Latest frame is handed to the screen thread; it never blocks the audio thread. */
 static uint8_t frame[2][1024];
-static volatile int frame_new = -1, frame_busy;
+static volatile int frame_new = -1, frame_busy, frame_last = -1;
 static uint32_t shadow[320 * 240], outbuf[320 * 240];
 
 /* THE place to swap in a native 320x240 interface: this turns the Move's 1-bit screen into pixels.
@@ -344,10 +345,46 @@ static void fb_flush(void)
 #endif
 }
 
+/* A native 320x240 screen from Console (mpcui/native.py): the file /tmp/console-native.rgb = "CNAT", a 32-bit counter,
+   then 320*240 RGB bytes. Present = it is the screen (the Move's 1-bit frames are ignored); absent = the scaled Move screen. */
+#define NATIVE_PATH "/tmp/console-native.rgb"
+static uint32_t native_seq = 0xFFFFFFFFu;
+static uint8_t nbuf[8 + 320 * 240 * 3];
+
+static int was_native;
+
+static int native_poll(void)
+{
+    int fd = open(NATIVE_PATH, 0);
+    if (fd < 0) { native_seq = 0xFFFFFFFFu; return 0; }
+    long n = read(fd, nbuf, 8);
+    if (n != 8 || memcmp(nbuf, "CNAT", 4) != 0) { close(fd); return 0; }
+    uint32_t seq;
+    memcpy(&seq, nbuf + 4, 4);
+    if (seq != native_seq) {
+        long got = 0;
+        while (got < 320 * 240 * 3) {
+            long r = read(fd, nbuf + 8 + got, (unsigned long)(320 * 240 * 3 - got));
+            if (r <= 0) break;
+            got += r;
+        }
+        if (got == 320 * 240 * 3) {
+            for (int i = 0; i < 320 * 240; i++)
+                shadow[i] = ((uint32_t)nbuf[8 + i * 3] << 16) | ((uint32_t)nbuf[9 + i * 3] << 8) | nbuf[10 + i * 3];
+            native_seq = seq;
+            fb_flush();
+        }
+    }
+    close(fd);
+    return 1;
+}
+
 static void *display_main(void *arg)
 {
     (void)arg;
     while (running) {
+        if (native_poll()) { frame_new = -1; was_native = 1; usleep(16000); continue; }
+        if (was_native) { was_native = 0; memset(shadow, 0, sizeof shadow); if (frame_last >= 0) frame_new = frame_last; }     /* back to the Move screen */
         int f = frame_new;
         if (f >= 0) {
             frame_busy = f;
@@ -376,6 +413,7 @@ static void handle_outputs(void)
             if (disp->ev[i].size == 1032 && memcmp(disp->store + disp->ev[i].off, "MOVEDISP", 8) == 0) {
                 int slot = frame_busy ? 0 : 1;
                 memcpy(frame[slot], disp->store + disp->ev[i].off + 8, 1024);
+                frame_last = slot;
                 frame_new = slot;
             }
         }
