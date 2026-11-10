@@ -61,6 +61,7 @@ static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47,
 
 /* ---- state ---- */
 static int step_mode, right_bank, knob_mode;
+static int param_mode;                      /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings), bank = 1-16 / 17-32 */
 static int pad_knob[16];                    /* knob mode: which Move knob (0-7) each held pad is touching, -1 none */
 static int knob_stamp[16], knob_clock;      /* ... and the order they were pressed (the last one wins) */
 static int shift_held, stop_target = -1;     /* STOP: stops playback (Play) while playing, else Back; Shift + STOP = Back */
@@ -98,7 +99,7 @@ static void colour_rgb(int v, int *r, int *g, int *b)
 static void refresh_pads(void)
 {
     for (int i = 0; i < 16; i++) {
-        int v = step_mode ? move_step[i] : move_pad[(i / 4) * 8 + (i % 4) + (right_bank ? 4 : 0)];
+        int v = param_mode ? move_pad[i + (right_bank ? 16 : 0)] : step_mode ? move_step[i] : move_pad[(i / 4) * 8 + (i % 4) + (right_bank ? 4 : 0)];
         int r, g, b;
         colour_rgb(v, &r, &g, &b);
         if (v == 0) { r = 0; g = 6; b = 14; }                       /* idle: a faint blue so the pads can be found */
@@ -120,7 +121,7 @@ static void set_btn_light(int note, int on)
 static void refresh_buttons(void)
 {
     for (int i = 0; i < NBUTTONS; i++) set_btn_light(BUTTONS[i].mpc, move_btn[BUTTONS[i].move] ? 1 : 0);
-    set_btn_light(MPC_SEQ, step_mode);
+    set_btn_light(MPC_SEQ, step_mode || param_mode);
     set_btn_light(MPC_PADBANK, right_bank);
     set_btn_light(MPC_KNOBFX, knob_mode);
 }
@@ -206,9 +207,10 @@ static void mpc_pad_event(int idx, int vel, int on)
         return;
     }
     if (on) {
-        int note = step_mode ? 16 + idx : 68 + (idx / 4) * 8 + (idx % 4) + (right_bank ? 4 : 0);
+        int note = param_mode ? 68 + idx + (right_bank ? 16 : 0)
+                 : step_mode ? 16 + idx : 68 + (idx / 4) * 8 + (idx % 4) + (right_bank ? 4 : 0);
         pad_target[idx] = note;
-        if (!step_mode) last_drum = note;
+        if (!step_mode && !param_mode) last_drum = note;
         send3(0x9F, note, vel > 0 ? vel : 100);
     } else if (pad_target[idx] >= 0) {
         send3(0x8F, pad_target[idx], 0);
@@ -247,7 +249,12 @@ static void mpc_button_event(int note, int down)
         return;
     }
     if (note == MPC_ENC_PUSH) { send3(0xBF, 3, down ? 127 : 0); return; }
-    if (down && note == MPC_SEQ) { step_mode = !step_mode; refresh_pads(); refresh_buttons(); return; }
+    if (down && note == MPC_SEQ) {
+        if (shift_held) param_mode = !param_mode;                     /* Shift + SEQ: the pads are a step's settings */
+        else if (param_mode) { param_mode = 0; step_mode = 1; }       /* SEQ from there: back to the steps */
+        else step_mode = !step_mode;
+        refresh_pads(); refresh_buttons(); return;
+    }
     if (down && note == MPC_PADBANK) { right_bank = !right_bank; refresh_pads(); refresh_buttons(); return; }
     if (down && note == MPC_KNOBFX) { release_knob_pads(); knob_mode = !knob_mode; refresh_pads(); refresh_buttons(); return; }
     if (note == MPC_SEQ || note == MPC_PADBANK || note == MPC_KNOBFX) return;

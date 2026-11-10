@@ -190,6 +190,29 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x80, 0x23, 0x00 }, 3);
     send((unsigned char[]){ 0x89, 37, 0 }, 3);
     CHECK(expect(26, 0x9F, 72, 70) && expect(27, 0x8F, 72, 0), "A: note-off matches note-on after a bank change");
+    /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings); PAD BANK = 17-32; SEQ goes to steps */
+    send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);
+    send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
+    send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
+    send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);
+    send((unsigned char[]){ 0x99, 37, 70 }, 3);
+    send((unsigned char[]){ 0x89, 37, 0 }, 3);
+    send((unsigned char[]){ 0x99, 48, 71 }, 3);                       /* pad 9 */
+    send((unsigned char[]){ 0x89, 48, 0 }, 3);
+    send((unsigned char[]){ 0x90, 0x23, 0x7F }, 3);
+    send((unsigned char[]){ 0x80, 0x23, 0x00 }, 3);
+    send((unsigned char[]){ 0x99, 37, 72 }, 3);
+    send((unsigned char[]){ 0x89, 37, 0 }, 3);
+    send((unsigned char[]){ 0x90, 0x23, 0x7F }, 3);
+    send((unsigned char[]){ 0x80, 0x23, 0x00 }, 3);                   /* bank back */
+    CHECK(expect(30, 0x9F, 68, 70) && expect(32, 0x9F, 76, 71) && expect(34, 0x9F, 84, 72), "A: Shift + SEQ: pads = Move pads in order (pad 1 = 68, pad 9 = 76, bank 2: 84)");
+    send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
+    send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);                   /* SEQ: back to the steps */
+    send((unsigned char[]){ 0x99, 37, 70 }, 3);
+    send((unsigned char[]){ 0x89, 37, 0 }, 3);
+    CHECK(expect(36, 0x9F, 16, 70), "A: SEQ from the settings pads: step mode (pad 1 = step 1)");
+    send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
+    send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);                   /* SEQ: normal pads again */
 
     /* lights and screen */
     sent_lights = 1;
