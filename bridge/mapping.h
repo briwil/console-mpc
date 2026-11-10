@@ -42,9 +42,8 @@ static const struct bmap BUTTONS[] = {
     { 0x36, 55 },   /* PLUS (light only): the press is the right arrow; Shift + PLUS = Move + (octave up) */
     { 0x37, 54 },   /* MINUS (light only): the press is the left arrow; Shift + MINUS = Move - (octave down) */
     { 0x0C, 43 },   /* B1  -> left button 1 (top)    */
-    { 0x0D, 42 },   /* B2  -> left button 2          */
-    { 0x0E, 41 },   /* B3  -> left button 3          */
-    { 0x01, 40 },   /* PAD FX -> left button 4 (bottom) */
+    { 0x0D, 41 },   /* B2  -> left button 3 = FX / MIXER (the mixer first; again: reverb, delay...) */
+    { 0x0E, 40 },   /* B3  -> left button 4 = TAPE */
     { 0x24, 50 },   /* SAMPLE SELECT  -> Menu (Shift + Menu: export) */
 };
 #define NBUTTONS ((int)(sizeof BUTTONS / sizeof BUTTONS[0]))

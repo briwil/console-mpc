@@ -4,7 +4,11 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 
 | MPC control | Console (Move) function |
 |---|---|
-| B1, B2, B3, PAD FX | Left buttons 1-4 (top to bottom): instruments, song mode, FX, tape recorder |
+| B1 | Instruments; again goes round an instrument's pages: sound, sequencer, automation, punch FX, then SONG, then back |
+| B2 | Mixer (again: reverb, delay, ...; Back leaves) |
+| B3 | Tape recorder (again: the selected track zoomed) |
+| PAD FX | not used yet |
+| Song mode on / off | on the SONG page: Shift + PLUS / MINUS |
 | Pads 1-16 | The left 4x4 pads (the drums) |
 | PAD BANK (latching) | Pads become the right 4x4 (chromatic) |
 | SEQ (latching) | Pads become the 16 step buttons |

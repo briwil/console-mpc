@@ -19,4 +19,27 @@ except Exception:
     import traceback
     print("native screens are off:\n" + traceback.format_exc(), flush=True)
 sys.argv[0] = APP_PY
-runpy.run_path(APP_PY, run_name="__main__")
+
+
+def song_after_punch(handle):
+    """Left button 1 goes round an instrument's pages (sound, sequencer, automation, punch FX); on the MPC the SONG page
+    comes after punch FX (left button 2 is the mixer there). Console's own files are not changed."""
+    def wrapped(name, T, m, e):
+        try:
+            if (name == "DRUMS" and not (m.open or m.kits.open) and T.drum_page and not T.fx_page and T.seq_page
+                    and getattr(T, "auto_page", False) not in (False, True, None)):
+                handle("DRUMS", T, m, e)                 # the original: punch FX done, the sound page again ...
+                handle("SONG", T, m, e)                  # ... and straight on to the song page
+                return
+        except Exception:
+            import traceback
+            print("song page step failed:\n" + traceback.format_exc(), flush=True)
+        handle(name, T, m, e)
+    return wrapped
+
+
+# run app.py as a module (not __main__: its main() is called below), put the wrapper in where main() looks for handle
+G = runpy.run_path(APP_PY, run_name="console_app")
+main = G["main"]
+main.__globals__["handle"] = song_after_punch(G["handle"])
+main()
