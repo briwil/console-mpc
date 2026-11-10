@@ -40,5 +40,5 @@ tail -n +"$((N + 1))" "$A/autorun.sh" >> "$T"
 cp "$T" "$A/autorun.sh"; rm -f "$T"
 check > "$A/autorun.check"
 sync
-echo "Installed. Restart the MPC: you get the startup menu (PAD 1 = Console, PAD 2 = MPC; no answer = MPC)."
-echo "Undo:  sh $0 remove     Skip it once:  put a file called NOCONSOLE on the SD card."
+echo "Installed. Restart the MPC: it now starts Console by itself."
+echo "Undo:  sh $0 remove     Boot to the stock MPC app instead: put a file called NOCONSOLE on the SD card."

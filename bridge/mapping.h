@@ -154,6 +154,10 @@ static void send3(int st, int a, int b)
     to_console(m, 3);
 }
 
+#ifndef KNOB_STEP
+#define KNOB_STEP 4
+#endif
+
 /* an absolute knob (0-127) becomes "clicks": CC value 1 = one click right, 127 = one click left */
 static void knob_clicks(int slot, int val, int move_cc)
 {
@@ -239,7 +243,8 @@ static void mpc_cc_event(int cc, int val)
     case 0x14: knob_clicks(4, val, 78); break;            /* FADER -> knob 8 */
     case 0x64: {                                          /* encoder: relative already */
         int k = held_knob();                              /* a knob-mode pad held: that knob; else the jog wheel */
-        send3(0xBF, k >= 0 ? 71 + k : 14, val == 0x7F ? 127 : 1);
+        for (int i = 0; i < (k >= 0 ? KNOB_STEP : 1); i++)   /* the MPC encoder is slow next to a Move knob: several clicks per notch */
+            send3(0xBF, k >= 0 ? 71 + k : 14, val == 0x7F ? 127 : 1);
         break;
     }
     }
