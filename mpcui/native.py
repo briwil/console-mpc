@@ -102,6 +102,12 @@ class Canvas:
         if x1 > x0 and y1 > y0:
             self.px[y0:y1, x0:x1] = c
 
+    def frame(self, x, y, w, h, c):
+        self.rect(x, y, w, 1, c)
+        self.rect(x, y + h - 1, w, 1, c)
+        self.rect(x, y, 1, h, c)
+        self.rect(x + w - 1, y, 1, h, c)
+
     def text(self, x, y, s, c=FG, scale=1):
         """Smooth text (Barlow Condensed, anti-aliased) if the font file is there, else the 5 x 7 pixel font.
         (x, y) is the top of the capital letters, the same place the pixel font had them; scale 2 = big."""
@@ -407,6 +413,128 @@ def draw_focus(T):
         c.text(4, H - 10, T.message[:50], BG)
 
 
+# ------------------------------------------------------------------ the drum sequencer
+
+CELL = (24, 30, 36)
+CELL_LINE = (50, 58, 66)
+SEL_FILL = (60, 50, 30)
+
+
+class NotNative(Exception):
+    """This view of the page has no native version: the Move's screen (scaled) is shown instead."""
+
+
+def draw_seq(T):
+    """The drum sequencer: the lane's 16 steps as big cells (height = velocity), then the lane's settings (nothing
+    selected) or the picked setting of the selected steps (see moveseq.py for how the pads and knobs work)."""
+    import sequencer
+    c = canvas
+    c.clear()
+    e = T.engine
+    ms, sp, seq = T.mseq, T.seqp, e.seq
+    lane = sp.lane
+    ln = seq.lane(lane)
+    first = ms.first()
+    names = getattr(e.drums, "lane_names", None) or []
+    name = names[lane] if lane < len(names) else "LANE %d" % (lane + 1)
+    pat = "PAT %d" % (seq.current + 1) + (">%d" % (seq.queued + 1) if seq.queued is not None else "")
+    selected = ms.held is not None
+    knobs = ms.knob_list() if selected else None
+    c.rect(0, 0, W, TOP_H, BAR)
+    if selected:
+        c.text(4, 1, ms.which(), ACC)
+        c.text(W - 4 - c.width(name[:14]), 1, name[:14], MID)
+    else:
+        c.text(4, 1, name[:14], ACC)
+        c.text(W - 4 - c.width(pat), 1, pat, MID)
+    # the 16 steps
+    at = ms.playing_step()
+    y = 15
+    sel = set(ms.selected) if selected else set()
+    for k in range(16):
+        i = first + k
+        x = 4 + k * 19
+        if i >= ln.length:
+            c.rect(x + 7, y + 16, 3, 2, DIM)
+            continue
+        if sequencer.dark(i, sequencer.TRIPLETS):
+            c.rect(x + 3, y + 16, 11, 2, DIM)
+            continue
+        is_sel = i in sel
+        c.rect(x, y, 17, 34, SEL_FILL if is_sel else CELL)
+        c.frame(x, y, 17, 34, ACC if is_sel else CELL_LINE)
+        st = ln.steps[i]
+        if st.on:
+            v = st.vel if st.vel else sequencer.DEFAULT_VELOCITY
+            h = max(3, int(26 * min(127, v) / 127.0))
+            c.rect(x + 2, y + 31 - h, 13, h, ACC if is_sel else FG)
+        if at is not None and i == at:
+            c.rect(x, y + 36, 17, 3, WHITE)
+        c.text(x + (5 if i < 9 else 2), y + 41, str(i + 1), FG if (k % 4 == 0) else MID)
+    # the lane's pages: 16 steps each; the shown one is lit
+    npages = max(1, (ln.length + 15) // 16)
+    gap = 4
+    seg = (W - 8 - gap * (npages - 1)) // npages
+    for p in range(npages):
+        c.rect(4 + p * (seg + gap), y + 56, seg, 4, ACC if p == first // 16 else CELL_LINE)
+    c.text(4, y + 63, "STEPS %d-%d OF %d" % (first + 1, min(first + 16, ln.length), ln.length), DIM)
+    top = 106
+    if not selected:
+        # the lane's settings: knobs 1-4
+        cw = (W - 8 - 3 * 6) // 4
+        for i, (label, value, _locked) in enumerate(knobs_lane(ms)[:4]):
+            x = 4 + i * (cw + 6)
+            c.rect(x, top, cw, 66, CELL)
+            c.frame(x, top, cw, 66, CELL_LINE)
+            c.text(x + 6, top + 7, str(label)[:10], MID)
+            c.text(x + 6, top + 26, str(value)[:6], FG, 2)
+            c.text(x + 6, top + 52, "K%d" % (i + 1), DIM)
+        hint = "SHIFT + STEPS: SELECT    SHIFT + SEQ: SETTINGS PADS"
+    elif knobs:
+        label, value, on = knobs[0]
+        key = ms.pad_items()[ms.sel][0]
+        ct = ms.chance_text(key)
+        c.rect(4, top, W - 8, 96, CELL)
+        c.frame(4, top, W - 8, 96, ACC)
+        c.text(14, top + 8, str(label)[:20], ACC, 2)
+        c.text(14, top + 40, "K1", DIM)
+        c.text(36, top + 34, str(value)[:8], FG, 3)
+        if key == "vel":
+            try:
+                frac = max(0.0, min(1.0, float(value) / 127.0))
+            except ValueError:
+                frac = 0.0
+            c.rect(150, top + 44, 156, 8, CELL_LINE)
+            c.rect(150, top + 44, int(156 * frac), 8, ACC)
+        if ct is not None:
+            c.text(14, top + 74, "K2 CHANCE  %s" % ct, MID)
+        c.text(W - 14 - c.width("SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT"), top + 74, "SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT", DIM)
+        hint = "SEQ: BACK TO THE STEPS    TAP A STEP: DONE"
+    else:
+        # steps selected, no setting picked: knobs 1-8 are the drum's sound page, turning one locks it on the steps
+        items = ms.lock_list()
+        c.text(8, top, "SOUND: " + str(ms.page_name())[:18], ACC)
+        cw = (W - 8 - 3 * 6) // 4
+        for i, (label, value, locked, lockable) in enumerate(items[:8]):
+            col, row = i % 4, i // 4
+            x, yy = 4 + col * (cw + 6), top + 16 + row * 40
+            c.rect(x, yy, cw, 36, SEL_FILL if locked else CELL)
+            c.frame(x, yy, cw, 36, ACC if locked else CELL_LINE)
+            c.text(x + 5, yy + 5, str(label)[:11], MID if lockable else DIM)
+            c.text(x + 5, yy + 18, str(value)[:7], FG if lockable else DIM)
+        hint = "PADS (SHIFT + SEQ): STEP SETTINGS    TAP A STEP: DONE"
+    c.rect(0, H - 12, W, 12, BAR)
+    if T.message and time.monotonic() < T.message_until:
+        c.text(4, H - 10, T.message[:50], ACC)
+    else:
+        c.text(4, H - 10, hint, DIM)
+
+
+def knobs_lane(ms):
+    return ms.knob_list()
+
+
+
 def on_tape_page(T, menu):
     """True when Console's own pages.draw would be drawing the tape page (see the end of its if / elif chain)."""
     if menu is not None and (menu.open or menu.kits.open):
@@ -419,6 +547,22 @@ def on_tape_page(T, menu):
     return True
 
 
+def on_seq_page(T, menu):
+    """True when pages.draw would draw seq_page for a drum lane (not the synth's sequencer, punch FX or automation)."""
+    if menu is not None and (menu.open or menu.kits.open):
+        return False
+    if T.fx_page or not T.seq_page:
+        return False
+    if getattr(T, "punch", None) is not None and T.punch.active():
+        return False
+    if getattr(T, "auto", None) is not None and T.auto.active():
+        return False
+    try:
+        return not T.synth_shown()
+    except Exception:
+        return False
+
+
 def install(pages):
     """Wraps pages.draw: the original always runs (it draws the Move screen); then, on the tape page, ours replaces it."""
     original = pages.draw
@@ -428,8 +572,12 @@ def install(pages):
         original(f, T, menu)
         try:
             card = T.pagefx.state() if getattr(T, "pagefx", None) is not None else None
-            if card is None and on_tape_page(T, menu) and T.engine:
+            if card is None and T.engine and on_tape_page(T, menu):
                 (draw_tape if T.focus.track is None else draw_focus)(T)
+                publish()
+                return
+            if card is None and T.engine and on_seq_page(T, menu):
+                draw_seq(T)
                 publish()
                 return
         except Exception:
