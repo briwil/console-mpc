@@ -12,12 +12,13 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | FADER | Move knob 8 |
 | MAIN VOLUME | Volume knob |
 | Encoder turn / push | Jog wheel turn / press |
-| Sample Select (0x24) | Left arrow (guess) |
+| Sample Select (0x24) | Menu (Shift + Menu: export) |
+| Button 0x06 (panel name unknown) | Left arrow (guess) |
 | 0x4A (unidentified light) | Right arrow (guess; no button known yet) |
 | PLUS / MINUS | Octave up / down |
 | PLAY, SEQ REC, SAMPLE REC | Play, Record, Sample |
 | STOP | While playing: stops playback. Otherwise: Back. Shift + STOP: always Back (saves and quits from the top level) |
-| ERASE, MUTE, TAP TEMPO, NOTE REPEAT, CHOP, 16 LEVELS, SAMPLE | Delete, Mute, Copy, Undo, Loop, Capture, Menu |
+| ERASE, MUTE, TAP TEMPO, NOTE REPEAT, CHOP, 16 LEVELS | Delete, Mute, Copy, Undo, Loop, Capture |
 | SHIFT | Shift |
 
 Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit: Shift + STOP.

@@ -1,0 +1,48 @@
+name: Build MPC bridge
+
+# Builds the bridge library, the demo and the startup menu for the MPC (aarch64), packs them with the launcher
+# scripts, and publishes the "bridge-latest" release: mpc-bridge.tgz (unpacks to mpc/). Runs on every push that
+# changes bridge/ or launcher/, or by hand.
+
+on:
+  push:
+    branches: [main]
+    paths: ["bridge/**", "launcher/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld llvm
+          for t in nm strip; do sudo ln -sf "$(ls /usr/bin/llvm-$t-* | head -n 1)" /usr/local/bin/llvm-$t; done
+          command -v ld.lld >/dev/null || sudo ln -sf "$(ls /usr/bin/ld.lld-* | head -n 1)" /usr/local/bin/ld.lld
+      - name: Build
+        run: cd bridge && ./build.sh
+      - name: Host test of the menu (fake hardware)
+        run: |
+          gcc -O1 -fPIC -shared -DHOST_TEST -fvisibility=hidden -Wno-unused-variable bridge/jackshim.c -o /tmp/libjack_mpc_host.so -lpthread
+          gcc -O1 -DHOST_TEST bridge/bootmenu.c -o /tmp/bootmenu_host
+          cd /tmp && ./bootmenu_host 3; test $? = 11
+      - name: Pack
+        run: |
+          mkdir -p pack/mpc
+          cp bridge/libjack_mpc.so bridge/bridge_demo bridge/bootmenu launcher/*.sh pack/mpc/
+          chmod +x pack/mpc/*
+          tar czf mpc-bridge.tgz -C pack mpc
+          ls -l mpc-bridge.tgz
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete bridge-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create bridge-latest mpc-bridge.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "MPC bridge (built $(date -u +%F\ %H:%M) UTC)" \
+            --notes "libjack_mpc.so, bridge_demo, bootmenu and the launcher scripts, built for the MPC Sample (aarch64)."

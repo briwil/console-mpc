@@ -38,14 +38,14 @@ static const struct bmap BUTTONS[] = {
     { 0x0B, 56 },   /* NOTE REPEAT    -> Undo    */
     { 0x4B, 58 },   /* CHOP           -> Loop    */
     { 0x28, 52 },   /* 16 LEVELS      -> Capture */
-    { 0x06, 50 },   /* SAMPLE         -> Menu    */
     { 0x36, 55 },   /* PLUS           -> + (octave up)   */
     { 0x37, 54 },   /* MINUS          -> - (octave down) */
     { 0x0C, 43 },   /* B1  -> left button 1 (top)    */
     { 0x0D, 42 },   /* B2  -> left button 2          */
     { 0x0E, 41 },   /* B3  -> left button 3          */
     { 0x01, 40 },   /* PAD FX -> left button 4 (bottom) */
-    { 0x24, 62 },   /* (unmatched MPC button, guess) -> left arrow  */
+    { 0x24, 50 },   /* SAMPLE SELECT  -> Menu (Shift + Menu: export) */
+    { 0x06, 62 },   /* button 0x06 (name on the panel unknown) -> left arrow, a guess */
     { 0x4A, 63 },   /* (unmatched MPC button, guess) -> right arrow */
 };
 #define NBUTTONS ((int)(sizeof BUTTONS / sizeof BUTTONS[0]))
