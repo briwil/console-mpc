@@ -31,3 +31,15 @@ ld.lld -o bridge_demo demo.o -L stubs/demo -l:libc.so.6 --dynamic-linker=/lib/ld
   --no-as-needed -z noexecstack --build-id=none
 llvm-strip bridge_demo
 echo built: bridge_demo $(ls -l bridge_demo | awk '{print $5}') bytes
+
+# ---- the startup menu (bootmenu): needs only libc ----
+clang --target=aarch64-linux-gnu -O2 -fno-pic -fno-stack-protector -ffreestanding -Wall -Wextra -Wno-unused-parameter -c bootmenu.c -o bootmenu.o
+llvm-nm -u bootmenu.o | awk '{print $2}' | sort -u > undef_boot.txt
+: > stubs/boot_libc.c
+while read -r sym; do echo "void $sym(void) {}" >> stubs/boot_libc.c; done < undef_boot.txt
+mkdir -p stubs/boot
+clang --target=aarch64-linux-gnu -shared -nostdlib -fPIC -fuse-ld=lld -Wl,-soname=libc.so.6 -o stubs/boot/libc.so.6 stubs/boot_libc.c 2>/dev/null
+ld.lld -o bootmenu bootmenu.o -L stubs/boot -l:libc.so.6 --dynamic-linker=/lib/ld-linux-aarch64.so.1 \
+  --no-as-needed -z noexecstack --build-id=none
+llvm-strip bootmenu
+echo built: bootmenu $(ls -l bootmenu | awk '{print $5}') bytes

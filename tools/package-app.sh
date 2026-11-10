@@ -11,7 +11,7 @@ cp -r "$CM/pi-app" "$CM/move" "$T/console/"
 cp -r "$CM/tools/sim/stubs" "$T/console/tools/sim/"
 tar xzf "$LIBS" -C "$T/console/pi-app"
 rm -rf "$T/console/move/manual" "$T/console/move/anim"
-cp "$HERE/bridge/libjack_mpc.so" "$HERE/bridge/bridge_demo" "$HERE/launcher/mpc-console.sh" "$T/console/mpc/"
+cp "$HERE/bridge/libjack_mpc.so" "$HERE/bridge/bridge_demo" "$HERE/bridge/bootmenu" "$HERE/launcher/"*.sh "$T/console/mpc/"
 chmod +x "$T/console/mpc/"*
 tar czf "$OUT" -C "$T" console
 rm -rf "$T"

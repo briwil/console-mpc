@@ -16,8 +16,11 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | 0x4A (unidentified light) | Right arrow (guess; no button known yet) |
 | PLUS / MINUS | Octave up / down |
 | PLAY, SEQ REC, SAMPLE REC | Play, Record, Sample |
-| STOP | Back (Shift + Back saves and quits) |
+| STOP | While playing: stops playback. Otherwise: Back. Shift + STOP: always Back (saves and quits from the top level) |
 | ERASE, MUTE, TAP TEMPO, NOTE REPEAT, CHOP, 16 LEVELS, SAMPLE | Delete, Mute, Copy, Undo, Loop, Capture, Menu |
 | SHIFT | Shift |
 
 Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit: Shift + STOP.
+
+## Starting without a computer
+`sh /data/UserData/console/mpc/install-boot.sh` adds a startup menu (PAD 1 = Console, PAD 2 = stock MPC, no answer = MPC) to the SD card's autorun; `... install-boot.sh remove` undoes it; a file named NOCONSOLE on the SD card skips it once.

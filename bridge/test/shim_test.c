@@ -156,6 +156,7 @@ int main(int argc, char **argv)
 
     /* lights and screen */
     sent_lights = 1;
+    int g0 = ngot;
     usleep(150000);
     fflush(lg);
     char cmd[256];
@@ -169,6 +170,15 @@ int main(int argc, char **argv)
     CHECK(idle == 0, "A: unlit pads show the faint idle blue");
     CHECK(screen[56 * 320 + 32] == 0x00F2EBDD && screen[(56 + 1) * 320 + 33] == 0x00F2EBDD, "A: screen pixel (0,0) drawn 2x2 at (32,56)");
     CHECK(screen[(56 + 127) * 320 + 32 + 255] == 0x00F2EBDD && screen[56 * 320 + 40] == 0, "A: pixel (127,63) drawn, others dark");
+    /* STOP: Play is lit (the core said so above) -> STOP presses Play; Shift + STOP = Back */
+    send((unsigned char[]){ 0x90, 0x51, 0x7F }, 3);
+    send((unsigned char[]){ 0x80, 0x51, 0x00 }, 3);
+    CHECK(expect(g0, 0xBF, 85, 127) && expect(g0 + 1, 0xBF, 85, 0), "A: STOP while playing -> Play (stops it)");
+    send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);
+    send((unsigned char[]){ 0x90, 0x51, 0x7F }, 3);
+    send((unsigned char[]){ 0x80, 0x51, 0x00 }, 3);
+    send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);
+    CHECK(expect(g0 + 2, 0xBF, 49, 127) && expect(g0 + 3, 0xBF, 51, 127) && expect(g0 + 4, 0xBF, 51, 0), "A: Shift + STOP -> Back");
     CHECK(c_deactivate(cl) == 0, "A: deactivate");
 
     /* B: the real core on the shim */

@@ -12,3 +12,5 @@ bridge/undef*.txt
 bridge/libjack_mpc.so
 bridge/bridge_demo
 bridge/demo.o
+bridge/bootmenu
+bridge/bootmenu.o

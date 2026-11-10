@@ -60,6 +60,7 @@ static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47,
 
 /* ---- state ---- */
 static int step_mode, right_bank, knob_bank;
+static int shift_held, stop_target = -1;     /* STOP: stops playback (Play) while playing, else Back; Shift + STOP = Back */
 static int pad_target[16];                  /* Move note each MPC pad is holding down (-1 none) */
 static int knob_last[5] = { -1, -1, -1, -1, -1 };   /* K1 K2 K3 VOL FADER */
 static uint8_t move_pad[32];                /* Console's colour (velocity) for each Move pad, row*8+col */
@@ -171,8 +172,17 @@ static void mpc_pad_event(int idx, int vel, int on)
     }
 }
 
+#define MPC_SHIFT 0x31
+#define MPC_STOP  0x51
 static void mpc_button_event(int note, int down)
 {
+    if (note == MPC_SHIFT) shift_held = down;
+    if (note == MPC_STOP) {
+        if (down) stop_target = (!shift_held && move_btn[85]) ? 85 : 51;   /* move_btn[85]: Console's Play light = playing */
+        if (stop_target >= 0) send3(0xBF, stop_target, down ? 127 : 0);
+        if (!down) stop_target = -1;
+        return;
+    }
     if (note == MPC_ENC_PUSH) { send3(0xBF, 3, down ? 127 : 0); return; }
     if (down && note == MPC_SEQ) { step_mode = !step_mode; refresh_pads(); refresh_buttons(); return; }
     if (down && note == MPC_PADBANK) { right_bank = !right_bank; refresh_pads(); refresh_buttons(); return; }
