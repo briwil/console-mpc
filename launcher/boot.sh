@@ -25,9 +25,9 @@ sleep 12                                             # let the stock app finish 
 systemctl unset-environment LD_PRELOAD 2>/dev/null
 systemctl stop ac50.service
 sleep 2
-"$M/bootmenu" 6 &
+"$M/bootmenu" 15 &
 P=$!
-( sleep 25; kill "$P" 2>/dev/null ) &
+( sleep 40; kill "$P" 2>/dev/null ) &
 W=$!
 wait "$P"; R=$?
 kill "$W" 2>/dev/null

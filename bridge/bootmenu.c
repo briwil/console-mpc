@@ -145,6 +145,7 @@ static void pad_led(int pad, int r, int g, int b)
     midi_write(m, 12);
 }
 
+static void midi_close(void);
 static void midi_open(void)
 {
 #ifndef HOST_TEST
@@ -160,6 +161,13 @@ static void midi_open(void)
         int r = ioctl(midifd, 0xC0305710UL, p);
         say(r == 0 ? "midi: opened, framing off\n" : "midi: opened, framing ioctl FAILED\n");
     }
+#endif
+}
+
+static void midi_close(void)
+{
+#ifndef HOST_TEST
+    if (midifd >= 0) { close(midifd); midifd = -1; }
 #endif
 }
 
@@ -209,7 +217,7 @@ int main(int argc, char **argv)
     for (int p = 2; p < 16; p++) pad_led(p, 0, 0, 0);
     int choice = 11, last = -1;
     uint8_t st = 0;
-    int need = 0, n = 0;
+    int need = 0, n = 0, heard = 0;
     uint8_t d[2];
     for (int t = 0; t < secs * 50 && choice == 11; t++) {
 #ifdef HOST_TEST
@@ -221,6 +229,12 @@ int main(int argc, char **argv)
         if (left != last) { last = left; draw(left); flush(); }
         uint8_t buf[64];
         int k = midi_read(buf, sizeof buf), picked = 0;
+        if (k > 0) heard = 1;
+        if (!heard && t > 0 && t % 100 == 0) {      /* silent so far: let go of the port, reopen it, light the pads again */
+            midi_close(); midi_open();
+            pad_led(0, 0, 110, 20); pad_led(1, 70, 70, 70);
+            for (int p = 2; p < 16; p++) pad_led(p, 0, 0, 0);
+        }
         for (int i = 0; i < k; i++) {
             uint8_t b = buf[i];
             if (b >= 0xF8) continue;
