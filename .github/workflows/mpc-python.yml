@@ -31,7 +31,7 @@ jobs:
           test -x python/bin/python3
           python/bin/python3 -c "import sys; print(sys.version)"
           python/bin/python3 -m ensurepip --upgrade || true
-          python/bin/python3 -m pip install --no-cache-dir numpy
+          python/bin/python3 -m pip install --no-cache-dir numpy pillow
           # smaller: no tests, no bytecode caches, no pip's own cache
           find python -name "__pycache__" -type d -prune -exec rm -rf {} +
           find python/lib -type d \( -name tests -o -name test \) -path "*site-packages/numpy*" -prune -exec rm -rf {} +
@@ -43,7 +43,7 @@ jobs:
           mkdir -p /tmp/moved && cp -r python /tmp/moved/python
           cd /tmp
           /tmp/moved/python/bin/python3 -I -c "
-          import numpy, ctypes, json, threading, queue, struct, wave, glob, shutil, subprocess, faulthandler
+          import numpy, PIL.Image, PIL.ImageDraw, PIL.ImageFont, ctypes, json, threading, queue, struct, wave, glob, shutil, subprocess, faulthandler
           a = numpy.arange(12, dtype=numpy.float32).reshape(3, 4)
           print('numpy', numpy.__version__, float((a @ a.T).sum()))"
           # what the MPC has: glibc 2.39, libstdc++ 6.0.32; list what this Python needs beyond that
@@ -60,5 +60,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete runtime-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
-          gh release create runtime-latest mpc-python.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "MPC runtime (Python ${PYVER} + numpy)" \
+          gh release create runtime-latest mpc-python.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "MPC runtime (Python ${PYVER} + numpy + Pillow)" \
             --notes "Relocatable Python with numpy for the MPC Sample (aarch64, glibc). Built by .github/workflows/mpc-python.yml."
