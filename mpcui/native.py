@@ -224,6 +224,123 @@ def draw_tape(T):
         c.text(W - 4 - c.width("LOOP"), H - 10, "LOOP", ACC)
 
 
+# ------------------------------------------------------------------ the zoomed track
+
+def draw_focus(T):
+    """The zoomed track (B3 again): the whole width and most of the height for one track's sound."""
+    c = canvas
+    c.clear()
+    e, t = T.engine, T.tape
+    n = T.focus.shown
+    c.rect(0, 0, W, TOP_H, BAR)
+    rec = bool(T.recording)
+    state = "REC" if rec else "PLAY" if T.playing else "STOP"
+    c.text(4, 1, state, RED if rec else ACC if T.playing else MID)
+    c.text(40, 1, "TRACK %d" % n, FG)
+    c.text(100, 1, "%.0f BPM" % (e.bpm if e else 120), MID)
+    pos = T.position_text(t.pos)[:14]
+    c.text(W - 4 - c.width(pos), 1, pos, FG)
+    if not e:
+        return
+    fpb = e.frames_per_beat()
+    x0, x1 = 4, W - 4
+    mid = (x0 + x1) // 2
+    ppb = (x1 - x0) / (tape.ZOOMS[t.zoom] * tape.BEATS_PER_BAR)
+    # ruler: ticks on the beats, longer on the half bar and the bar (with its number)
+    bar = tape.BEATS_PER_BAR
+    c.rect(x0, RULER_Y, x1 - x0, RULER_H, (28, 34, 40))
+    k = int(t.pos - (mid - x0) / ppb) - 1
+    while True:
+        x = int(round(mid + (k - t.pos) * ppb))
+        if x >= x1:
+            break
+        if x >= x0:
+            in_bar = k % bar
+            if abs(in_bar) < 1e-6:
+                c.rect(x, RULER_Y + 3, 1, 8, FG)
+                c.text(x + 3, RULER_Y + 3, str(int(k // bar) + 1), MID)
+            elif ppb >= 6 and abs(in_bar - bar / 2) < 1e-6:
+                c.rect(x, RULER_Y + 6, 1, 5, MID)
+            elif ppb >= 6:
+                c.rect(x, RULER_Y + 8, 1, 3, DIM)
+        k += 1
+    region = e.loop_region()
+    if region:
+        a = int(round(mid + (region[0] / fpb - t.pos) * ppb))
+        b = int(round(mid + (region[1] / fpb - t.pos) * ppb))
+        c.rect(max(x0, a), RULER_Y, max(0, min(x1, b) - max(x0, a)), 2, ACC if e.loop_on else DIM)
+    # the track
+    lane_top, lane_bot = RULER_Y + RULER_H + 3, H - 44
+    centre = (lane_top + lane_bot) // 2
+    half = (lane_bot - lane_top) // 2 - 3
+    c.rect(x0, lane_top, x1 - x0, lane_bot - lane_top, LANE)
+    c.rect(x0, centre, x1 - x0, 1, (40, 46, 52))
+    ch = e.chans(n - 1)[0]
+    boxes = e.regions[ch]
+    lv = e.levels[ch] if ch < len(e.levels) else None
+    lv = np.asarray(lv) if lv is not None and len(lv) else None
+    here = None
+    for i, r in enumerate(boxes):
+        xa = int(round(mid + (r[0] / fpb - t.pos) * ppb))
+        xb = int(round(mid + (r[1] / fpb - t.pos) * ppb))
+        if r[0] / fpb <= t.pos < r[1] / fpb:
+            here = r
+        if xb <= x0 or xa >= x1:
+            continue
+        a, b = max(x0, xa), min(x1, xb)
+        if b <= a:
+            continue
+        under = r[0] / fpb <= t.pos < r[1] / fpb
+        c.rect(a, lane_top, b - a, lane_bot - lane_top, BOX_SEL if under else BOX)
+        if lv is not None:
+            xs = np.arange(a, b)
+            idx = ((t.pos + (xs - mid) / ppb) * tape.RES).astype(int)
+            ok = (idx >= 0) & (idx < len(lv))
+            h = np.zeros(len(xs), int)
+            h[ok] = np.maximum(1, np.rint(np.minimum(1.0, lv[idx[ok]].astype(float)) * half).astype(int))
+            rows = np.arange(lane_bot - lane_top)[:, None]
+            mask = (np.abs(rows - (centre - lane_top)) <= h[None, :]) & (h[None, :] > 0)
+            c.px[lane_top:lane_bot, a:b][mask] = ACC if under else FG
+        if xa >= x0:
+            c.rect(xa, lane_top, 1, lane_bot - lane_top, FG)
+        if xb < x1:
+            c.rect(xb - 1, lane_top, 1, lane_bot - lane_top, FG)
+    for i, r in enumerate(boxes):                               # a splice: an I-beam where two boxes touch
+        if i and int(boxes[i - 1][1]) == int(r[0]):
+            x = int(round(mid + (r[0] / fpb - t.pos) * ppb))
+            if x0 <= x < x1:
+                c.rect(x, lane_top, 1, lane_bot - lane_top, WHITE)
+                c.rect(x - 3, lane_top, 7, 1, WHITE)
+                c.rect(x - 3, lane_bot - 1, 7, 1, WHITE)
+    c.rect(mid, RULER_Y, 1, lane_bot - RULER_Y, WHITE)          # the playhead
+    c.rect(mid - 3, RULER_Y - 2, 7, 3, WHITE)
+    # the settings: what knobs 1, 2 and 4-6 change
+    py = H - 40
+    c.rect(0, py, W, 40, BAR)
+    stereo = (n - 1) in e.stereo
+    try:
+        src = e.input_text(n - 1)
+    except Exception:
+        src = "?"
+    c.text(6, py + 5, "K1", DIM); c.text(24, py + 5, "STEREO" if stereo else "MONO", FG)
+    c.text(100, py + 5, "K2", DIM); c.text(118, py + 5, "IN " + str(src)[:14], FG)
+    c.text(6, py + 18, "BOX", DIM if here is None else ACC)
+    if here is None:
+        c.text(36, py + 18, "MOVE THE PLAYHEAD ONTO A BOX", DIM)
+    else:
+        gain = here[3] if len(here) > 3 else 0.0
+        fin = (here[4] if len(here) > 4 else 0) / 44100.0
+        fout = (here[5] if len(here) > 5 else 0) / 44100.0
+        def fade(sec):
+            return "OFF" if sec <= 0 else ("%d MS" % round(sec * 1000) if sec < 1 else "%.2g S" % sec)
+        c.text(36, py + 18, "K4 GAIN %+.1f DB" % gain, FG)
+        c.text(150, py + 18, "K5 IN " + fade(fin), FG)
+        c.text(236, py + 18, "K6 OUT " + fade(fout), FG)
+    if T.message and time.monotonic() < T.message_until:
+        c.rect(0, H - 12, W, 12, ACC)
+        c.text(4, H - 10, T.message[:50], BG)
+
+
 def on_tape_page(T, menu):
     """True when Console's own pages.draw would be drawing the tape page (see the end of its if / elif chain)."""
     if menu is not None and (menu.open or menu.kits.open):
@@ -233,7 +350,7 @@ def on_tape_page(T, menu):
         return False
     if T.fx_page or T.seq_page or T.drum_page or T.inst_page or getattr(T, "song_page", False):
         return False
-    return T.focus.track is None
+    return True
 
 
 def install(pages):
@@ -246,7 +363,7 @@ def install(pages):
         try:
             card = T.pagefx.state() if getattr(T, "pagefx", None) is not None else None
             if card is None and on_tape_page(T, menu) and T.engine:
-                draw_tape(T)
+                (draw_tape if T.focus.track is None else draw_focus)(T)
                 publish()
                 return
         except Exception:
