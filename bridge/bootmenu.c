@@ -58,6 +58,28 @@ static void host_ppm(const char *name)
 }
 #endif
 
+static void say(const char *s)
+{
+#ifdef HOST_TEST
+    fputs(s, stdout);
+#else
+    unsigned long n = 0;
+    while (s[n]) n++;
+    write(1, s, n);
+#endif
+}
+
+static void say_hex(const char *tag, const uint8_t *b, int n)
+{
+    char line[160];
+    static const char hx[] = "0123456789ABCDEF";
+    int k = 0;
+    while (tag[k] && k < 20) { line[k] = tag[k]; k++; }
+    for (int i = 0; i < n && k < 150; i++) { line[k++] = ' '; line[k++] = hx[b[i] >> 4]; line[k++] = hx[b[i] & 15]; }
+    line[k++] = '\n'; line[k] = 0;
+    say(line);
+}
+
 static void fb_open(void)
 {
 #ifndef HOST_TEST
@@ -126,12 +148,17 @@ static void pad_led(int pad, int r, int g, int b)
 static void midi_open(void)
 {
 #ifndef HOST_TEST
-    midifd = open("/dev/snd/midiC0D0", O_RDWR_ | O_NONBLOCK_);
-    if (midifd >= 0) {                  /* plain MIDI bytes, not the stock app's timestamped records */
+    for (int tries = 0; tries < 40 && midifd < 0; tries++) {     /* the stock app may still be letting go of it */
+        midifd = open("/dev/snd/midiC0D0", O_RDWR_ | O_NONBLOCK_);
+        if (midifd < 0) usleep(100000);
+    }
+    if (midifd < 0) { say("midi: could not open /dev/snd/midiC0D0\n"); return; }
+    {                                   /* plain MIDI bytes, not the stock app's timestamped records */
         uint64_t p[6];
         memset(p, 0, sizeof p);
         ((int *)p)[0] = 1; p[1] = 4096; p[2] = 1;
-        ioctl(midifd, 0xC0305710UL, p);
+        int r = ioctl(midifd, 0xC0305710UL, p);
+        say(r == 0 ? "midi: opened, framing off\n" : "midi: opened, framing ioctl FAILED\n");
     }
 #endif
 }
@@ -146,6 +173,10 @@ static int midi_read(uint8_t *b, int max)
 #else
     if (midifd < 0) return 0;
     long r = read(midifd, b, (unsigned long)max);
+    if (r > 0) {
+        static int logged;
+        if (logged < 25) { logged++; say_hex("midi in:", b, r > 24 ? 24 : (int)r); }
+    }
     return r > 0 ? (int)r : 0;
 #endif
 }

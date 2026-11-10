@@ -11,6 +11,8 @@ TRY=$C/boot-attempt
 
 [ -e "$MARK" ] && exit 0
 touch "$MARK"
+exec >> "$C/boot.log" 2>&1
+echo "--- boot.sh $(date)"
 [ -e /media/sample/NOCONSOLE ] && exit 0
 [ -e "$C/NOBOOT" ] && exit 0
 [ -x "$C/python/bin/python3" ] && [ -x "$M/bootmenu" ] || exit 0
@@ -19,10 +21,10 @@ touch "$TRY"
 
 n=0
 while ! systemctl is-active --quiet ac50.service && [ $n -lt 90 ]; do sleep 1; n=$((n + 1)); done
-sleep 6                                              # let the stock app finish starting
+sleep 12                                             # let the stock app finish starting (and the panel finish talking to it)
 systemctl unset-environment LD_PRELOAD 2>/dev/null
 systemctl stop ac50.service
-sleep 1
+sleep 2
 "$M/bootmenu" 6 &
 P=$!
 ( sleep 25; kill "$P" 2>/dev/null ) &
