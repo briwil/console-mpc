@@ -1,0 +1,8 @@
+*.o
+*.ppm
+test/mpc_test
+test/mpc_test_host
+test/stubs/
+test/undef*.txt
+test/midi_out.txt
+test/audio.raw
