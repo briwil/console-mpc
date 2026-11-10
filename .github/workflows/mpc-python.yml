@@ -1,0 +1,60 @@
+name: Build MPC Python bundle
+
+# Builds a relocatable Python (3.10 if available) with numpy for the Akai MPC Sample (aarch64 Linux, glibc 2.39)
+# and publishes it as the "runtime-latest" release: mpc-python.tgz (unpacks to python/).
+# Run it by hand: Actions > Build MPC Python bundle > Run workflow.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Get a relocatable Python (python-build-standalone, through uv)
+        run: |
+          python3 -m venv /tmp/uvenv
+          /tmp/uvenv/bin/pip install uv
+          export UV_PYTHON_INSTALL_DIR="$PWD/py"
+          for v in 3.10 3.11 3.12; do
+            if /tmp/uvenv/bin/uv python install "$v"; then echo "PYVER=$v" >> "$GITHUB_ENV"; break; fi
+          done
+          ls py
+
+      - name: Assemble python/ and install numpy
+        run: |
+          D=$(ls -d py/cpython-*-linux-aarch64-gnu | head -n 1)
+          mv "$D" python
+          python/bin/python3 -c "import sys; print(sys.version)"
+          python/bin/python3 -m ensurepip --upgrade || true
+          python/bin/python3 -m pip install --no-cache-dir numpy
+          # smaller: no tests, no bytecode caches, no pip's own cache
+          find python -name "__pycache__" -type d -prune -exec rm -rf {} +
+          find python/lib -type d \( -name tests -o -name test \) -path "*site-packages/numpy*" -prune -exec rm -rf {} +
+          rm -rf python/lib/python*/test python/lib/python*/idlelib python/lib/python*/tkinter python/lib/python*/turtledemo
+          du -sh python
+
+      - name: Smoke test, from another folder (it has to be relocatable)
+        run: |
+          mkdir -p /tmp/moved && cp -r python /tmp/moved/python
+          cd /tmp
+          /tmp/moved/python/bin/python3 -I -c "
+          import numpy, ctypes, json, threading, queue, struct, wave, glob, shutil, subprocess, faulthandler
+          a = numpy.arange(12, dtype=numpy.float32).reshape(3, 4)
+          print('numpy', numpy.__version__, float((a @ a.T).sum()))"
+          # what the MPC has: glibc 2.39, libstdc++ 6.0.32; list what this Python needs beyond that
+          find python -name "*.so*" -type f -exec readelf -d {} \; 2>/dev/null | grep NEEDED | sort | uniq -c | sort -rn | head -n 30
+
+      - name: Pack
+        run: tar czf mpc-python.tgz python && ls -l mpc-python.tgz
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete runtime-latest --yes --cleanup-tag || true
+          gh release create runtime-latest mpc-python.tgz --title "MPC runtime (Python ${PYVER} + numpy)" \
+            --notes "Relocatable Python with numpy for the MPC Sample (aarch64, glibc). Built by .github/workflows/mpc-python.yml."
