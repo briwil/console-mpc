@@ -204,6 +204,25 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0xB0, 0x14, 12 }, 3);
         CHECK(ngot == b + 2 && got[b][1] == 74 && got[b + 1][1] == 74, "A: FADER = knob 4 (CC 74)");
     }
+    {   /* PLUS / MINUS = arrows; Shift + them = Move + / - (Console sees Shift released meanwhile); LOOP = Loop */
+        int b = ngot;
+        send((unsigned char[]){ 0x90, 0x36, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x36, 0x00 }, 3);
+        send((unsigned char[]){ 0x90, 0x37, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x37, 0x00 }, 3);
+        CHECK(expect(b, 0xBF, 63, 127) && expect(b + 2, 0xBF, 62, 127), "A: PLUS = right arrow, MINUS = left arrow");
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);
+        send((unsigned char[]){ 0x90, 0x36, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x36, 0x00 }, 3);
+        send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);
+        CHECK(expect(b, 0xBF, 49, 127) && expect(b + 1, 0xBF, 49, 0) && expect(b + 2, 0xBF, 55, 127) && expect(b + 3, 0xBF, 49, 127),
+              "A: Shift + PLUS = Move + (Shift lifted for it, then back)");
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x4A, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x4A, 0x00 }, 3);
+        CHECK(expect(b, 0xBF, 58, 127), "A: LOOP -> Move Loop");
+    }
     int s0 = ngot;
     /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings); PAD BANK = 17-32; SEQ goes to steps */
     send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);

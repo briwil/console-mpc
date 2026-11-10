@@ -37,17 +37,15 @@ static const struct bmap BUTTONS[] = {
     { 0x2B, 88 },   /* MUTE           -> Mute    */
     { 0x35, 60 },   /* TAP TEMPO      -> Copy    */
     { 0x0B, 56 },   /* NOTE REPEAT    -> Undo    */
-    { 0x4B, 58 },   /* CHOP           -> Loop    */
+    { 0x4A, 58 },   /* LOOP           -> Loop (the tape's loop in / out) */
     { 0x28, 52 },   /* 16 LEVELS      -> Capture */
-    { 0x36, 55 },   /* PLUS           -> + (octave up)   */
-    { 0x37, 54 },   /* MINUS          -> - (octave down) */
+    { 0x36, 55 },   /* PLUS (light only): the press is the right arrow; Shift + PLUS = Move + (octave up) */
+    { 0x37, 54 },   /* MINUS (light only): the press is the left arrow; Shift + MINUS = Move - (octave down) */
     { 0x0C, 43 },   /* B1  -> left button 1 (top)    */
     { 0x0D, 42 },   /* B2  -> left button 2          */
     { 0x0E, 41 },   /* B3  -> left button 3          */
     { 0x01, 40 },   /* PAD FX -> left button 4 (bottom) */
     { 0x24, 50 },   /* SAMPLE SELECT  -> Menu (Shift + Menu: export) */
-    { 0x06, 62 },   /* button 0x06 (name on the panel unknown) -> left arrow, a guess */
-    { 0x4A, 63 },   /* (unmatched MPC button, guess) -> right arrow */
 };
 #define NBUTTONS ((int)(sizeof BUTTONS / sizeof BUTTONS[0]))
 
@@ -274,6 +272,13 @@ static void mpc_button_event(int note, int down)
     if (down && note == MPC_PADBANK) { right_bank = !right_bank; refresh_pads(); refresh_buttons(); return; }
     if (down && note == MPC_KNOBFX) { release_knob_pads(); knob_mode = !knob_mode; refresh_pads(); refresh_buttons(); return; }
     if (note == MPC_SEQ || note == MPC_PADBANK || note == MPC_KNOBFX) return;
+    if (note == 0x36 || note == 0x37) {                   /* PLUS / MINUS = right / left arrow; with Shift: the Move's + / - */
+        int plus = note == 0x36;
+        if (!shift_held) send3(0xBF, plus ? 63 : 62, down ? 127 : 0);
+        else if (down) { send3(0xBF, 49, 0); send3(0xBF, plus ? 55 : 54, 127); send3(0xBF, 49, 127); }   /* Console must not see Shift on it */
+        else send3(0xBF, plus ? 55 : 54, 0);
+        return;
+    }
     for (int i = 0; i < NBUTTONS; i++)
         if (BUTTONS[i].mpc == note) { send3(0xBF, BUTTONS[i].move, down ? 127 : 0); return; }
 }
