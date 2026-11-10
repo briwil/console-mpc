@@ -30,7 +30,9 @@ jobs:
         run: |
           gcc -O1 -fPIC -shared -DHOST_TEST -fvisibility=hidden -Wno-unused-variable bridge/jackshim.c -o /tmp/libjack_mpc_host.so -lpthread
           gcc -O1 -DHOST_TEST bridge/bootmenu.c -o /tmp/bootmenu_host
-          cd /tmp && ./bootmenu_host 3; test $? = 11
+          cd /tmp
+          r=0; ./bootmenu_host 3 || r=$?     # 11 = timeout, stock app
+          test "$r" = 11
       - name: Pack
         run: |
           mkdir -p pack/mpc
