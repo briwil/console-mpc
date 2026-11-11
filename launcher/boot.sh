@@ -20,7 +20,8 @@ n=0
 while ! systemctl is-active --quiet ac50.service && [ $n -lt 90 ]; do sleep 1; n=$((n + 1)); done
 # The stock launcher first runs az0x-firmware-tool (it talks to the pad / button panel over the serial port), then starts the app.
 # Stopping the service while that tool is still running left the panel half started: Console ran and nothing responded. So wait for
-# the tool to finish (or the app to be up), then take over at once: no need to wait for the stock app to load.
+# the tool to finish (or the app to be up), then take over at once: no need to wait for the stock app to load. (The panel's start-up
+# handshake the stock app does after that is now done by the bridge itself.)
 w=0; seen=0
 while [ $w -lt 90 ]; do
   if ps | grep -q '[a]z0x-firmware-too[l]'; then seen=1

@@ -485,6 +485,19 @@ static void *audio_main(void *arg)
     struct port *cin = find("controls_in"), *ol = find("out_L"), *orr = find("out_R");
     struct port *il = find("in_L"), *ir = find("in_R");
     mapping_init();
+#ifndef HOST_TEST
+    /* The panel's start-up handshake, exactly what the stock app sends when it starts (recorded with panelsniff): an Identity
+       Request, then the message F0 47 7F 5C 42 00 00 F7 (the panel answers with its knob positions). Without it, a panel whose
+       stock app was stopped too early stays silent. Harmless if it has been done already. */
+    {
+        static const uint8_t ident[6] = { 0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7 };
+        static const uint8_t start[8] = { 0xF0, 0x47, 0x7F, 0x5C, 0x42, 0x00, 0x00, 0xF7 };
+        hw_midi_write(ident, 6);
+        usleep(150000);
+        hw_midi_write(start, 8);
+        usleep(150000);
+    }
+#endif
     while (running) {
         uint8_t raw[64];
         int n;
