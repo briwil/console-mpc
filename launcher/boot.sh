@@ -29,7 +29,16 @@ while [ $w -lt 90 ]; do
   fi
   sleep 1; w=$((w + 1))
 done
-sleep 2
+# the stock app is up now but is still talking to the panel (its start-up handshake). Stopping it in the middle leaves the panel
+# silent, so wait until the panel's serial port has been quiet for 4 s in a row (at most 60 s more)
+txn() { sed -n 's/^3:.* tx:\([0-9]*\).*/\1/p' /proc/tty/driver/* 2>/dev/null | head -n 1; }
+last=$(txn); quiet=0; q=0
+while [ $q -lt 60 ] && [ $quiet -lt 4 ]; do
+  sleep 1; q=$((q + 1)); now=$(txn)
+  if [ "$now" = "$last" ]; then quiet=$((quiet + 1)); else quiet=0; last=$now; fi
+done
+echo "panel quiet after ${q}s (tx $last)"
+sleep 1
 UP_MIN=0
 [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (optional extra wait, in seconds of uptime:  echo 40 > $C/UP_MIN)
 up=$(cut -d. -f1 /proc/uptime)
