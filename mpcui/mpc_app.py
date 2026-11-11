@@ -109,6 +109,12 @@ if _STRESS:
     G["main"].__globals__["STRESS_MINUTES"] = _STRESS      # (where main() looks it up)
 main = G["main"]
 try:
+    import padhello
+    padhello.install(main.__globals__)                   # start-up on the pads: 2 seconds of random colours (no HELLO letters)
+except Exception:
+    import traceback
+    print("pad start-up is off:\n" + traceback.format_exc(), flush=True)
+try:
     import stepentry
     stepentry.install(G["MoveBoard"], G.get("pad_velocity"))
     import native as _native

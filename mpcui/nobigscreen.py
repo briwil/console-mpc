@@ -4,7 +4,7 @@ import random
 import sys
 import types
 
-# what Console still asks of the module: the colour family of this start (the HELLO animation on the pads)
+# what Console still asks of the module (its colour family; the pads no longer use it)
 FAMILY = random.choice(["ORANGE", "GREEN", "YELLOW", "TEAL", "PURPLE"])
 PAD_COLOUR = {"ORANGE": 3, "GREEN": 11, "YELLOW": 8, "TEAL": 15, "PURPLE": 22}
 
