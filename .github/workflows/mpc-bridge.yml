@@ -39,6 +39,7 @@ jobs:
           cp bridge/libjack_mpc.so bridge/bridge_demo bridge/bootmenu launcher/*.sh mpcui/*.py pack/mpc/
           mkdir -p pack/mpc/fonts && cp mpcui/fonts/* pack/mpc/fonts/
           chmod +x pack/mpc/*
+          echo "${GITHUB_SHA::7} $(date -u +%F\ %H:%M)" > pack/mpc/BUILD
           tar czf mpc-bridge.tgz -C pack mpc
           ls -l mpc-bridge.tgz
       - name: Publish
