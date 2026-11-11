@@ -3,6 +3,12 @@ Console's files are not changed: this adds the same search paths app.py does, wr
 import os
 import runpy
 import sys
+try:                                  # `kill -USR1 <pid>` writes where every thread is into the log (to find out where a freeze sits)
+    import faulthandler
+    import signal
+    faulthandler.register(signal.SIGUSR1, all_threads=True)
+except Exception:
+    pass
 
 C = os.environ.get("CONSOLE_HOME", "/data/UserData/console")
 APP_PY = os.path.join(C, "move", "app.py")
