@@ -210,6 +210,25 @@ def draw_focus(T, nat):
             sub[mask[:sub.shape[0], :sub.shape[1]]] = nat.DIM if muted else nat.FG
         if xa >= x0:
             c.rect(xa, top + 1, 1, rows_n, nat.FG)
+    # light lines down through the box: the grid (thin and dark), the beats, the bars (lightest); they pass behind the waveform
+    ink = np.array(nat.DIM if muted else nat.FG, dtype=c.px.dtype)
+    marks = {}
+    for size, col in ((t.step, (72, 82, 90)), (1.0, (100, 110, 112)), (float(tape.BEATS_PER_BAR), (150, 156, 160))):
+        if size * ppb < 4 and size < tape.BEATS_PER_BAR:
+            continue                                             # too close together at this zoom
+        k = int((t.pos - (mid - x0) / ppb) / size) - 1
+        while True:
+            x = int(round(mid + (k * size - t.pos) * ppb))
+            if x >= x1:
+                break
+            if x > x0 and k >= 0:
+                marks[x] = col
+            k += 1
+    for x, col in marks.items():
+        colm = c.px[top + 1:top + 1 + rows_n, x]
+        colm[~(colm == ink).all(axis=1)] = col
+        if col[0] < 150:
+            c.rect(x, RULER_Y + 7, 1, 3, nat.DIM)                # ... and a tick for it in the ruler at the very top
     for i, r in enumerate(boxes):                                # a splice: an I-beam where two boxes touch
         if i and int(boxes[i - 1][1]) == int(r[0]):
             x = int(round(mid + (r[0] / fpb - t.pos) * ppb))
