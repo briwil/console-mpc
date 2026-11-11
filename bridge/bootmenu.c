@@ -139,6 +139,20 @@ static void midi_write(const uint8_t *b, int n)
 #endif
 }
 
+/* The panel only talks once it has had its start-up handshake (the stock app does it, and stopping the stock app leaves the panel
+ * silent): Identity Request, then the knob-dump request. */
+static void panel_hello(void)
+{
+    static const uint8_t a[6] = { 0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7 };
+    static const uint8_t b[8] = { 0xF0, 0x47, 0x7F, 0x5C, 0x42, 0x00, 0x00, 0xF7 };
+#ifndef HOST_TEST
+    midi_write(a, 6); usleep(150000);
+    midi_write(b, 8); usleep(150000);
+#else
+    (void)a; (void)b;
+#endif
+}
+
 static void pad_led(int pad, int r, int g, int b)
 {
     uint8_t m[12] = { 0xF0, 0x47, 0x7F, 0x5C, 0x65, 0x00, 0x04, (uint8_t)pad, (uint8_t)r, (uint8_t)g, (uint8_t)b, 0xF7 };
@@ -212,6 +226,7 @@ int main(int argc, char **argv)
     if (secs > 30) secs = 30;
     fb_open();
     midi_open();
+    panel_hello();
     pad_led(0, 0, 110, 20);
     pad_led(1, 70, 70, 70);
     for (int p = 2; p < 16; p++) pad_led(p, 0, 0, 0);
@@ -231,7 +246,7 @@ int main(int argc, char **argv)
         int k = midi_read(buf, sizeof buf), picked = 0;
         if (k > 0) heard = 1;
         if (!heard && t > 0 && t % 100 == 0) {      /* silent so far: let go of the port, reopen it, light the pads again */
-            midi_close(); midi_open();
+            midi_close(); midi_open(); panel_hello();
             pad_led(0, 0, 110, 20); pad_led(1, 70, 70, 70);
             for (int p = 2; p < 16; p++) pad_led(p, 0, 0, 0);
         }
