@@ -50,6 +50,13 @@ try:
     import stepentry
     stepentry.install(G["MoveBoard"], G.get("pad_velocity"))
     import native as _native
+    import pagefx as _pagefx
+    _label = _pagefx.label
+
+    def _label2(T):
+        name = _label(T)
+        return "INSTRUMENTS" if name == "INSTRUMENT SELECTION" else name        # the page-change card's name for the list
+    _pagefx.label = _label2
     _orig_note = G["MoveBoard"].note
 
     def _note(self, num, val):
