@@ -137,8 +137,61 @@ def _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb):
         c.rect(max(x0, a), RULER_Y, max(0, min(x1, b) - max(x0, a)), 2, G[6] if e.loop_on else G[3])
 
 
+_GY = None
+_GX = None
+
+
+def _grids():
+    global _GY, _GX
+    if _GY is None:
+        import numpy as _np
+        _GY, _GX = _np.ogrid[0:240, 0:320]
+    return _GY, _GX
+
+
+def _disc(cx, cy, r0, r1, a0=None, a1=None):
+    """A boolean mask: the ring r0..r1 around (cx, cy), optionally only the wedge of angle a0..a1 (radians)."""
+    gy, gx = _grids()
+    dy = gy - cy
+    dx = gx - cx
+    d2 = dx * dx + dy * dy
+    m = (d2 >= r0 * r0) & (d2 <= r1 * r1)
+    if a0 is not None:
+        ang = np.arctan2(dy, dx) % (2 * np.pi)
+        a0 %= 2 * np.pi
+        a1 %= 2 * np.pi
+        m &= (ang >= a0) & (ang <= a1) if a0 <= a1 else ((ang >= a0) | (ang <= a1))
+    return m
+
+
+def _reel(c, cx, cy, R, wf, rot):
+    """A tape reel at (cx, cy): the flange (rim + 3 rotating spokes), and tape wound to fraction wf (0..1)."""
+    hub = 9
+    px = c.px
+    px[_disc(cx, cy, 0, R)] = (18, 22, 16)                          # the flange face (very dark)
+    diskR = hub + (R - hub - 2) * max(0.0, min(1.0, wf))
+    if diskR > hub:
+        px[_disc(cx, cy, hub, diskR)] = G[3]                        # the tape wound on (dark green)
+    for k in range(3):                                              # three light spoke-windows, turning
+        a = rot + k * 2 * np.pi / 3
+        px[_disc(cx, cy, hub + 1, R - 2, a - 0.32, a + 0.32)] = G[5]
+    px[_disc(cx, cy, R - 1, R + 0.6)] = G[6]                        # the rim
+    px[_disc(cx, cy, 0, hub)] = G[6]                                # the hub
+    px[_disc(cx, cy, 0, 2.2)] = (10, 12, 10)                        # the spindle hole
+
+
+def _time(beats, bpm):
+    sec = beats / max(1e-6, bpm) * 60.0
+    m = int(sec // 60)
+    s2 = int(sec % 60)
+    cc = int((sec - int(sec)) * 100)
+    return "%d:%02d:%02d" % (m, s2, cc)
+
+
 def draw_focus(T, nat):
-    """The zoomed track: one big box in the same style."""
+    """The zoomed track as a reel-to-reel tape deck, in Console's own look (greens, Silkscreen)."""
+    global nat_white
+    nat_white = nat.WHITE
     c = nat.canvas
     c.clear((0, 0, 0))
     e, t = T.engine, T.tape
@@ -147,92 +200,94 @@ def draw_focus(T, nat):
     if not e:
         return
     fpb = e.frames_per_beat()
-    BX, BW = 32, 285                                             # the big box: x 32 .. 317
-    top, bot = 16, 156
-    x0, x1 = BX + 1, BX + BW - 1
-    mid = x0 + (x1 - x0) // 3
-    ppb = (x1 - x0) / (tape.ZOOMS[t.zoom] * tape.BEATS_PER_BAR)
-    _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb)
     muted = not e.audible(n - 1)
-    c.text_px(4, 52, str(n), G[2] if muted else nat.WHITE, 24, 0)
+    frac = max(0.0, min(1.0, t.pos / t.total_beats)) if t.total_beats else 0.0
+    rot = t.pos * 1.7                                               # the reels turn as the tape moves (still when stopped)
+
+    # the track number, big, top-left
+    c.text_px(6, 40, str(n), G[2] if muted else nat.WHITE, 32, 0)
+    # the time counter, top-centre
+    tc = _time(t.pos, e.bpm)
+    c.text_px(160 - text_width(c.pxfont(24), tc, -2) // 2, 36, tc, nat.WHITE, 24, -2)
+
+    # the two reels: the left empties as the right fills
+    ly, R = 118, 50
+    lx, rx = 82, 238
+    _reel(c, lx, ly, R, 1.0 - frac, rot)
+    _reel(c, rx, ly, R, frac, rot)
+
+    # the play / pause / record glyph, between the reels
+    gx, gy = 160, 104
     if T.recording:
-        c.rect(6, 2, 9, 9, nat.RED)
+        c.px[_disc(gx, gy, 0, 8)] = nat.RED
     elif T.playing:
-        for r in range(9):
-            c.rect(6, 2 + r, max(1, 9 - abs(r * 2 - 8)), 1, nat.WHITE)
+        for r in range(13):
+            c.rect(gx - 6, gy - 6 + r, max(1, 12 - abs(r * 2 - 12)) // 2 + 1, 1, nat.WHITE)
     else:
-        c.frame(6, 2, 9, 9, G[4])
-    c.frame(BX, top, BW, bot - top, OUTLINE[n - 1])
-    rows_n = bot - top - 2
-    centre = rows_n // 2
-    half = centre - 3
+        c.rect(gx - 6, gy - 7, 4, 14, nat.WHITE)
+        c.rect(gx + 2, gy - 7, 4, 14, nat.WHITE)
+
+    # the tape path: from the bottom of each reel, dipping to a head in the middle
+    hy = ly + R + 14
+    c.rect(lx, ly + R - 1, 1, 2, G[5])
+    c.rect(rx, ly + R - 1, 1, 2, G[5])
+    for xa, xb in ((lx, gx), (gx, rx)):
+        steps = abs(xb - xa)
+        for s2 in range(steps):
+            fx = s2 / steps
+            x = int(round(xa + (xb - xa) * fx))
+            y = int(round((ly + R) + (hy - (ly + R)) * fx)) if xa < gx else int(round(hy + ((ly + R) - hy) * fx))
+            c.rect(x, y, 1, 1, G[4])
+    c.px[_disc(gx, hy, 0, 5)] = G[6]                                # the capstan / head
+    c.px[_disc(gx, hy, 0, 2)] = (10, 12, 10)
+
+    # the bottom strip: this track's recording as a bar, with a ruler and the playhead
+    sx0, sx1, sy = 8, 312, 196
+    mid = sx0 + (sx1 - sx0) // 3
+    ppb = (sx1 - sx0) / (tape.ZOOMS[t.zoom] * tape.BEATS_PER_BAR)
+    bar = tape.BEATS_PER_BAR                                        # bar numbers just above the strip
+    k = int(t.pos - (mid - sx0) / ppb) - 1
+    while True:
+        x = int(round(mid + (k - t.pos) * ppb))
+        if x >= sx1:
+            break
+        if x >= sx0 and k % bar == 0 and k >= 0:
+            c.rect(x, sy - 6, 1, 4, G[4])
+            c.text_px(x + 3, sy - 3, str(int(k // bar) + 1), G[4], 8, 0)
+        k += 1
+    bar_col = G[1] if muted else OUTLINE[n - 1]
     ch = e.chans(n - 1)[0]
     boxes = e.regions[ch]
-    lv = e.levels[ch] if ch < len(e.levels) else None
-    lv = np.asarray(lv) if lv is not None and len(lv) else None
-    bar_col = G[1] if muted else OUTLINE[n - 1]
     here = None
-    for i, r in enumerate(boxes):
+    c.frame(sx0, sy, sx1 - sx0, 20, G[3])
+    for r in boxes:
         xa = int(round(mid + (r[0] / fpb - t.pos) * ppb))
         xb = int(round(mid + (r[1] / fpb - t.pos) * ppb))
         if r[0] / fpb <= t.pos < r[1] / fpb:
             here = r
-        if xb <= x0 or xa >= x1:
+        if xb <= sx0 or xa >= sx1:
             continue
-        a, b = max(x0, xa), min(x1, xb)
-        if b <= a:
-            continue
-        c.rect(a, top + 1 + centre - 14, b - a, 28, bar_col)     # recorded audio: a plain bar
-    # light lines down through the box: the grid (thin and dark), the beats, the bars (lightest); they pass behind the waveform
-    ink = np.array(bar_col, dtype=c.px.dtype)
-    marks = {}
-    for size, col in ((t.step, (72, 82, 90)), (1.0, (100, 110, 112)), (float(tape.BEATS_PER_BAR), (150, 156, 160))):
-        if size * ppb < 4 and size < tape.BEATS_PER_BAR:
-            continue                                             # too close together at this zoom
-        k = int((t.pos - (mid - x0) / ppb) / size) - 1
-        while True:
-            x = int(round(mid + (k * size - t.pos) * ppb))
-            if x >= x1:
-                break
-            if x > x0 and k >= 0:
-                marks[x] = col
-            k += 1
-    for x, col in marks.items():
-        colm = c.px[top + 1:top + 1 + rows_n, x]
-        colm[~(colm == ink).all(axis=1)] = col
-        if col[0] < 150:
-            c.rect(x, RULER_Y + 7, 1, 3, nat.DIM)                # ... and a tick for it in the ruler at the very top
-    for i, r in enumerate(boxes):                                # a splice: an I-beam where two boxes touch
-        if i and int(boxes[i - 1][1]) == int(r[0]):
-            x = int(round(mid + (r[0] / fpb - t.pos) * ppb))
-            if x0 <= x < x1:
-                c.rect(x, top, 1, rows_n + 2, nat.WHITE)
-                c.rect(x - 3, top, 7, 1, nat.WHITE)
-                c.rect(x - 3, bot - 1, 7, 1, nat.WHITE)
-    c.rect(mid, RULER_Y, 1, bot - RULER_Y, nat.WHITE)            # the playhead
-    # what knobs 1, 2 and the pads change
+        a, b = max(sx0 + 1, xa), min(sx1 - 1, xb)
+        if b > a:
+            c.rect(a, sy + 5, b - a, 10, bar_col)
+    c.rect(mid, sy - 1, 1, 22, nat.WHITE)                           # the playhead
+
+    # one compact line of the box's settings (what knobs 4-6 edit)
     stereo = (n - 1) in e.stereo
     try:
         src = str(e.input_text(n - 1))
     except Exception:
         src = "?"
-    c.text_px(8, 182, "STEREO" if stereo else "MONO", nat.WHITE, 16, -1)
-    c.text_px(130, 182, src[:14], nat.WHITE, 16, -1)
-    if here is None:
-        c.text_px(8, 208, "NO BOX HERE", G[3], 16, -1)
-    else:
+    c.text_px(8, 232, ("STEREO" if stereo else "MONO") + "  " + src[:10], G[5], 16, -1)
+    if here is not None:
         gain = here[3] if len(here) > 3 else 0.0
         fin = (here[4] if len(here) > 4 else 0) / 44100.0
         fout = (here[5] if len(here) > 5 else 0) / 44100.0
 
         def fade(sec):
-            return "OFF" if sec <= 0 else ("%d MS" % round(sec * 1000) if sec < 1 else "%.2g S" % sec)
-        c.text_px(8, 208, "GAIN %+.1f" % gain, nat.WHITE, 16, -1)
-        c.text_px(130, 208, "IN " + fade(fin), nat.WHITE, 16, -1)
-        c.text_px(230, 208, "OUT " + fade(fout), nat.WHITE, 16, -1)
-    bpm = "%.0f BPM" % e.bpm
-    c.text_px(317 - text_width(c.pxfont(16), bpm, -1), 236, bpm, nat.WHITE, 16, -1)
+            return "OFF" if sec <= 0 else ("%dMS" % round(sec * 1000) if sec < 1 else "%.2gS" % sec)
+        txt = "G%+.1f  I%s O%s" % (gain, fade(fin), fade(fout))
+        c.text_px(312 - text_width(c.pxfont(16), txt, -1), 232, txt, nat.WHITE, 16, -1)
     if T.message and now < T.message_until:
-        c.text_px(8, 236, T.message.upper()[:20], nat.WHITE, 16, -1)
-    else:
-        c.text_px(8, 236, T.position_text(t.pos)[:14].upper(), nat.WHITE, 16, -1)
+        c.rect(0, 220, 320, 20, (0, 0, 0))
+        c.text_px(8, 236, T.message.upper()[:22], nat.WHITE, 16, -1)
