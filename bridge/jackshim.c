@@ -131,6 +131,8 @@ EXPORT void mpcshim_test_inject(const unsigned char *b, int n)
 EXPORT void mpcshim_test_log(FILE *f) { host_log = f; }
 EXPORT uint32_t mpcshim_test_screen[320 * 240];
 EXPORT long mpcshim_test_frames;
+EXPORT volatile int32_t mpcshim_test_peak;                /* the loudest output sample since the test last cleared it */
+EXPORT volatile float mpcshim_test_click;                 /* how much the metronome has added */
 #endif
 
 static int hw_audio_open(void)
@@ -194,7 +196,7 @@ static void hw_audio_read(float *l, float *r)
 static void hw_audio_write(const int32_t *fr, int n)
 {
 #ifdef HOST_TEST
-    (void)fr; (void)n;
+    for (int i = 0; i < n * 2; i++) { int32_t a = fr[i] < 0 ? -fr[i] : fr[i]; if (a > mpcshim_test_peak) mpcshim_test_peak = a; }
     mpcshim_test_frames += n;
     usleep(2900);
 #else
@@ -407,6 +409,91 @@ static void pagemode_poll(void)
     if (n == 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N'); page_seq = (ch == 'S' || ch == 'P'); }
 }
 
+/* ---- the metronome: /tmp/console-metro = "on volume bpm*100 beats-per-bar t0_ns" (Console writes it while recording; t0 = a bar's start on CLOCK_MONOTONIC) ---- */
+struct mts { long tv_sec; long tv_nsec; };
+extern int mpc_clock(int, void *) __asm__("clock_gettime");
+static volatile int metro_on, metro_vol;
+static volatile long long metro_beat_ns, metro_t0;
+static volatile int metro_bar = 4;
+static void metro_poll(void)
+{
+    int fd = open("/tmp/console-metro", 0);
+    if (fd < 0) { metro_on = 0; return; }
+    char b[96];
+    long n = read(fd, b, sizeof b - 1);
+    close(fd);
+    if (n <= 0) { metro_on = 0; return; }
+    b[n] = 0;
+    long long v[5] = { 0, 0, 0, 0, 0 };
+    int k = 0;
+    for (long i = 0; i < n && k < 5; i++) {
+        if (b[i] >= '0' && b[i] <= '9') v[k] = v[k] * 10 + (b[i] - '0');
+        else if (i > 0 && b[i - 1] >= '0' && b[i - 1] <= '9') k++;
+    }
+    if (v[2] < 3000 || v[2] > 30000 || v[3] < 1) { metro_on = 0; return; }
+    metro_vol = (int)(v[1] > 100 ? 100 : v[1]);
+    metro_beat_ns = 6000000000000LL / v[2];
+    metro_bar = (int)v[3];
+    metro_t0 = v[4];
+    {   /* Console rewrites the file every few tenths of a second while it is recording; if that stops, so do the clicks */
+        static long long last_t0, last_change;
+        struct mts ts;
+        mpc_clock(1, &ts);
+        long long now = (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+        if (v[4] != last_t0) { last_t0 = v[4]; last_change = now; }
+        metro_on = (v[0] && now - last_change < 1500000000LL) ? 1 : 0;
+    }
+}
+
+/* the click: a short sine burst (a rotating oscillator: no libm), 1100 Hz, 1700 Hz on the first beat of a bar */
+static int click_left;
+static float click_y1, click_y2, click_c2, click_env;
+static void click_start(int accent)
+{
+    click_left = 1100;
+    click_env = 1.f;
+    click_c2 = accent ? 1.94156f : 1.97548f;           /* 2 * cos(2 pi f / 44100) */
+    click_y2 = 0.f;
+    click_y1 = accent ? 0.23983f : 0.15610f;            /* sin(w) */
+}
+
+static void metro_mix(float *l, float *r)
+{
+    if (!metro_on && !click_left) return;
+    struct mts ts;
+    mpc_clock(1, &ts);
+    long long now = (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+    int next_i = -1; long long next_at = 0;
+    if (metro_on && metro_beat_ns > 0) {
+        long long n = (now - metro_t0) / metro_beat_ns;
+        if (now - metro_t0 > 0) n++;
+        long long at = metro_t0 + n * metro_beat_ns;
+        long long span = (long long)PERIOD * 1000000000LL / RATE;
+        if (at >= now && at < now + span) {
+            next_i = (int)((at - now) * RATE / 1000000000LL);
+            long long m = n % metro_bar; if (m < 0) m += metro_bar;
+            next_at = m == 0;
+        }
+    }
+    float gain = metro_vol / 100.f * 0.5f;
+    for (int i = 0; i < PERIOD; i++) {
+        if (i == next_i) click_start((int)next_at);
+        if (click_left > 0) {
+            float y = click_y1;
+            float ny = click_c2 * click_y1 - click_y2;
+            click_y2 = click_y1; click_y1 = ny;
+            float o = y * click_env * gain;
+#ifdef HOST_TEST
+            mpcshim_test_click += o < 0 ? -o : o;
+#endif
+            click_env *= 0.9945f;
+            click_left--;
+            if (l) l[i] += o;
+            if (r) r[i] += o;
+        }
+    }
+}
+
 static int native_poll(void)
 {
     int fd = open(NATIVE_PATH, 0);
@@ -438,6 +525,7 @@ static void *display_main(void *arg)
     (void)arg;
     while (running) {
         pagemode_poll();
+        metro_poll();
         if (native_poll()) { frame_new = -1; was_native = 1; usleep(16000); continue; }
         if (was_native) { was_native = 0; memset(shadow, 0, sizeof shadow); if (frame_last >= 0) frame_new = frame_last; }     /* back to the Move screen */
         int f = frame_new;
@@ -542,6 +630,7 @@ static void *audio_main(void *arg)
         if (callback) callback(PERIOD, callback_arg);
         handle_outputs();
 
+        metro_mix(ol ? ol->audio : 0, orr ? orr->audio : 0);
         for (int i = 0; i < PERIOD; i++) {
             float l = ol ? ol->audio[i] : 0, r = orr ? orr->audio[i] : 0;
             if (l > 1.f) l = 1.f; else if (l < -1.f) l = -1.f;

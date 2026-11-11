@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -390,6 +391,33 @@ int main(int argc, char **argv)
         BTN(0x4A, 1); BTN(0x4A, 0);
         usleep(200000);
         CHECK(expect(ngot - 2, 0xBF, 58, 127) && expect(ngot - 1, 0xBF, 58, 0), "tape page: LOOP alone -> Loop on / off");
+        b = ngot;
+        BTN(0x31, 1); BTN(0x35, 1); BTN(0x35, 0); BTN(0x31, 0);        /* Shift + TAP TEMPO -> the metronome */
+        usleep(200000);
+        CHECK(expect(b + 1, 0xBF, 108, 127), "tape page: Shift + TAP TEMPO -> metronome on / off");
+        {   /* the metronome: with the file written the output clicks, without it the output is quiet */
+            volatile float *peak = dlsym(lib, "mpcshim_test_click");
+            *peak = 0; usleep(300000);
+            CHECK(*peak == 0, "metronome: quiet without the file");
+            struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
+            long long t0 = (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+            for (int k = 0; k < 8; k++) {                              /* (Console rewrites it: 12000 = 120.00 bpm) */
+                FILE *mf = fopen("/tmp/console-metro", "wb"); fprintf(mf, "1 100 12000 4 %lld", t0 + k * 10000000LL); fclose(mf);
+                usleep(100000);
+            }
+            CHECK(*peak > 1.0f, "metronome: clicks while the file says on");
+            remove("/tmp/console-metro"); usleep(300000);
+            *peak = 0; usleep(600000);
+            CHECK(*peak == 0, "metronome: quiet again once the file is gone");
+        }
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
+        usleep(250000);
+        b = ngot;
+        BTN(0x31, 1); BTN(0x0B, 1); BTN(0x0B, 0); BTN(0x31, 0);        /* Shift + NOTE REPEAT elsewhere -> triplets */
+        BTN(0x28, 1); BTN(0x28, 0);                                    /* 16 LEVELS elsewhere -> Undo */
+        usleep(200000);
+        CHECK(expect(b + 1, 0xBF, 107, 127), "other pages: Shift + NOTE REPEAT -> triplets on / off");
+        CHECK(expect(ngot - 2, 0xBF, 56, 127) && expect(ngot - 1, 0xBF, 56, 0), "other pages: 16 LEVELS -> Undo");
         pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
         usleep(250000);
     }

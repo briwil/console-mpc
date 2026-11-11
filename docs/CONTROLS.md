@@ -26,7 +26,7 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | CHOP | Splice (Shift + CHOP: splice all) |
 | SAMPLE REC | not used yet |
 | STOP | While playing: stops playback. Otherwise: Back. Shift + STOP: always Back (saves and quits from the top level) |
-| NOTE REPEAT | The arpeggiator page of a synth (the Move's Shift + step 3). Again: back. Shift + NOTE REPEAT = Undo |
+| NOTE REPEAT | The arpeggiator page of a synth (the Move's Shift + step 3). Again: back. Shift + NOTE REPEAT = triplets on / off |
 | ERASE, MUTE, TAP TEMPO, 16 LEVELS | Delete, Mute, Copy, Capture |
 | SHIFT | Shift |
 
@@ -36,7 +36,9 @@ Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit:
 
 | Control | Does |
 |---|---|
-| Shift + wheel | Scroll through the 8 tracks. K1-K3 and the FADER are the volumes of the 4 tracks on screen (Shift: pan) |
+| Shift + wheel | Scroll through the 8 tracks |
+| K1 / K2 / FADER | The selected track: K1 = volume, K2 = pan, FADER = volume (Shift + FADER: pan). K3 does nothing |
+| Shift + TAP TEMPO | Metronome on / off: it clicks while recording. Its volume: SETTINGS > METRONOME |
 | Shift + wheel push | Next grid (1/4, 1/8 ...) |
 | Shift + pad | Arm / disarm that track. SAMPLE REC: arm / disarm the selected track |
 | MINUS / PLUS | Undo / Redo. Shift + them: zoom out / in |
@@ -45,6 +47,8 @@ Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit:
 | NOTE REPEAT | Drop (Shift: drop and push the rest later) |
 | LOOP | Loop on / off. Shift + LOOP: the first press marks a loop point, the second sets the other (earlier = IN, later = OUT). Both at the same spot: points cleared |
 | KNOB FX, SEQ, PAD BANK, PAD FX, TAP TEMPO, 16 LEVELS | do nothing here |
+
+Off the tape page: Shift + NOTE REPEAT (labelled TRIPLET) turns triplets on / off; 16 LEVELS is Undo (the sequencer's undo too).
 
 ## Starting without a computer
 `sh /data/UserData/console/mpc/install-boot.sh` adds a startup menu (PAD 1 = Console, PAD 2 = stock MPC, no answer = MPC) to the SD card's autorun; `... install-boot.sh remove` undoes it; a file named NOCONSOLE on the SD card skips it once.

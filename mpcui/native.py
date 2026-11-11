@@ -494,7 +494,7 @@ def on_settings(menu):
 def draw_settings(T, menu):
     import menu as menu_mod
     c = canvas
-    names = {"TIMESIG": "TIME SIG", "FORMAT": "EXPORT", "UPDATE": "UPDATE", "SCREEN": "SCREEN"}
+    names = {"TIMESIG": "TIME SIG", "FORMAT": "EXPORT", "UPDATE": "UPDATE", "SCREEN": "SCREEN", "METRONOME": "METRO"}
     begin()
     c.text(6, 7, "SETTINGS", WHITE, 2, -2)
     rows = menu_mod.SETTINGS
@@ -590,6 +590,11 @@ def install(pages):
 
     def draw(f, T, menu=None):
         original(f, T, menu)
+        try:
+            import metronome
+            metronome.tick(T)                        # (while recording with the metronome on: tells the bridge when the beats are)
+        except Exception:
+            pass
         try:
             T._mpc_menu = menu                       # (so the wheel handler knows a menu is open and leaves the wheel alone)
         except Exception:

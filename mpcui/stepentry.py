@@ -7,7 +7,7 @@ import time
 WHEEL = 14
 PUSH = 3                                                         # the wheel's push (the MPC encoder push)
 BACK = 51
-REDO, LOOPMARK, ARMSEL = 104, 105, 106                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
+REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO = 104, 105, 106, 107, 108                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
 K1 = 71                                                          # Move knob 1 (relative clicks)
 K1_ABS = 118                                                     # K1's absolute position from the bridge (0-127)
 MAX_LEN = 64
@@ -110,6 +110,12 @@ def tape_button(board, num):
         loop_mark(T)
     elif num == ARMSEL:
         board.keys.put("ARM%d" % T.armed)
+    elif num == TRIPLETS:
+        e.set_triplets(not e.triplets)
+        T.say("TRIPLETS ON  (STEPS 4, 8, 12, 16 OFF)" if e.triplets else "TRIPLETS OFF", 3)
+    elif num == METRO:
+        import metronome
+        metronome.toggle(T)
 
 
 def in_seq(T):
@@ -224,13 +230,25 @@ def install(MoveBoard, pad_velocity=None):
 
     def cc(self, num, val):
         T = self.T
-        if num in (REDO, LOOPMARK, ARMSEL):                    # the bridge's tape-page buttons (see bridge/mapping.h)
+        if num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO):                    # the bridge's tape-page buttons (see bridge/mapping.h)
             if val:
                 tape_button(self, num)
             return
         if 71 <= num <= 74 and on_tape(T):
-            import tapepage                                     # K1-K3 and the fader: the tracks on screen (not always 1-4)
-            num += tapepage.top_row(T)
+            # the tape page: K1 = the selected track's volume, K2 = its pan, K3 = nothing, the fader = its volume (Shift: pan)
+            if num == 73:
+                return
+            track = 70 + T.armed
+            if num == 74:
+                orig_cc(self, track, val)
+                return
+            shift = self.shift
+            self.shift = num == 72
+            try:
+                orig_cc(self, track, val)
+            finally:
+                self.shift = shift
+            return
         if num == K1_ABS or num == K1:
             if length_page(T):
                 if num == K1_ABS:

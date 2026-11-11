@@ -26,6 +26,14 @@ except Exception:
     print("native screens are off:\n" + traceback.format_exc(), flush=True)
 sys.argv[0] = APP_PY
 try:
+    import menu as _menu
+    import metronome
+    metronome.load()
+    metronome.install_menu(_menu)        # SETTINGS gets a METRONOME row (its volume)
+except Exception:
+    import traceback
+    print("metronome is off:\n" + traceback.format_exc(), flush=True)
+try:
     import audio
     import redo
     redo.install(audio.Engine)           # PLUS on the tape page: REDO (Console only has UNDO)

@@ -38,7 +38,7 @@ static const struct bmap BUTTONS[] = {
     { 0x35, 60 },   /* TAP TEMPO      -> Copy    */
     { 0x0B, 56 },   /* NOTE REPEAT    -> Undo    */
     { 0x4A, 58 },   /* LOOP           -> Loop (the tape's loop in / out) */
-    { 0x28, 52 },   /* 16 LEVELS      -> Capture */
+    { 0x28, 56 },   /* 16 LEVELS      -> Undo (off the tape page; the tape page has MINUS for that) */
     { 0x36, 55 },   /* PLUS (light only): the press is the right arrow; Shift + PLUS = Move + (octave up) */
     { 0x37, 54 },   /* MINUS (light only): the press is the left arrow; Shift + MINUS = Move - (octave down) */
     { 0x0C, 43 },   /* B1  -> left button 1 (top)    */
@@ -277,8 +277,11 @@ static void mpc_button_event(int note, int down)
         if (down) alt[note] = shift_held;
         int was_alt = alt[note];
         switch (note) {
-        case MPC_KNOBFX: case MPC_SEQ: case MPC_PADBANK: case 0x01: case 0x35: case 0x28:
-            return;                                                    /* KNOB FX, SEQ, PAD BANK, PAD FX, TAP TEMPO, 16 LEVELS: nothing here */
+        case 0x35:                                                     /* Shift + TAP TEMPO = the metronome on / off (it clicks while recording) */
+            if (was_alt && down) send3(0xBF, 108, 127);
+            return;
+        case MPC_KNOBFX: case MPC_SEQ: case MPC_PADBANK: case 0x01: case 0x28:
+            return;                                                    /* KNOB FX, SEQ, PAD BANK, PAD FX, 16 LEVELS: nothing here */
         case 0x0B: send3(0xBF, 52, down ? 127 : 0); return;           /* NOTE REPEAT = Drop (Shift: Drop and push the rest later) */
         case 0x09:                                                     /* ERASE = Cut; Shift + ERASE = Copy (Console must not see Shift on it) */
             if (was_alt) { if (down) { send3(0xBF, 49, 0); send3(0xBF, 60, 127); send3(0xBF, 49, 127); } else send3(0xBF, 60, 0); }
@@ -308,6 +311,10 @@ static void mpc_button_event(int note, int down)
         if (!shift_held) send3(0xBF, plus ? 63 : 62, down ? 127 : 0);
         else if (down) { send3(0xBF, 49, 0); send3(0xBF, plus ? 55 : 54, 127); send3(0xBF, 49, 127); }   /* Console must not see Shift on it */
         else send3(0xBF, plus ? 55 : 54, 0);
+        return;
+    }
+    if (note == 0x0B && shift_held) {                       /* Shift + NOTE REPEAT (labelled TRIPLET): triplets on / off (Console's own undo moved to 16 LEVELS) */
+        if (down) send3(0xBF, 107, 127);
         return;
     }
     if ((note == 0x0B && !shift_held) || note == 0x01) {   /* NOTE REPEAT = the arpeggiator page (Shift + step 3), PAD FX = the pads page (Shift + step 2);
