@@ -357,11 +357,11 @@ static int was_native;
 static void pagemode_poll(void)
 {
     int fd = open("/tmp/console-pagemode", 0);
-    if (fd < 0) { page_tape = 0; return; }
+    if (fd < 0) { page_tape = 0; page_param = 0; return; }
     char ch = 0;
     long n = read(fd, &ch, 1);
     close(fd);
-    if (n == 1) page_tape = (ch == 'T');
+    if (n == 1) { page_tape = (ch == 'T'); page_param = (ch == 'P'); }
 }
 
 static int native_poll(void)

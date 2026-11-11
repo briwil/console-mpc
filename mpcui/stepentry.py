@@ -4,6 +4,8 @@ Installed over Console's MoveBoard by mpc_app.py; Console's own files are not ch
 import time
 
 WHEEL = 14
+PUSH = 3                                                         # the wheel's push (the MPC encoder push)
+BACK = 51
 
 
 def active(T):
@@ -17,6 +19,44 @@ def active(T):
         return T.engine is not None and T.engine.drums is not None
     except Exception:
         return False
+
+
+def in_seq(T):
+    """Drum sequencer page (steps selected or not): the wheel's box and push are in use."""
+    try:
+        ms = T.mseq
+        if not T.seq_page or T.fx_page or not ms.active():
+            return False
+        if T.punch.active() or T.auto.active() or T.synth_shown():
+            return False
+        return T.engine is not None and T.engine.drums is not None
+    except Exception:
+        return False
+
+
+def click(T, add):
+    """The wheel was pushed: select the box's step (it blinks and the pads become its settings). Shift: add it to the
+    selection. Pushed on a step that is already selected: take just that one out again."""
+    import sequencer
+    ms, e = T.mseq, T.engine
+    lane = T.seqp.lane
+    length = e.seq.lane(lane).length
+    i = _cursor(ms)
+    if i >= length:
+        T.say("STEP %d IS PAST THE END (LENGTH %d: KNOB 1)" % (i + 1, length), 2)
+        return
+    if sequencer.dark(i, sequencer.TRIPLETS):
+        return
+    if i in ms.selected:
+        ms.selected.remove(i)
+        ms.sel = None
+        return
+    if not ms.selected:
+        ms.knob_page = getattr(T, "drum_tab", 0)                 # (the knobs start on the sound page you were on)
+    if not add:
+        ms.selected = []
+    ms.selected.append(i)
+    ms.sel = None
 
 
 def _cursor(ms):
@@ -60,6 +100,18 @@ def install(MoveBoard, pad_velocity=None):
     orig_cc, orig_pad = MoveBoard.cc, MoveBoard.pad
 
     def cc(self, num, val):
+        T = self.T
+        if num == PUSH and val and in_seq(T):
+            click(T, self.shift)
+            return
+        if num == BACK and val and not self.shift and in_seq(T) and T.mseq.selected:
+            T.mseq.selected, T.mseq.sel = [], None               # BACK: done with the selected steps
+            return
+        if num == WHEEL and val and not self.shift and in_seq(T) and T.mseq.selected:
+            step = val - 128 if val > 63 else val
+            if step:
+                move(T, step)                                    # (the box keeps moving; K1 is the amount)
+            return
         if num == WHEEL and val and not self.shift and active(self.T) and not self.T.engine.playing:
             step = val - 128 if val > 63 else val
             if step:

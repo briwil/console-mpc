@@ -493,18 +493,19 @@ def draw_seq(T):
             c.rect(x + 3, y + 16, 11, 2, DIM)
             continue
         is_sel = i in sel
-        c.rect(x, y, 17, 34, SEL_FILL if is_sel else CELL)
-        c.frame(x, y, 17, 34, ACC if is_sel else CELL_LINE)
+        lit = is_sel and int(time.monotonic() * 3) % 2 == 0      # (selected steps blink)
+        c.rect(x, y, 17, 34, SEL_FILL if lit else CELL)
+        c.frame(x, y, 17, 34, ACC if lit else CELL_LINE)
         st = ln.steps[i]
         if st.on:
             v = st.vel if st.vel else sequencer.DEFAULT_VELOCITY
             h = max(3, int(26 * min(127, v) / 127.0))
-            c.rect(x + 2, y + 31 - h, 13, h, ACC if is_sel else FG)
+            c.rect(x + 2, y + 31 - h, 13, h, ACC if lit else FG)
         if at is not None and i == at:
             c.rect(x, y + 36, 17, 3, WHITE)
         c.text(x + (6 if i < 9 else 2), y + 40, str(i + 1), FG if (k % 4 == 0) else MID)
     cur = getattr(ms, "cur", None)
-    if cur is not None and not selected and first <= cur < first + 16 and cur < ln.length:     # the step cursor (a drum hit lays a step here)
+    if cur is not None and first <= cur < first + 16 and cur < ln.length:     # the step cursor (a drum hit lays a step here)
         x = 4 + (cur - first) * 19
         c.frame(x - 1, y - 1, 19, 36, WHITE)
         c.frame(x - 2, y - 2, 21, 38, WHITE)
@@ -527,7 +528,7 @@ def draw_seq(T):
             v = str(value)
             c.text(x + 6, top + 26 if len(v) <= 4 else top + 31, v[:9] if len(v) > 4 else v, FG, 3 if len(v) <= 4 else 1)
             c.text(x + 6, top + 57, ("K%d" % (i + 1)) if i < 3 else "FADER", DIM)
-        hint = "WHEEL: MOVE BOX   HIT DRUM: ADD STEP"
+        hint = "WHEEL: MOVE BOX  CLICK: SELECT  HIT DRUM: ADD"
     elif knobs:
         label, value, on = knobs[0]
         key = ms.pad_items()[ms.sel][0]
@@ -547,20 +548,26 @@ def draw_seq(T):
         if ct is not None:
             c.text(14, top + 78, "K2 CHANCE  %s" % ct, MID)
         c.text(W - 14 - c.width("SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT"), top + 78, "SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT", DIM)
-        hint = "SEQ: BACK TO STEPS  TAP STEP: DONE"
+        hint = "CLICK: ON/OFF  SHIFT+CLICK: ADD  BACK: DONE"
     else:
-        # steps selected, no setting picked: knobs 1-8 are the drum's sound page, turning one locks it on the steps
-        items = ms.lock_list()
-        c.text(8, top, "SOUND: " + str(ms.page_name())[:18], ACC)
+        # steps selected, no setting picked: the pads' settings as a 4 x 4 grid (lit: what the steps have); K1-K8 lock sound settings
+        items = ms.pad_items()
         cw = (W - 8 - 3 * 6) // 4
-        for i, (label, value, locked, lockable) in enumerate(items[:8]):
-            col, row = i % 4, i // 4
-            x, yy = 4 + col * (cw + 6), top + 16 + row * 42
-            c.rect(x, yy, cw, 38, SEL_FILL if locked else CELL)
-            c.frame(x, yy, cw, 38, ACC if locked else CELL_LINE)
-            c.text(x + 5, yy + 4, str(label)[:9], MID if lockable else DIM)
-            c.text(x + 5, yy + 19, str(value)[:9], FG if lockable else DIM)
-        hint = "SHIFT+SEQ: SETTINGS  TAP STEP: DONE"
+        for p in range(16):
+            col, row = p % 4, 3 - p // 4
+            x, yy = 4 + col * (cw + 6), top + row * 28
+            c.rect(x, yy, cw, 25, CELL)
+            if p >= len(items):
+                c.frame(x, yy, cw, 25, CELL_LINE)
+                continue
+            key, label = items[p]
+            on = ms.engaged(key)
+            c.rect(x, yy, cw, 25, SEL_FILL if on else CELL)
+            c.frame(x, yy, cw, 25, ACC if on else CELL_LINE)
+            c.text(x + 4, yy + 4, str(label)[:11], ACC if on else MID)
+            if on:
+                c.text(x + 4, yy + 15, str(ms.item_value(key))[:11], FG)
+        hint = "PAD: PICK A SETTING  CLICK: ON/OFF  BACK: DONE"
     c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
     if T.message and time.monotonic() < T.message_until:
         c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
@@ -969,7 +976,7 @@ def install(pages):
             if card is None and T.engine and on_seq_page(T, menu):
                 draw_seq(T)
                 publish()
-                set_mode("O")
+                set_mode("P" if T.mseq.selected else "O")
                 return
         except Exception:
             import traceback

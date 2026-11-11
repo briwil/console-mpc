@@ -59,6 +59,7 @@ static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47,
 /* ---- state ---- */
 static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
+static volatile int page_param;             /* a step is selected on the sequencer page (written by the screen thread): the pads are its settings, as with param_mode */
 static int param_mode;                      /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings), bank = 1-16 / 17-32 */
 static int pad_knob[16];                    /* knob mode: which Move knob (0-7) each held pad is touching, -1 none */
 static int knob_stamp[16], knob_clock;      /* ... and the order they were pressed (the last one wins) */
@@ -97,7 +98,7 @@ static void colour_rgb(int v, int *r, int *g, int *b)
 static void refresh_pads(void)
 {
     for (int i = 0; i < 16; i++) {
-        int v = param_mode ? move_pad[i + (right_bank ? 16 : 0)] : (step_mode || page_tape) ? move_step[i] : move_pad[(i / 4) * 8 + (i % 4) + (right_bank ? 4 : 0)];
+        int v = (param_mode || page_param) ? move_pad[i + (right_bank ? 16 : 0)] : (step_mode || page_tape) ? move_step[i] : move_pad[(i / 4) * 8 + (i % 4) + (right_bank ? 4 : 0)];
         int r, g, b;
         colour_rgb(v, &r, &g, &b);
         if (v == 0) { r = 0; g = 6; b = 14; }                       /* idle: a faint blue so the pads can be found */
@@ -221,10 +222,10 @@ static void mpc_pad_event(int idx, int vel, int on)
         return;
     }
     if (on) {
-        int note = param_mode ? 68 + idx + (right_bank ? 16 : 0)
+        int note = (param_mode || page_param) ? 68 + idx + (right_bank ? 16 : 0)
                  : (step_mode || page_tape) ? 16 + idx : 68 + (idx / 4) * 8 + (idx % 4) + (right_bank ? 4 : 0);
         pad_target[idx] = note;
-        if (!step_mode && !param_mode && !page_tape) last_drum = note;
+        if (!step_mode && !param_mode && !page_param && !page_tape) last_drum = note;
         send3(0x9F, note, vel > 0 ? vel : 100);
     } else if (pad_target[idx] >= 0) {
         send3(0x8F, pad_target[idx], 0);
@@ -240,7 +241,7 @@ static void mpc_pad_event(int idx, int vel, int on)
 static void mapping_tick(void)
 {
     tick_n++;
-    { static int seen; if (seen != page_tape) { seen = page_tape; refresh_pads(); } }     /* the pads change meaning on the tape page: new lights */
+    { static int seen; int now = page_tape * 2 + page_param; if (seen != now) { seen = now; refresh_pads(); } }     /* the pads change meaning on the tape page: new lights */
 #ifdef NO_RETRIG
     return;
 #endif

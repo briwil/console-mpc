@@ -240,6 +240,15 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x99, 37, 70 }, 3);
         send((unsigned char[]){ 0x89, 37, 0 }, 3);
         CHECK(expect(b, 0x9F, 68, 70), "A: other pages: the pads are drum pads again");
+        /* P: steps are selected on the sequencer page: pads are the Move pads 1-16 in order (their settings) */
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('P', pf); fclose(pf);
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x99, 36, 70 }, 3);                   /* pad 2 -> Move pad 2 (index 1) = note 69 */
+        send((unsigned char[]){ 0x89, 36, 0 }, 3);
+        send((unsigned char[]){ 0x99, 48, 71 }, 3);                   /* pad 9 -> note 76 */
+        send((unsigned char[]){ 0x89, 48, 0 }, 3);
+        CHECK(expect(b, 0x9F, 69, 70) && expect(b + 2, 0x9F, 76, 71), "A: steps selected (P): pads are the step settings in order");
         remove("/tmp/console-pagemode");
     }
     int s0 = ngot;
