@@ -41,38 +41,45 @@ def in_seq(T):
         return False
 
 
-def click(T, add):
-    """The wheel was pushed: select the box's step (it blinks and the pads become its settings). Shift: add it to the
-    selection. Pushed on a step that is already selected: take just that one out again."""
+def click(T, shift):
+    """The wheel was pushed. On an empty step: the selected drum's step goes down. On a step that is on: it is selected (it
+    blinks and the pads become its settings); pushed again: back out. Shift + push: the step comes off."""
     import sequencer
-    ms, e = T.mseq, T.engine
-    lane = T.seqp.lane
+    ms, e, sp = T.mseq, T.engine, T.seqp
+    lane = sp.lane
     length = e.seq.lane(lane).length
+    if not getattr(ms, "cur_on", False) and not ms.selected:
+        return                                                   # no box yet: turn the wheel first
     i = _cursor(ms)
     if i >= length:
         T.say("STEP %d IS PAST THE END (LENGTH %d: KNOB 1)" % (i + 1, length), 2)
         return
     if sequencer.dark(i, sequencer.TRIPLETS):
         return
-    if not add and not ms.selected:                              # a plain push: the step on / off
-        if not getattr(ms, "cur_on", False):
-            return                                               # (no box yet: turn the wheel first)
-        sp = T.seqp
-        sp._edit(("toggle", time.monotonic()))                   # (undo works as for a step button)
+    on = bool(e.seq.step(lane, i).on)
+    if shift:                                                    # Shift + push: take the step off
+        if i in ms.selected:
+            ms.selected.remove(i)
+            ms.sel = None
+        if on:
+            sp._edit(("toggle", time.monotonic()))               # (undo works as for a step button)
+            with e.seq.lock:
+                e.seq.step(lane, i).on = False
+            e.seq_changed()
+        return
+    if not on:                                                   # an empty step: put it down
+        sp._edit(("toggle", time.monotonic()))
         with e.seq.lock:
-            st = e.seq.step(lane, i)
-            st.on = not st.on
+            e.seq.step(lane, i).on = True
         e.seq_changed()
         return
-    if i in ms.selected:
+    if i in ms.selected:                                         # already selected: back out of its settings
         ms.selected.remove(i)
         ms.sel = None
         return
     if not ms.selected:
         ms.knob_page = getattr(T, "drum_tab", 0)                 # (the knobs start on the sound page you were on)
-    if not add:
-        ms.selected = []
-    ms.selected.append(i)
+    ms.selected = [i]
     ms.sel = None
 
 
