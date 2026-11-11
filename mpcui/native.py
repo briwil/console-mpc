@@ -627,7 +627,7 @@ def install(pages):
             if card is None and T.engine and on_synth_seq_page(T, menu):
                 draw_synth_seq(T)
                 publish()
-                set_mode("P" if T.msyn.selected else "O")
+                set_mode("P" if T.msyn.selected else "S")
                 return
             if card is None and T.engine and on_seq_page(T, menu):
                 draw_seq(T)

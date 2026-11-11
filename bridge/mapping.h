@@ -127,7 +127,11 @@ static void refresh_buttons(void)
         set_btn_light(BUTTONS[i].mpc, move_btn[BUTTONS[i].move] ? 1 : 0);
     }
     if (page_seq) set_btn_light(0x50, step_mode);
+#ifdef SEQ_BUTTON_ON
     set_btn_light(MPC_SEQ, (step_mode || param_mode) && !page_nostep);
+#else
+    set_btn_light(MPC_SEQ, 0);
+#endif
     set_btn_light(MPC_PADBANK, right_bank);
     set_btn_light(MPC_KNOBFX, knob_mode);
 }
@@ -277,6 +281,9 @@ static void mpc_button_event(int note, int down)
         return;
     }
     if (note == MPC_ENC_PUSH) { send3(0xBF, 3, down ? 127 : 0); return; }
+#ifndef SEQ_BUTTON_ON
+    if (note == MPC_SEQ) return;                          /* SEQ is not used: SEQ RECORD on a sequencer page turns the pads into the steps (the old SEQ behaviour is kept for the tests) */
+#endif
     if (note == MPC_SEQ && page_nostep) return;                       /* a page with no steps: SEQ does nothing (and nothing carries over to the next page) */
     if (down && note == MPC_SEQ) {
         if (shift_held) param_mode = !param_mode;                     /* Shift + SEQ: the pads are a step's settings */
