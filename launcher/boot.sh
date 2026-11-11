@@ -18,18 +18,12 @@ if [ -e "$TRY" ]; then rm -f "$TRY"; exit 0; fi      # last time it never got th
 
 n=0
 while ! systemctl is-active --quiet ac50.service && [ $n -lt 90 ]; do sleep 1; n=$((n + 1)); done
-# Let the stock app finish starting AND finish talking to the pad/button panel (serial port 3): stopping it half way left the panel
-# silent on some boots (Console ran, nothing responded). Wait until the panel's received-byte count has stood still for 4 s
-# (at least 12 s, at most 45 s after the stock app is up).
-panel_rx() { grep -h '^3:' /proc/tty/driver/* 2>/dev/null | sed -n 's/.* rx:\([0-9]*\).*/\1/p'; }
-w=0; last=-1; still=0
-while [ $w -lt 45 ]; do
-  r=$(panel_rx)
-  if [ "$r" = "$last" ]; then still=$((still + 1)); else still=0; last=$r; fi
-  [ $w -ge 12 ] && [ $still -ge 4 ] && break
-  sleep 1; w=$((w + 1))
-done
-echo "waited ${w}s for the panel (received bytes: ${last:-?})"
+# Let the stock app finish starting before taking over: stopping it early left Console frozen on some power-ons (it ran, nothing
+# responded), while starting Console by hand minutes after power-on always worked. So: not before the MPC has been up UP_MIN seconds.
+UP_MIN=60
+up=$(cut -d. -f1 /proc/uptime)
+[ "$up" -lt "$UP_MIN" ] && sleep $((UP_MIN - up))
+echo "taking over at uptime $(cut -d. -f1 /proc/uptime) s (was $up s when the stock app came up); ulimit -s $(ulimit -s); PATH=$PATH"
 touch "$TRY"                                         # from here on: if Console never gets through, the next power-on starts the stock app
 systemctl unset-environment LD_PRELOAD 2>/dev/null
 systemctl stop ac50.service
