@@ -738,6 +738,120 @@ def draw_mixer(T):
         c.text_in(4, H - BOTTOM_H, BOTTOM_H, "KNOBS: LEVEL   PAD: MUTE   SHIFT+PAD: SOLO", DIM)
 
 
+# ------------------------------------------------------------------ instruments list, project menu, settings
+
+def on_inst_list(T, menu):
+    if menu is not None and (menu.open or menu.kits.open):
+        return False
+    if T.fx_page or T.seq_page or T.drum_page or not T.inst_page or T.engine is None:
+        return False
+    return T.instp.mode is None                                  # (the picker, and change / remove / show-hide: the Move screen)
+
+
+def _top(title, right=""):
+    c = canvas
+    c.clear()
+    c.rect(0, 0, W, TOP_H, BAR)
+    c.text_in(4, 0, TOP_H, title, ACC)
+    if right:
+        c.text_in(W - 4 - c.width(right), 0, TOP_H, right, MID)
+
+
+def _bottom(T, hint, msg=""):
+    c = canvas
+    c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
+    if msg:
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, msg[:44], ACC)
+    elif T is not None and T.message and time.monotonic() < T.message_until:
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
+    else:
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, hint, DIM)
+
+
+def draw_inst_list(T):
+    c = canvas
+    e, ip = T.engine, T.instp
+    names = {}
+    try:
+        import instpage
+        names = {m: title for m, title in instpage.machines()}
+    except Exception:
+        pass
+    _top("INSTRUMENTS", "8 SLOTS")
+    for i in range(8):
+        y = 22 + i * 24
+        mid = e.slots[i]
+        on = i == ip.row
+        name = str(names.get(mid, mid) or "-").upper() if mid else "-"
+        c.rect(4, y, W - 8, 21, SEL_FILL if on else CELL)
+        c.frame(4, y, W - 8, 21, ACC if on else CELL_LINE)
+        c.text_in(12, y, 21, str(i + 1), ACC if on else MID)
+        c.text_in(34, y, 21, name[:18], FG if mid else DIM, 2)
+        if not mid:
+            c.text_in(W - 12 - c.width("EMPTY"), y, 21, "EMPTY", DIM)
+        elif i in e.slot_mutes:
+            c.rect(W - 62, y + 4, 50, 13, (60, 30, 30))
+            c.text_in(W - 57, y + 4, 13, "MUTE", FG)
+    _bottom(T, "WHEEL: PICK  PUSH: OPEN  PAD: MUTE")
+
+
+def on_project_menu(menu):
+    return menu is not None and menu.open and getattr(menu, "mode", "") == "list"
+
+
+def draw_project_menu(T, menu):
+    import menu as menu_mod
+    c = canvas
+    shift = bool(getattr(T, "shift_held", lambda: False)())
+    e = menu.engine
+    _top(((e.song or "UNTITLED") if e else "DEMO").upper()[:21], "PROJECT")
+    for i, (label, _) in enumerate(menu_mod.ITEMS):
+        text = {"NEW": "DELETE PROJECT" if shift else "NEW PROJECT", "SAVE": "RENAME PROJECT" if shift else "SAVE PROJECT",
+                "LOAD": "LOAD PROJECT", "SETTINGS": "SETTINGS"}[label]
+        y = 30 + i * 44
+        on = i == menu.choice
+        c.rect(12, y, W - 24, 38, SEL_FILL if on else CELL)
+        c.frame(12, y, W - 24, 38, ACC if on else CELL_LINE)
+        c.text_in(24, y, 38, text, ACC if on else FG, 3 if len(text) <= 14 else 2)
+    _bottom(T, "SHIFT + PUSH: DELETE / RENAME", str(getattr(menu, "msg", "") or "").upper())
+
+
+def on_settings(menu):
+    return menu is not None and menu.open and getattr(menu, "mode", "") == "settings"
+
+
+def draw_settings(T, menu):
+    import menu as menu_mod
+    c = canvas
+    names = {"TIMESIG": "TIME SIGNATURE", "FORMAT": "EXPORT FORMAT", "UPDATE": "SOFTWARE UPDATE", "SCREEN": "EXTERNAL SCREEN"}
+    _top("SETTINGS", "TURN, PUSH: DONE" if menu.editing else "PUSH: CHANGE IT")
+    rows = menu_mod.SETTINGS
+    fit = 6
+    first = max(0, min(menu.row - fit + 1, len(rows) - fit)) if len(rows) > fit else 0
+    for i, what in enumerate(rows):
+        if not first <= i < first + fit:
+            continue
+        y = 22 + (i - first) * 30
+        on = i == menu.row
+        full = str(menu.setting_text(what) or "")
+        short = full.split("  ")[0].split(": ")[0].upper()[:14]
+        label = names.get(what, menu_mod.LABELS.get(what, what))
+        c.rect(4, y, W - 8, 27, SEL_FILL if on else CELL)
+        c.frame(4, y, W - 8, 27, ACC if on else CELL_LINE)
+        c.text_in(12, y, 27, label, ACC if on else MID)
+        vx = W - 12 - c.width(short, 2)
+        if on and menu.editing:
+            c.rect(vx - 5, y + 3, c.width(short, 2) + 10, 21, ACC)
+            c.text_in(vx, y, 27, short, BG, 2)
+        else:
+            c.text_in(vx, y, 27, short, FG, 2)
+    full = str(menu.setting_text(rows[menu.row]) or "")
+    msg = str(getattr(menu, "msg", "") or "") or (menu.update_message() if rows[menu.row] == "UPDATE" else "") or full
+    c.rect(0, 206, W, 19, (12, 14, 18))
+    c.text_in(6, 206, 19, msg.upper()[:44], MID)
+    _bottom(None, "WHEEL: PICK ROW  PUSH: EDIT VALUE")
+
+
 def on_seq_page(T, menu):
     """True when pages.draw would draw seq_page for a drum lane (not the synth's sequencer, punch FX or automation)."""
     if menu is not None and (menu.open or menu.kits.open):
@@ -765,6 +879,21 @@ def install(pages):
             card = T.pagefx.state() if getattr(T, "pagefx", None) is not None else None
             if card is None and T.engine and on_tape_page(T, menu):
                 (draw_tape if T.focus.track is None else draw_focus)(T)
+                publish()
+                set_mode("T")
+                return
+            if card is None and T.engine and on_project_menu(menu):
+                draw_project_menu(T, menu)
+                publish()
+                set_mode("O")
+                return
+            if card is None and T.engine and on_settings(menu):
+                draw_settings(T, menu)
+                publish()
+                set_mode("O")
+                return
+            if card is None and T.engine and on_inst_list(T, menu):
+                draw_inst_list(T)
                 publish()
                 set_mode("T")
                 return
