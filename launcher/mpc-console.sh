@@ -8,6 +8,10 @@ export TMPDIR=/tmp
 export CONSOLE_LIBJACK="$C/mpc/libjack_mpc.so"
 export CONSOLE_PLATFORM=move
 export PYTHONUNBUFFERED=1
+# where the sampler and the sample browser look for sounds: the SD card, then the internal drive (leave out any that isn't there)
+SMP=""
+for d in /media/sample /data/UserData/UserLibrary/Samples /data/UserData/console/samples; do [ -d "$d" ] && SMP="$SMP${SMP:+:}$d"; done
+export CONSOLE_SAMPLES="$SMP"
 mkdir -p "$C/data"
 
 restore() { systemctl start ac50.service; }
