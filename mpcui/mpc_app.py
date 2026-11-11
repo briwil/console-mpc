@@ -34,6 +34,17 @@ except Exception:
     import traceback
     print("metronome is off:\n" + traceback.format_exc(), flush=True)
 try:
+    import menu as _menu2
+    import sequencer as _seq2
+    import notes as _notes2
+    import freerec
+    freerec.load()
+    freerec.install(_seq2.Sequencer, _notes2.NoteSequencer, _seq2)   # recording into a sequencer keeps your timing (the steps' NUDGE)
+    freerec.install_menu(_menu2)                                     # SETTINGS > REC TIMING: FREE / GRID
+except Exception:
+    import traceback
+    print("free recording is off:\n" + traceback.format_exc(), flush=True)
+try:
     import audio
     import redo
     redo.install(audio.Engine)           # PLUS on the tape page: REDO (Console only has UNDO)

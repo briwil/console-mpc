@@ -494,7 +494,7 @@ def on_settings(menu):
 def draw_settings(T, menu):
     import menu as menu_mod
     c = canvas
-    names = {"TIMESIG": "TIME SIG", "FORMAT": "EXPORT", "UPDATE": "UPDATE", "SCREEN": "SCREEN", "METRONOME": "METRO"}
+    names = {"TIMESIG": "TIME SIG", "FORMAT": "EXPORT", "UPDATE": "UPDATE", "SCREEN": "SCREEN", "METRONOME": "METRO", "RECTIMING": "REC TIME"}
     begin()
     c.text(6, 7, "SETTINGS", WHITE, 2, -2)
     rows = menu_mod.SETTINGS

@@ -66,3 +66,5 @@ Step settings (velocity, chance, multiply, pulse, hold, jump, random, ramps, nud
 Lane settings (no steps selected): K1 = length, K2 = rate, K3 = Euclid. Shift needs knob 4: KNOB FX on, hold pad 4, turn the encoder.
 
 Drum sequencer with the wheel: push on an empty step puts it down; push on a step that is on adds it to the selected steps (push it again: it leaves them); BACK: none selected. ERASE takes the selected steps off (none selected: the step under the box). Leaving the sequencer page deselects.
+
+Recording into a sequencer keeps your timing (SETTINGS > REC TIMING: FREE). A hit lands on the nearest step and the step's NUDGE is set to how early or late you played (drums: 10% of a step at a time, synth notes: 1%; half a step at most). GRID: recording snaps to the steps.
