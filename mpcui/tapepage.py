@@ -164,20 +164,32 @@ def _disc(cx, cy, r0, r1, a0=None, a1=None):
     return m
 
 
-def _reel(c, cx, cy, R, wf, rot):
-    """A tape reel at (cx, cy): the flange (rim + 3 rotating spokes), and tape wound to fraction wf (0..1)."""
-    hub = 9
+OLIVE = (0x67, 0x6F, 0x58)                                      # from Brian's reel drawing
+
+
+def _line(c, xa, ya, xb, yb, col):
+    n = int(max(abs(xb - xa), abs(yb - ya))) + 1
+    xs = np.rint(np.linspace(xa, xb, n)).astype(int)
+    ys = np.rint(np.linspace(ya, yb, n)).astype(int)
+    ok = (xs >= 0) & (xs < 320) & (ys >= 0) & (ys < 240)
+    c.px[ys[ok], xs[ok]] = col
+
+
+def _reel(c, cx, cy, wf, rot):
+    """A reel as Brian drew it: a thin white ring, the tape as a white disc (it shrinks as the tape runs off: wf 0..1), three olive
+    windows (they turn), an olive ring round the white hub. Returns the radius of the tape pack."""
     px = c.px
-    px[_disc(cx, cy, 0, R)] = (18, 22, 16)                          # the flange face (very dark)
-    diskR = hub + (R - hub - 2) * max(0.0, min(1.0, wf))
-    if diskR > hub:
-        px[_disc(cx, cy, hub, diskR)] = G[3]                        # the tape wound on (dark green)
-    for k in range(3):                                              # three light spoke-windows, turning
-        a = rot + k * 2 * np.pi / 3
-        px[_disc(cx, cy, hub + 1, R - 2, a - 0.32, a + 0.32)] = G[5]
-    px[_disc(cx, cy, R - 1, R + 0.6)] = G[6]                        # the rim
-    px[_disc(cx, cy, 0, hub)] = G[6]                                # the hub
-    px[_disc(cx, cy, 0, 2.2)] = (10, 12, 10)                        # the spindle hole
+    white = (255, 255, 255)
+    pack = 17 + (36.3 - 17) * max(0.0, min(1.0, wf))
+    px[_disc(cx, cy, 41.2, 42.3)] = white                           # the outer ring
+    px[_disc(cx, cy, 0, pack)] = white                              # the tape
+    for k in range(3):                                              # the three windows
+        a = rot - np.pi / 2 + k * 2 * np.pi / 3
+        px[_disc(cx, cy, 17.5, 33, a - 0.24, a + 0.24)] = OLIVE
+    px[_disc(cx, cy, 0, 14.7)] = OLIVE                              # the hub: an olive ring, white inside, an olive dot
+    px[_disc(cx, cy, 0, 12.3)] = white
+    px[_disc(cx, cy, 0, 1.5)] = OLIVE
+    return pack
 
 
 def _time(beats, bpm):
@@ -210,36 +222,35 @@ def draw_focus(T, nat):
     tc = _time(t.pos, e.bpm)
     c.text_px(160 - text_width(c.pxfont(24), tc, -2) // 2, 36, tc, nat.WHITE, 24, -2)
 
-    # the two reels: the left empties as the right fills
-    ly, R = 118, 50
-    lx, rx = 82, 238
-    _reel(c, lx, ly, R, 1.0 - frac, rot)
-    _reel(c, rx, ly, R, frac, rot)
+    # the two reels (Brian's drawing): the left empties as the right fills
+    ly, lx, rx = 104, 87, 233
+    pl = _reel(c, lx, ly, 1.0 - frac, rot)
+    pr = _reel(c, rx, ly, frac, rot)
 
     # the play / pause / record glyph, between the reels
-    gx, gy = 160, 104
+    gx, gy = 160, 100
     if T.recording:
-        c.px[_disc(gx, gy, 0, 8)] = nat.RED
+        c.px[_disc(gx, gy, 0, 7)] = nat.RED
     elif T.playing:
         for r in range(13):
-            c.rect(gx - 6, gy - 6 + r, max(1, 12 - abs(r * 2 - 12)) // 2 + 1, 1, nat.WHITE)
+            c.rect(gx - 5, gy - 6 + r, 7 - abs(r - 6), 1, nat.WHITE)
     else:
         c.rect(gx - 6, gy - 7, 4, 14, nat.WHITE)
         c.rect(gx + 2, gy - 7, 4, 14, nat.WHITE)
 
-    # the tape path: from the bottom of each reel, dipping to a head in the middle
-    hy = ly + R + 14
-    c.rect(lx, ly + R - 1, 1, 2, G[5])
-    c.rect(rx, ly + R - 1, 1, 2, G[5])
-    for xa, xb in ((lx, gx), (gx, rx)):
-        steps = abs(xb - xa)
-        for s2 in range(steps):
-            fx = s2 / steps
-            x = int(round(xa + (xb - xa) * fx))
-            y = int(round((ly + R) + (hy - (ly + R)) * fx)) if xa < gx else int(round(hy + ((ly + R) - hy) * fx))
-            c.rect(x, y, 1, 1, G[4])
-    c.px[_disc(gx, hy, 0, 5)] = G[6]                                # the capstan / head
-    c.px[_disc(gx, hy, 0, 2)] = (10, 12, 10)
+    # the tape path, as drawn: off each reel's pack, down under a white guide, over a roller, sagging to the middle
+    white = (255, 255, 255)
+    gyd, ryr = ly + 54, ly + 52                                     # the guides (dots) and the rollers (rings)
+    for side, cx, pk in ((-1, lx, pl), (1, rx, pr)):
+        dotx, rolx = cx - side * 1, cx - side * 27
+        _line(c, cx + side * pk * 0.75, ly + pk * 0.66, dotx + side * 2, gyd + 2, white)
+        _line(c, dotx + side * 2, gyd + 2, dotx - side * 2, gyd + 3, white)
+        _line(c, dotx - side * 2, gyd + 3, rolx, ryr - 6, white)
+        _line(c, rolx, ryr - 6, rolx - side * 14, ryr - 6, white)
+        _line(c, rolx - side * 14, ryr - 6, gx, ryr + 3, white)
+        c.px[_disc(dotx, gyd, 0, 4)] = white
+        c.px[_disc(rolx, ryr, 0, 5.5)] = (0, 0, 0)
+        c.px[_disc(rolx, ryr, 4.9, 5.9)] = white
 
     # the bottom strip: this track's recording as a bar, with a ruler and the playhead
     sx0, sx1, sy = 8, 312, 196
