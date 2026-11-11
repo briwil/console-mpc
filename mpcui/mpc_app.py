@@ -49,6 +49,14 @@ main = G["main"]
 try:
     import stepentry
     stepentry.install(G["MoveBoard"], G.get("pad_velocity"))
+    import native as _native
+    _orig_note = G["MoveBoard"].note
+
+    def _note(self, num, val):
+        if 0 <= num < 8:
+            _native.set_touch(num, bool(val))             # knob-mode pads: a held pad = that knob touched
+        _orig_note(self, num, val)
+    G["MoveBoard"].note = _note
 except Exception:
     import traceback
     print("step entry is off:\n" + traceback.format_exc(), flush=True)

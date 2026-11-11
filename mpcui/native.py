@@ -573,6 +573,112 @@ def knobs_lane(ms):
 
 
 
+# ------------------------------------------------------------------ the sound pages
+
+_touched = []                                                    # knob-mode pads held (knob numbers 0-7), the last one wins
+MENU_KINDS = ("menu", "onoff", "voice", "vel_target", "lfo_target")
+
+
+def set_touch(knob, down):
+    """Called from the board for the touch notes the bridge sends in knob mode (a pad held = that knob touched)."""
+    if knob in _touched:
+        _touched.remove(knob)
+    if down:
+        _touched.append(knob)
+
+
+def draw_sound(T):
+    """An instrument's sound page: its settings as eight cards in knob order, the page names as tabs. A touched knob
+    (a pad held in knob mode) or one being turned gets its card lit and its name and value large along the bottom."""
+    c = canvas
+    c.clear()
+    e = T.engine
+    d = e.drums
+    pages = T.drum_pages()
+    T.drum_tab = min(T.drum_tab, len(pages) - 1)
+    page_name, params = pages[T.drum_tab]
+    names = getattr(d, "names", None) or []
+    voice = T.drum_voice
+    vname = names[voice] if voice < len(names) else ""
+    octave = getattr(T, "octave", 0)
+    c.rect(0, 0, W, TOP_H, BAR)
+    c.text_in(4, 0, TOP_H, vname[:14], ACC)
+    right = ("OCT %+d   " % octave if octave else "") + "%d / %d" % (T.drum_tab + 1, len(pages))
+    c.text_in(W - 4 - c.width(right), 0, TOP_H, right, MID)
+    # the page names as tabs (scrolled so the shown one is always in view)
+    first = max(0, T.drum_tab - 2)
+    x = 4
+    for i in range(first, len(pages)):
+        nm = str(pages[i][0]).upper()[:10]
+        w = c.width(nm) + 12
+        if x + w > W - 4 and i > T.drum_tab:
+            break
+        here = i == T.drum_tab
+        c.rect(x, 20, w, 16, ACC if here else CELL)
+        c.text_in(x + 6, 20, 16, nm, BG if here else MID)
+        x += w + 4
+    # who is being touched / turned
+    now = time.monotonic()
+    active = _touched[-1] if _touched else None
+    if active is None:
+        newest = 0.0
+        for i, _p in enumerate(params[:8]):
+            when = T.drumpage.edited.get(i + 1, 0.0)
+            if now - when < 1.0 and when > newest:
+                active, newest = i, when
+    # the eight cards
+    cw, ch = 73, 62
+    for i, p in enumerate(params[:8]):
+        col, row = i % 4, i // 4
+        x, y = 4 + col * (cw + 6), 42 + row * (ch + 6)
+        hot = i == active
+        c.rect(x, y, cw, ch, SEL_FILL if hot else CELL)
+        c.frame(x, y, cw, ch, ACC if hot else CELL_LINE)
+        c.text(x + 6, y + 6, ("%d %s" % (i + 1, d.label(p)))[:11], ACC if hot else MID)
+        v = str(d.value_text(p))
+        big = len(v) <= 4
+        c.text_in(x + 6, y + 18, 28, v[:9], FG, 3 if big else 2)
+        if d.kind(p) not in MENU_KINDS:
+            frac = max(0.0, min(1.0, d.fraction(p)))
+            c.rect(x + 6, y + ch - 10, cw - 12, 4, CELL_LINE)
+            c.rect(x + 6, y + ch - 10, int((cw - 12) * frac), 4, ACC if hot else FG)
+    c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
+    if active is not None and active < len(params):
+        p = params[active]
+        py = 174
+        c.rect(0, py, W, H - BOTTOM_H - py, (12, 14, 18))
+        c.rect(0, py, W, 1, ACC)
+        c.text(10, py + 5, "KNOB %d" % (active + 1), MID)
+        label = str(d.label(p)).upper()
+        value = str(d.value_text(p))
+        c.text(10, py + 13, label[:18], ACC, 3 if len(label) <= 9 else 2)
+        c.text(W - 10 - c.width(value[:8], 3), py + 13, value[:8], FG, 3)
+        if d.kind(p) not in MENU_KINDS:
+            frac = max(0.0, min(1.0, d.fraction(p)))
+            c.rect(10, py + 42, W - 20, 4, CELL_LINE)
+            c.rect(10, py + 42, int((W - 20) * frac), 4, ACC)
+    if T.message and time.monotonic() < T.message_until:
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
+    else:
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, "< > OR WHEEL: PAGES   PAD + ENCODER: KNOB", DIM)
+
+
+def on_sound_page(T, menu):
+    """True when pages.draw would draw sound_page itself (not the sample browser, LFO / insert / arp pages or presets)."""
+    if menu is not None and (menu.open or menu.kits.open):
+        return False
+    if T.fx_page or T.seq_page or not T.drum_page:
+        return False
+    try:
+        if T.punch.active() or T.auto.active() or T.sbrowse.active or T.mlfo.active():
+            return False
+        if getattr(T, "presets", None) is not None and T.presets.on_page():
+            return False
+        return T.engine is not None and T.engine.drums is not None
+    except Exception:
+        return False
+
+
 def on_tape_page(T, menu):
     """True when Console's own pages.draw would be drawing the tape page (see the end of its if / elif chain)."""
     if menu is not None and (menu.open or menu.kits.open):
@@ -614,6 +720,11 @@ def install(pages):
                 (draw_tape if T.focus.track is None else draw_focus)(T)
                 publish()
                 set_mode("T")
+                return
+            if card is None and T.engine and on_sound_page(T, menu):
+                draw_sound(T)
+                publish()
+                set_mode("O")
                 return
             if card is None and T.engine and on_seq_page(T, menu):
                 draw_seq(T)
