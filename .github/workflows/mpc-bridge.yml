@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04          # (the arm runners sat queued for 40 minutes; the build is a cross build either way)
     steps:
       - uses: actions/checkout@v4
       - name: Tools
