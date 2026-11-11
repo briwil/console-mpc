@@ -30,3 +30,9 @@ def pick(key, n):
     order = list(range(len(BODIES)))
     rnd.shuffle(order)
     return [BODIES[order[i % len(order)]] for i in range(n)]
+
+
+# the green palette (from the sound-page design): darkest -> lightest. For the green frame, and for other pages that follow.
+GREENS = [(0x19, 0x1F, 0x11), (0x29, 0x33, 0x18), (0x3B, 0x4D, 0x22), (0x4C, 0x66, 0x2F), (0x5D, 0x80, 0x39), (0x6E, 0x99, 0x3F),
+          (0x80, 0xB2, 0x41)]
+DARK_TEXT = (0x23, 0x2B, 0x2B)             # text of the parameters that are not being turned

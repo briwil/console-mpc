@@ -6,6 +6,7 @@ it draws the full-colour frame and hands it to the bridge through /tmp/console-n
 Nothing in Console's own files changes. If anything here fails, the page falls back to the Move screen.
 """
 import os
+import sys
 import time
 
 import numpy as np
@@ -48,6 +49,7 @@ def _glyph(ch):
 
 
 _fonts = {}
+_pxfonts = {}
 _masks = {}
 _HERE = os.path.dirname(os.path.abspath(__file__))
 # Jersey 15 (a pixel font, OFL) is the look; Lato / Carlito / Barlow stay as fallbacks. A pixel font is only sharp at its own
@@ -149,6 +151,42 @@ class Canvas:
         h, w = a.shape
         x1, y1 = min(W, x + w), min(H, y0 + h)
         if x < 0 or x1 <= x or y1 <= y0:
+            return
+        a = a[:y1 - y0, :x1 - x][..., None]
+        region = self.px[y0:y1, x:x1].astype(np.float32)
+        self.px[y0:y1, x:x1] = (region * (1 - a) + np.array(c, np.float32) * a).astype(np.uint8)
+
+    @staticmethod
+    def pxfont(px):
+        """The pixel font at exactly px pixels (sharp at whole multiples of 8), with cap_h / cap_pad."""
+        f = _pxfonts.get(px)
+        if f is None:
+            from PIL import ImageFont
+            for path, _base in FONT_CANDIDATES:
+                if path and os.path.exists(path):
+                    f = ImageFont.truetype(path, px)
+                    box = f.getbbox("H")
+                    f.cap_pad, f.cap_h = box[1], box[3] - box[1]
+                    break
+            _pxfonts[px] = f
+        return f
+
+    def text_px(self, x, baseline, s, c, px, track=0):
+        """Text at exactly px pixels, its left edge at x and the bottom of its capitals on the line `baseline` (no ox shift)."""
+        font = self.pxfont(px)
+        s = str(s).upper()
+        a = _mask(font, s, track)
+        y0 = int(baseline) - font.cap_h - font.cap_pad
+        x = int(x)
+        h, w = a.shape
+        if y0 < 0:
+            a, y0 = a[-y0:], 0
+            h = a.shape[0]
+        if x < 0:
+            a, x = a[:, -x:], 0
+            w = a.shape[1]
+        x1, y1 = min(W, x + w), min(H, y0 + h)
+        if x1 <= x or y1 <= y0:
             return
         a = a[:y1 - y0, :x1 - x][..., None]
         region = self.px[y0:y1, x:x1].astype(np.float32)
@@ -651,44 +689,9 @@ def set_touch(knob, down):
 
 
 def draw_sound(T):
-    """An instrument's sound page in colour blocks: the instrument (or drum) in big letters, its eight settings as blocks in
-    knob order. A touched knob (a pad held in knob mode) or one being turned: its block gets a white frame."""
-    c = canvas
-    begin()
-    e = T.engine
-    d = e.drums
-    pages = T.drum_pages()
-    T.drum_tab = min(T.drum_tab, len(pages) - 1)
-    page_name, params = pages[T.drum_tab]
-    names = getattr(d, "names", None) or []
-    voice = T.drum_voice
-    vname = (names[voice] if voice < len(names) else "") or str(getattr(d, "title", ""))
-    octave = getattr(T, "octave", 0)
-    now = time.monotonic()
-    active = _touched[-1] if _touched else None
-    if active is None:
-        newest = 0.0
-        for i, _p in enumerate(params[:8]):
-            when = T.drumpage.edited.get(i + 1, 0.0)
-            if now - when < 1.0 and when > newest:
-                active, newest = i, when
-    top = "PAGE %d/%d" % (T.drum_tab + 1, len(pages))
-    if len(pages) > 1:
-        top += " " + str(page_name).upper()[:12]
-    if octave:
-        top += " OCT %+d" % octave
-    c.text(6, 8, top, WHITE, 2, -2)
-    title = vname.upper()
-    big_title(title, 24)
-    if T.message and now < T.message_until:
-        c.text(6, 64, T.message[:28], ACC, 2, -2)
-    cols = colour.pick("%s/%s/%s" % (getattr(d, "id", getattr(d, "machine", "")), voice, page_name), 8)
-    cw, ch = CW // 4, 71
-    for i, p in enumerate(params[:8]):
-        col, row = i % 4, i // 4
-        x, y = col * cw, 98 + row * ch
-        flat = d.kind(p) in MENU_KINDS
-        block(x, y, cw, ch, cols[i], d.label(p), d.value_text(p), None if flat else d.fraction(p), hot=(i == active))
+    """An instrument's sound page: see soundpage.py (the green frame, the setting being turned grows, the rest go dark; animated)."""
+    import soundpage
+    soundpage.draw(T, sys.modules[__name__])
 
 
 def on_sound_page(T, menu):
