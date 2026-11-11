@@ -11,6 +11,9 @@ BACK = 51
 def active(T):
     """Drum sequencer page, nothing selected, no popups on top: the cursor is in use."""
     try:
+        mn = getattr(T, "_mpc_menu", None)
+        if mn is not None and (mn.open or mn.kits.open):
+            return False                                    # a menu (SAVE PRESET ...) is up: the wheel and push are the menu's
         ms = T.mseq
         if not T.seq_page or T.fx_page or not ms.active() or ms.held is not None:
             return False
@@ -24,6 +27,9 @@ def active(T):
 def in_seq(T):
     """Drum sequencer page (steps selected or not): the wheel's box and push are in use."""
     try:
+        mn = getattr(T, "_mpc_menu", None)
+        if mn is not None and (mn.open or mn.kits.open):
+            return False
         ms = T.mseq
         if not T.seq_page or T.fx_page or not ms.active():
             return False

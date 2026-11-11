@@ -972,6 +972,10 @@ def install(pages):
     def draw(f, T, menu=None):
         original(f, T, menu)
         try:
+            T._mpc_menu = menu                       # (so the wheel handler knows a menu is open and leaves the wheel alone)
+        except Exception:
+            pass
+        try:
             card = T.pagefx.state() if getattr(T, "pagefx", None) is not None else None
             if card is None and T.engine and on_tape_page(T, menu):
                 (draw_tape if T.focus.track is None else draw_focus)(T)
