@@ -34,6 +34,7 @@ extern int close(int);
 extern long read(int, void *, unsigned long);
 extern long write(int, const void *, unsigned long);
 extern int ioctl(int, unsigned long, ...);
+extern int access(const char *, int);
 extern long lseek(int, long, int);
 extern int usleep(unsigned);
 extern int pthread_create(unsigned long *, const void *, void *(*)(void *), void *);
@@ -142,7 +143,9 @@ static int hw_audio_open(void)
             /* S32_LE = 10, RW_INTERLEAVED = 3, stereo, 44100, no resampling, 9 ms buffer */
             if (snd_pcm_set_params(pcm, 10, 3, 2, RATE, 0, 9000) == 0) {
                 /* the inputs: SND_PCM_STREAM_CAPTURE = 1; if it can't be opened Console simply hears silence there */
-                if (snd_pcm_open(&pcm_in, "hw:2,0", 1, 0) == 0) {
+                /* OFF unless the file /data/UserData/console/ENABLE_INPUT exists: the first try broke the audio output */
+                int want_in = access("/data/UserData/console/ENABLE_INPUT", 0) == 0;
+                if (want_in && snd_pcm_open(&pcm_in, "hw:2,0", 1, 0) == 0) {
                     if (snd_pcm_set_params(pcm_in, 10, 3, 2, RATE, 0, 9000) != 0) { snd_pcm_close(pcm_in); pcm_in = 0; }
                 } else pcm_in = 0;
                 return 0;
