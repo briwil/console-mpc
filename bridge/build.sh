@@ -43,3 +43,13 @@ ld.lld -o bootmenu bootmenu.o -L stubs/boot -l:libc.so.6 --dynamic-linker=/lib/l
   --no-as-needed -z noexecstack --build-id=none
 llvm-strip bootmenu
 echo built: bootmenu $(ls -l bootmenu | awk '{print $5}') bytes
+
+# ---- panelsniff.so: a listener for what the stock app says to the panel (LD_PRELOAD; only needs __errno_location from libc) ----
+clang --target=aarch64-linux-gnu -O2 -fPIC -fno-stack-protector -ffreestanding -fvisibility=hidden -Wall -Wextra -c panelsniff.c -o panelsniff.o
+: > stubs/sniff_libc.c
+echo "int *__errno_location(void) { return 0; }" > stubs/sniff_libc.c
+mkdir -p stubs/sniff
+clang --target=aarch64-linux-gnu -shared -nostdlib -fPIC -fuse-ld=lld -Wl,-soname=libc.so.6 -o stubs/sniff/libc.so.6 stubs/sniff_libc.c
+ld.lld -shared -o panelsniff.so panelsniff.o -L stubs/sniff -l:libc.so.6 --no-as-needed -z noexecstack --build-id=none -soname panelsniff.so
+llvm-strip panelsniff.so
+echo built: panelsniff.so $(ls -l panelsniff.so | awk '{print $5}') bytes
