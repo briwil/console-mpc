@@ -36,7 +36,9 @@ mpc "cd $C && rm -rf mpc.old && { [ -d mpc ] && mv mpc mpc.old || true; } && mv 
 echo "5/5  Checking"
 GOT=$(mpc "cat $C/mpc/BUILD")
 [ "$GOT" = "$NEW" ] || { echo "MISMATCH: MPC has '$GOT'. Do NOT restart; run this again."; exit 1; }
-echo "Done: the MPC has build $GOT, safely written. Restarting the MPC now..."
-# clear the boot safety catch (this restart is ours, not a failed start), flush, restart. The connection drops as it goes down: that is fine.
-mpc "rm -f $C/boot-attempt; sync; sleep 1; (sleep 1; reboot) >/dev/null 2>&1 &" || true
-echo "The MPC is restarting: the startup menu comes up in a few seconds."
+echo "Done: the MPC has build $GOT, safely written. Bringing up the startup menu (no restart needed)..."
+# Run the power-on script again by hand, the way the power-on hook does: it waits for the stock app, takes over and shows the menu.
+# (A warm "reboot" left the panel dead until a real power-off, so there is no restart here.)
+mpc "rm -f $C/boot-attempt /run/console-boot.done; sync; systemd-run --unit=console-boot-update-\$\$ --collect --no-block /bin/sh $C/mpc/boot.sh >/dev/null 2>&1" \
+  || echo "Could not start the menu: power the MPC off and on instead."
+echo "The startup menu (PAD 1 CONSOLE / PAD 2 MPC) comes up on the MPC in a few seconds."
