@@ -731,36 +731,9 @@ def on_mixer_page(T, menu):
 
 
 def draw_mixer(T):
-    """MIXER in colour blocks: each instrument's level as a fill, its name, its pan; muted ones greyed."""
-    from console import mix_pan_text
-    c = canvas
-    begin()
-    e = T.engine
-    c.text(6, 8, "SHIFT: PAN", WHITE, 2, -2)
-    big_title("MIXER", 24)
-    if T.message and time.monotonic() < T.message_until:
-        c.text(6, 64, T.message[:28], ACC, 2, -2)
-    else:
-        c.text(6, 70, "KNOBS: LEVEL  PAD: MUTE", MID)
-        c.text(6, 80, "SHIFT+PAD: SOLO", MID)
-    cols = colour.pick("mixer", 8)
-    cw, ch = CW // 4, 71
-    for i in range(8):
-        x, y = (i % 4) * cw, 98 + (i // 4) * ch
-        mid = e.slots[i]
-        if not mid:
-            c.rect(x, y, cw, ch, (14, 16, 20))
-            c.text_in(x + 4, y, 19, "%d -" % (i + 1), DIM, 2, -2)
-            continue
-        muted = i in e.slot_mutes
-        lvl = max(0.0, min(1.0, float(e.inst_levels[i])))
-        body = colour.mix(cols[i], (70, 70, 76), 0.8) if muted else cols[i]
-        name = str(T.instp.title(mid)).upper()
-        block(x, y, cw, ch, body, name, "MUTE" if muted else "%d" % round(lvl * 100),
-              None if muted else lvl, vscales=(5, 3, 2) if not muted else (3, 2))
-        c.text(x + 3, y + ch - 10, str(i + 1), WHITE)
-        pan = mix_pan_text(e.inst_pans[i])
-        c.text(x + cw - 3 - c.width(pan), y + ch - 10, pan, WHITE)
+    """The mixer in the sound page's style: see soundpage.py."""
+    import soundpage
+    soundpage.draw_mixer(T, sys.modules[__name__])
 
 
 # ------------------------------------------------------------------ instruments list, project menu, settings
