@@ -128,3 +128,119 @@ def draw(T, nat):
             txt = "SONG  " + txt
     px = 16 if text_width(c.pxfont(16), txt, -1) <= room else 8
     c.text_px(20, BASE, txt[:60 if px == 8 else 40], col, px, -1 if px == 16 else 0)
+
+
+def _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb):
+    c.rect(x0, RULER_Y, x1 - x0, RULER_H, nat.BOX)
+    bar = tape.BEATS_PER_BAR
+    k = int(t.pos - (mid - x0) / ppb) - 1
+    while True:
+        x = int(round(mid + (k - t.pos) * ppb))
+        if x >= x1:
+            break
+        if x >= x0:
+            in_bar = k % bar
+            if abs(in_bar) < 1e-6:
+                c.rect(x, RULER_Y + 2, 1, RULER_H - 2, nat.MID)
+                c.text_px(x + 3, RULER_Y + 8, str(int(k // bar) + 1), nat.MID, 8, 0)
+            elif ppb >= 6:
+                c.rect(x, RULER_Y + 7, 1, 3, nat.DIM)
+        k += 1
+    region = e.loop_region()
+    if region:
+        a = int(round(mid + (region[0] / fpb - t.pos) * ppb))
+        b = int(round(mid + (region[1] / fpb - t.pos) * ppb))
+        c.rect(max(x0, a), RULER_Y, max(0, min(x1, b) - max(x0, a)), 2, G[6] if e.loop_on else G[3])
+
+
+def draw_focus(T, nat):
+    """The zoomed track: one big box in the same style."""
+    c = nat.canvas
+    c.clear((0, 0, 0))
+    e, t = T.engine, T.tape
+    n = T.focus.shown
+    now = nat.time.monotonic()
+    if not e:
+        return
+    fpb = e.frames_per_beat()
+    BX, BW = 32, 285                                             # the big box: x 32 .. 317
+    top, bot = 16, 156
+    x0, x1 = BX + 1, BX + BW - 1
+    mid = x0 + (x1 - x0) // 3
+    ppb = (x1 - x0) / (tape.ZOOMS[t.zoom] * tape.BEATS_PER_BAR)
+    _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb)
+    muted = not e.audible(n - 1)
+    c.text_px(4, 52, str(n), G[2] if muted else nat.WHITE, 24, 0)
+    if T.recording:
+        c.rect(6, 2, 9, 9, nat.RED)
+    elif T.playing:
+        for r in range(9):
+            c.rect(6, 2 + r, max(1, 9 - abs(r * 2 - 8)), 1, nat.WHITE)
+    else:
+        c.frame(6, 2, 9, 9, G[4])
+    c.frame(BX, top, BW, bot - top, OUTLINE[n - 1])
+    rows_n = bot - top - 2
+    centre = rows_n // 2
+    half = centre - 3
+    ch = e.chans(n - 1)[0]
+    boxes = e.regions[ch]
+    lv = e.levels[ch] if ch < len(e.levels) else None
+    lv = np.asarray(lv) if lv is not None and len(lv) else None
+    here = None
+    for i, r in enumerate(boxes):
+        xa = int(round(mid + (r[0] / fpb - t.pos) * ppb))
+        xb = int(round(mid + (r[1] / fpb - t.pos) * ppb))
+        if r[0] / fpb <= t.pos < r[1] / fpb:
+            here = r
+        if xb <= x0 or xa >= x1:
+            continue
+        a, b = max(x0, xa), min(x1, xb)
+        if b <= a:
+            continue
+        c.rect(a, top + 1, b - a, rows_n, nat.BOX)
+        if lv is not None:
+            xs = np.arange(a, b)
+            idx = ((t.pos + (xs - mid) / ppb) * tape.RES).astype(int)
+            ok = (idx >= 0) & (idx < len(lv))
+            h = np.zeros(len(xs), int)
+            h[ok] = np.maximum(1, np.rint(np.minimum(1.0, lv[idx[ok]].astype(float)) * half).astype(int))
+            rows = np.arange(rows_n)[:, None]
+            mask = (np.abs(rows - centre) <= h[None, :]) & (h[None, :] > 0)
+            sub = c.px[top + 1:top + 1 + rows_n, a:b]
+            sub[mask[:sub.shape[0], :sub.shape[1]]] = nat.DIM if muted else nat.FG
+        if xa >= x0:
+            c.rect(xa, top + 1, 1, rows_n, nat.FG)
+    for i, r in enumerate(boxes):                                # a splice: an I-beam where two boxes touch
+        if i and int(boxes[i - 1][1]) == int(r[0]):
+            x = int(round(mid + (r[0] / fpb - t.pos) * ppb))
+            if x0 <= x < x1:
+                c.rect(x, top, 1, rows_n + 2, nat.WHITE)
+                c.rect(x - 3, top, 7, 1, nat.WHITE)
+                c.rect(x - 3, bot - 1, 7, 1, nat.WHITE)
+    c.rect(mid, RULER_Y, 1, bot - RULER_Y, nat.WHITE)            # the playhead
+    # what knobs 1, 2 and the pads change
+    stereo = (n - 1) in e.stereo
+    try:
+        src = str(e.input_text(n - 1))
+    except Exception:
+        src = "?"
+    c.text_px(8, 182, "STEREO" if stereo else "MONO", nat.WHITE, 16, -1)
+    c.text_px(130, 182, src[:14], nat.WHITE, 16, -1)
+    if here is None:
+        c.text_px(8, 208, "NO BOX HERE", G[3], 16, -1)
+    else:
+        gain = here[3] if len(here) > 3 else 0.0
+        fin = (here[4] if len(here) > 4 else 0) / 44100.0
+        fout = (here[5] if len(here) > 5 else 0) / 44100.0
+
+        def fade(sec):
+            return "OFF" if sec <= 0 else ("%d MS" % round(sec * 1000) if sec < 1 else "%.2g S" % sec)
+        c.text_px(8, 208, "GAIN %+.1f" % gain, nat.WHITE, 16, -1)
+        c.text_px(130, 208, "IN " + fade(fin), nat.WHITE, 16, -1)
+        c.text_px(230, 208, "OUT " + fade(fout), nat.WHITE, 16, -1)
+    bpm = "%.0f BPM" % e.bpm
+    c.text_px(317 - text_width(c.pxfont(16), bpm, -1), 236, bpm, nat.WHITE, 16, -1)
+    if T.message and now < T.message_until:
+        c.text_px(8, 236, T.message.upper()[:20], nat.WHITE, 16, -1)
+    else:
+        c.text_px(8, 236, T.position_text(t.pos)[:14].upper(), nat.WHITE, 16, -1)
