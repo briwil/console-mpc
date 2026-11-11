@@ -299,20 +299,6 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);                   /* SEQ: normal pads again */
 
-    /* K1 turned left to its stop and held there: it keeps clicking left (a pot has an end, a Move knob doesn't) */
-    {
-        int b = ngot;
-        send((unsigned char[]){ 0xB0, 0x10, 5 }, 3);
-        send((unsigned char[]){ 0xB0, 0x10, 0 }, 3);
-        usleep(700000);
-        int rep = 0;
-        for (int i = b; i < ngot; i++) if (got[i][0] == 0xBF && got[i][1] == 71 && got[i][2] == 127) rep++;
-        CHECK(rep > 5 + 2, "A: K1 held at its left stop keeps clicking left");
-        send((unsigned char[]){ 0xB0, 0x10, 3 }, 3);                  /* let go of the stop */
-        b = ngot;
-        usleep(400000);
-        CHECK(ngot == b, "A: ... and stops when the knob leaves the stop");
-    }
     /* lights and screen */
     sent_lights = 1;
     int g0 = ngot;
@@ -356,6 +342,20 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x80, 0x51, 0x00 }, 3);
     send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);
     CHECK(expect(g0 + 2, 0xBF, 49, 127) && expect(g0 + 3, 0xBF, 51, 127) && expect(g0 + 4, 0xBF, 51, 0), "A: Shift + STOP -> Back");
+    /* K1 is also sent as its absolute position (CC 118) */
+    {
+        FILE *pf = fopen("/tmp/console-pagemode", "wb"); fputc('S', pf); fclose(pf);
+        usleep(200000);
+        int b = ngot;
+        send((unsigned char[]){ 0xB0, 0x10, 100 }, 3);
+        send((unsigned char[]){ 0xB0, 0x10, 0 }, 3);
+        usleep(200000);
+        int abs0 = 0;
+        for (int i = b; i < ngot; i++) if (got[i][0] == 0xBF && got[i][1] == 118 && got[i][2] == 0) abs0++;
+        CHECK(abs0 == 1, "A: K1 also sends its absolute position (CC 118) on a sequencer page");
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
+        usleep(200000);
+    }
     CHECK(c_deactivate(cl) == 0, "A: deactivate");
 
     /* B: the real core on the shim */

@@ -59,6 +59,7 @@ static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47,
 /* ---- state ---- */
 static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
+static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
 static volatile int page_nostep;            /* a page with no steps (the sound page): SEQ does nothing there and step mode / step settings don't apply (written by the screen thread) */
 static volatile int page_param;             /* a step is selected on the sequencer page (written by the screen thread): the pads are its settings, as with param_mode */
 static int param_mode;                      /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings), bank = 1-16 / 17-32 */
@@ -162,38 +163,19 @@ static void send3(int st, int a, int b)
 #endif
 
 /* an absolute knob (0-127) becomes "clicks": CC value 1 = one click right, 127 = one click left */
-/* K1-K3 and FADER are potentiometers: they have a stop at each end, a Move knob doesn't. So the clicks come from the movement, and
-   when a knob is turned right to a stop and held there it keeps clicking (about 8 a second, for up to 4 seconds), like holding an
-   arrow key. Without that a setting could only go as far as the pot's travel from wherever it started. */
-#define EDGE_EVERY 45                        /* ticks between repeats: about 0.13 s */
-#define EDGE_FOR 1400                        /* ticks: about 4 s */
-static int knob_cc[5], knob_edge_dir[5];
-static long knob_edge_since[5], knob_edge_next[5];
+/* K1-K3 and FADER are potentiometers (absolute 0-127, a stop at each end), a Move knob is endless. The clicks come from the
+   movement. K1 is also sent as its absolute position (CC 118, 0-127): Console's MPC layer uses it to set a pattern's length directly
+   from where the knob is (1-64), which the clicks alone could not do. */
 static void knob_clicks(int slot, int val, int move_cc)
 {
+    if (slot == 0 && page_seq) send3(0xBF, 118, val);                 /* (on the sequencer pages) */
     if (knob_last[slot] < 0) { knob_last[slot] = val; return; }
     int d = val - knob_last[slot];
     knob_last[slot] = val;
-    knob_cc[slot] = move_cc;
-    knob_edge_dir[slot] = 0;
     if (d == 0) return;
     int n = d < 0 ? -d : d;
     if (n > 40) n = 40;
     for (int i = 0; i < n; i++) send3(0xBF, move_cc, d > 0 ? 1 : 127);
-    if (val <= 1 && d < 0) { knob_edge_dir[slot] = -1; knob_edge_since[slot] = tick_n; knob_edge_next[slot] = tick_n + EDGE_EVERY * 2; }
-    if (val >= 126 && d > 0) { knob_edge_dir[slot] = 1; knob_edge_since[slot] = tick_n; knob_edge_next[slot] = tick_n + EDGE_EVERY * 2; }
-}
-
-static void knob_edges(void)
-{
-    for (int k = 0; k < 5; k++) {
-        if (!knob_edge_dir[k]) continue;
-        if (tick_n - knob_edge_since[k] > EDGE_FOR) { knob_edge_dir[k] = 0; continue; }
-        if (tick_n >= knob_edge_next[k]) {
-            knob_edge_next[k] = tick_n + EDGE_EVERY;
-            send3(0xBF, knob_cc[k], knob_edge_dir[k] > 0 ? 1 : 127);
-        }
-    }
 }
 
 /* The MAIN VOLUME knob is absolute, Console's volume is 50 clicks of 2 % each (CC 79 relative). The first move syncs them
@@ -265,7 +247,6 @@ static void mpc_pad_event(int idx, int vel, int on)
 static void mapping_tick(void)
 {
     tick_n++;
-    knob_edges();
     { static int seen; int now = page_tape * 4 + page_param * 2 + page_nostep; if (seen != now) { seen = now; refresh_pads(); } }     /* the pads change meaning on the tape page: new lights */
 #ifdef NO_RETRIG
     return;

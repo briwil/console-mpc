@@ -7,6 +7,42 @@ import time
 WHEEL = 14
 PUSH = 3                                                         # the wheel's push (the MPC encoder push)
 BACK = 51
+K1 = 71                                                          # Move knob 1 (relative clicks)
+K1_ABS = 118                                                     # K1's absolute position from the bridge (0-127)
+MAX_LEN = 64
+
+
+def length_page(T):
+    """K1 sets a length: a drum lane's, or the synth pattern's (or the picked note's), no steps selected or held."""
+    try:
+        mn = getattr(T, "_mpc_menu", None)
+        if mn is not None and (mn.open or mn.kits.open):
+            return False
+        if not T.seq_page or T.fx_page or T.punch.active() or T.auto.active() or not T.engine:
+            return False
+        if T.synth_shown():
+            ms = T.msyn
+            return bool(ms.active() and not ms.selected and not ms.down and not (ms.kind and ms.lane is None))
+        ms = T.mseq
+        return bool(ms.active() and ms.held is None and not ms.selected and T.engine.drums is not None)
+    except Exception:
+        return False
+
+
+def set_length(T, val):
+    """Length from K1's position: 0 -> 1 step, 127 -> 64."""
+    target = 1 + int(round(val * (MAX_LEN - 1) / 127.0))
+    if T.synth_shown():
+        ms = T.msyn
+        cur = ms.length()
+        if target != cur:
+            ms.knob(1, target - cur, False)
+    else:
+        ms = T.mseq
+        cur = T.engine.seq.lane(T.seqp.lane).length
+        if target != cur:
+            ms.knob(1, target - cur, False)
+
 
 
 def active(T):
@@ -137,6 +173,13 @@ def install(MoveBoard, pad_velocity=None):
 
     def cc(self, num, val):
         T = self.T
+        if num == K1_ABS or num == K1:
+            if length_page(T):
+                if num == K1_ABS:
+                    set_length(T, val)                          # K1 is a pot: its position IS the length (1-64)
+                return                                          # (and its clicks are not used there)
+            if num == K1_ABS:
+                return
         if num == PUSH and val and in_seq(T):
             click(T, self.shift)
             return
