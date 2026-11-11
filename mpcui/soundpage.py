@@ -513,3 +513,117 @@ def draw_seq(T, nat):
         gkey = ("seqlane", lane)
     items, active = by_pad_rows(items, active)
     grid(nat, gkey, "", "", items, active, now, None, head=head, band_dy=SEQ_DY)
+
+
+SYN = {"prev": None, "when": {}}
+
+
+def draw_synth_seq(T, nat):
+    """A synth's sequencer in the drum sequencer's look: the 16 steps on top, the pattern's knobs (or the selected steps'
+    settings) in the green frame."""
+    import sequencer
+    import notes
+    c = nat.canvas
+    e = T.engine
+    ms, seq = T.msyn, e.seq
+    first = ms.first()
+    length = ms.length()
+    now = nat.time.monotonic()
+    pat = "PAT %d" % (seq.current + 1) + (">%d" % (seq.queued + 1) if seq.queued is not None else "")
+    selected = bool(ms.selected)
+    sel = set(ms.selected)
+    at = ms.playing_step()
+    blink = int(now * 3) % 2 == 0
+    msg = T.message if (T.message and now < T.message_until) else None
+    per_note = ms.lane is not None and ms.kind
+    if selected:
+        left = str(ms.which())
+    elif per_note:
+        left = "NOTE " + notes.note_name(ms.lane)
+    else:
+        left = "PER NOTE" if ms.kind else "UNIFIED"
+    if T.live_rec and not selected:
+        left = "REC " + left
+
+    def head(c):
+        px = 24 if text_width(c.pxfont(24), left[:16], -3) <= 190 else 16
+        c.text_px(6, 25, left[:16].upper(), WHITE, px, -3 if px == 24 else -1)
+        c.text_px(314 - text_width(c.pxfont(16), pat, -1), 25, pat, colour.GREENS[5], 16, -1)
+        if msg:
+            c.text_px(6, 6, msg[:50], nat.ACC, 8, 0)
+        y = 32
+        for k in range(16):
+            i = first + k
+            x = 8 + k * 19
+            if i >= length or sequencer.dark(i, sequencer.TRIPLETS):
+                c.rect(x + 7, y + 20, 3, 3, colour.GREENS[2])
+                continue
+            c.rect(x, y, 17, 40, colour.GREENS[1] if (k // 4) % 2 == 0 else colour.GREENS[0])
+            here = ms.notes_at(i)
+            on = (ms.lane in here) if per_note else bool(here)
+            is_sel = i in sel
+            if on:
+                h = 40 if per_note else min(40, 16 + 8 * (len(here) - 1))   # a chord stands taller than one note
+                c.rect(x, y + 40 - h, 17, h, WHITE if is_sel else colour.GREENS[5])
+            if is_sel and blink:
+                c.rect(x, y, 17, 40, WHITE)
+            if i in ms.down:
+                c.frame(x - 1, y - 1, 19, 42, WHITE)
+            if at is not None and i == at:
+                c.rect(x, y + 42, 17, 3, WHITE)
+            num = str(i + 1)
+            c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 54, num, WHITE if k % 4 == 0 else colour.GREENS[4], 8, 0)
+        npages = max(1, (length + 15) // 16)
+        seg = (W - 16 - 4 * (npages - 1)) // npages
+        for p in range(npages):
+            c.rect(8 + p * (seg + 4), 91, seg, 3, WHITE if p == first // 16 else colour.GREENS[1])
+
+    if selected and ms.sel is None:                                 # the step settings as a grid, like the pads
+        c.clear((0, 0, 0))
+        c.px[:] = bands(SEQ_DY)
+        head(c)
+        items = ms.pad_items()
+        for p in range(16):
+            col, row = p % 4, 3 - p // 4
+            x, y = 6 + col * 70, 124 + row * 29
+            if p >= len(items):
+                continue
+            key, label = items[p]
+            on = ms.engaged(key)
+            c.rect(x, y, 68, 27, colour.GREENS[3] if on else colour.GREENS[0])
+            c.text_px(x + 4, y + 10, str(label)[:11], WHITE if on else colour.GREENS[4], 8, 0)
+            if on:
+                c.text_px(x + 4, y + 22, str(ms.item_value(key))[:11], WHITE, 8, 0)
+        LAST["key"] = None
+        return
+    if selected:
+        key, label = ms.pad_items()[ms.sel]
+        ct = ms.chance_text(key)
+        items = [("K1 " + str(label)[:10], str(ms.item_value(key)), 1.0)]
+        if ct is not None:
+            items.append(("K2 CHANCE", str(ct)[:9], 1.0))
+        active = 0
+        gkey = ("synsel", key, ct is not None)
+    else:
+        items = [(str(lb), str(v), 1.0) for lb, v, _x in ms.knob_list()[:8]]
+        cur_vals = [it[1] for it in items]
+        prev = SYN["prev"]
+        if prev is not None and len(prev) == len(cur_vals):
+            for i in range(len(items)):
+                if cur_vals[i] != prev[i]:
+                    SYN["when"][i] = now
+        else:
+            SYN["when"] = {}
+        SYN["prev"] = cur_vals
+        active = nat._touched[-1] if nat._touched else None
+        if active is None:
+            newest = 0.0
+            for i in range(len(items)):
+                w = SYN["when"].get(i, -9.0)
+                if now - w < 1.0 and w > newest:
+                    active, newest = i, w
+        if active is not None and active >= len(items):
+            active = None
+        gkey = ("synlane", len(items))
+    items, active = by_pad_rows(items, active)
+    grid(nat, gkey, "", "", items, active, now, None, head=head, band_dy=SEQ_DY)

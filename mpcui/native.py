@@ -544,6 +544,28 @@ def draw_song(T):
     soundpage.draw_song(T, sys.modules[__name__])
 
 
+def on_synth_seq_page(T, menu):
+    """True when pages.draw would draw a synth's sequencer."""
+    if menu is not None and (menu.open or menu.kits.open):
+        return False
+    try:
+        if T.fx_page or not T.seq_page or not T.synth_shown():
+            return False
+        if getattr(T, "punch", None) is not None and T.punch.active():
+            return False
+        if getattr(T, "auto", None) is not None and T.auto.active():
+            return False
+        return bool(T.msyn.active())
+    except Exception:
+        return False
+
+
+def draw_synth_seq(T):
+    """A synth's sequencer in the drum sequencer's look: see soundpage.py."""
+    import soundpage
+    soundpage.draw_synth_seq(T, sys.modules[__name__])
+
+
 def on_seq_page(T, menu):
     """True when pages.draw would draw seq_page for a drum lane (not the synth's sequencer, punch FX or automation)."""
     if menu is not None and (menu.open or menu.kits.open):
@@ -601,6 +623,11 @@ def install(pages):
                 draw_sound(T)
                 publish()
                 set_mode("N")
+                return
+            if card is None and T.engine and on_synth_seq_page(T, menu):
+                draw_synth_seq(T)
+                publish()
+                set_mode("P" if T.msyn.selected else "O")
                 return
             if card is None and T.engine and on_seq_page(T, menu):
                 draw_seq(T)
