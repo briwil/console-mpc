@@ -253,7 +253,7 @@ def draw_mixer(T, nat):
 LST = {"key": None, "t": 0.0, "rows": None}
 
 
-def listview(nat, key, top, title, rows, focus, now, message=None):
+def listview(nat, key, top, title, rows, focus, now, message=None, first=0):
     """rows = [(name, tag, idle)]: one row each, `focus` the selected one (24 px, white; the others 16 px and dimmer, sliding out of
     its way). tag: small text at the right (MUTE...)."""
     c = nat.canvas
@@ -289,7 +289,7 @@ def listview(nat, key, top, title, rows, focus, now, message=None):
         room = 285 - nx - (c_w(c, 8, tag) + 8 if tag else 0)
         while px > 8 and text_width(c.pxfont(px), name, -(px // 8)) > room:
             px -= 8
-        c.text_px(8, base, str(i + 1), col, px, 0)
+        c.text_px(8, base, str(i + 1 + first) if name else "", col, px, 0)
         c.text_px(nx, base, name, col, px, -(px // 8))
         if tag:
             c.text_px(286 - c_w(c, 8, tag), base, tag, col, 8, 0)

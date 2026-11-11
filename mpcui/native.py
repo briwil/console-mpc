@@ -14,6 +14,7 @@ import numpy as np
 import colour
 import screen as _screen
 import tape
+import fxpages
 
 W, H = 320, 240
 PATH = os.environ.get("CONSOLE_NATIVE", "/tmp/console-native.rgb")
@@ -618,6 +619,26 @@ def install(pages):
                 draw_mixer(T)
                 publish()
                 set_mode("T")
+                return
+            if card is None and T.engine and fxpages.on_lfo_page(T, menu):
+                fxpages.draw_lfo(T, sys.modules[__name__])
+                publish()
+                set_mode("O")
+                return
+            if card is None and T.engine and fxpages.on_presets_page(T, menu):
+                fxpages.draw_presets(T, sys.modules[__name__])
+                publish()
+                set_mode("O")
+                return
+            if card is None and T.engine and fxpages.on_punch_page(T, menu):
+                fxpages.draw_punch(T, sys.modules[__name__])
+                publish()
+                set_mode("O")
+                return
+            if card is None and T.engine and fxpages.on_auto_page(T, menu):
+                fxpages.draw_auto(T, sys.modules[__name__])
+                publish()
+                set_mode("O")
                 return
             if card is None and T.engine and on_sound_page(T, menu):
                 draw_sound(T)
