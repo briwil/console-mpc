@@ -33,7 +33,7 @@ def move(T, way):
     ms.page[lane] = cur // 16                                    # the 16 steps shown follow the box
 
 
-def lay(T, p):
+def lay(T, p, vel=None):
     """A drum pad (Move pad number p) was hit while stopped: its step on the cursor's step is switched on (off if it was on)."""
     ms, sp, e = T.mseq, T.seqp, T.engine
     d = e.drums
@@ -50,11 +50,13 @@ def lay(T, p):
     with e.seq.lock:
         st = e.seq.step(lane, cur)
         st.on = not st.on                                        # a hit on a step that has one takes it off
+        if st.on and vel:
+            st.vel = max(1, min(127, int(vel)))                  # a new step takes the velocity you hit with
     e.seq_changed()
     ms.page[lane] = cur // 16
 
 
-def install(MoveBoard):
+def install(MoveBoard, pad_velocity=None):
     orig_cc, orig_pad = MoveBoard.cc, MoveBoard.pad
 
     def cc(self, num, val):
@@ -75,7 +77,7 @@ def install(MoveBoard):
         orig_pad(self, p, vel)
         if lay_it:
             try:
-                lay(T, p)
+                lay(T, p, pad_velocity(T, vel) if pad_velocity else vel)
             except Exception:
                 import traceback
                 print("step entry failed:\n" + traceback.format_exc(), flush=True)

@@ -49,30 +49,31 @@ def _glyph(ch):
 _fonts = {}
 _masks = {}
 _HERE = os.path.dirname(os.path.abspath(__file__))
-# Lato first if you drop it in (mpc/fonts/Lato-Bold.ttf); Carlito (a Lato-based, OFL font) ships with this; Barlow last
-FONT_CANDIDATES = [os.environ.get("CONSOLE_FONT", ""),
-                   os.path.join(_HERE, "fonts", "Lato-Bold.ttf"),
-                   os.path.join(_HERE, "fonts", "Carlito-Bold.ttf"),
-                   "/data/UserData/console/move/fonts/BarlowCondensed-SemiBold.ttf",
-                   "/home/claude/briwil/console-move/move/fonts/BarlowCondensed-SemiBold.ttf"]
-GAMMA = 0.6                                                      # boosts the soft edges of the letters: crisper text
+# Jersey 15 (a pixel font, OFL) is the look; Lato / Carlito / Barlow stay as fallbacks. A pixel font is only sharp at its own
+# pixel size and whole multiples of it: Jersey 15's is 18 (so 18 / 36 / 54).
+FONT_CANDIDATES = [(os.environ.get("CONSOLE_FONT", ""), 18),
+                   (os.path.join(_HERE, "fonts", "Jersey15-Regular.ttf"), 18),
+                   (os.path.join(_HERE, "fonts", "Carlito-Bold.ttf"), 13),
+                   ("/home/claude/briwil/console-move/move/fonts/BarlowCondensed-SemiBold.ttf", 12)]
+_chosen = []
 
 
-def _font(size):
-    if size in _fonts:
-        return _fonts[size]
+def _font(scale):
+    """The font at 1x / 2x / 3x of its base size, with cap_h (capital height) and cap_pad (its top), or None."""
+    if scale in _fonts:
+        return _fonts[scale]
     f = None
     try:
         from PIL import ImageFont
-        for path in FONT_CANDIDATES:
+        for path, base in FONT_CANDIDATES:
             if path and os.path.exists(path):
-                f = ImageFont.truetype(path, size, layout_engine=ImageFont.Layout.BASIC)      # (hinted)
-                top = f.getbbox("H")[1]                          # where the capital letters start below the line's top
-                f.cap_pad = top
+                f = ImageFont.truetype(path, base * scale)
+                box = f.getbbox("H")
+                f.cap_pad, f.cap_h = box[1], box[3] - box[1]
                 break
     except Exception:
         f = None
-    _fonts[size] = f
+    _fonts[scale] = f
     return f
 
 
@@ -86,8 +87,10 @@ def _mask(font, s):
         if len(_masks) > 600:
             _masks.clear()
         im = Image.new("L", (max(1, w), font.size + 6), 0)
-        ImageDraw.Draw(im).text((0, 0), s, font=font, fill=255)
-        m = (np.asarray(im, np.float32) / 255.0) ** GAMMA
+        dr = ImageDraw.Draw(im)
+        dr.fontmode = "1"                                         # no smoothing: crisp pixels
+        dr.text((0, 0), s, font=font, fill=255)
+        m = np.asarray(im, np.float32) / 255.0
         _masks[key] = m
     return m
 
@@ -116,7 +119,7 @@ class Canvas:
         """Smooth text (Barlow Condensed, anti-aliased) if the font file is there, else the 5 x 7 pixel font.
         (x, y) is the top of the capital letters, the same place the pixel font had them; scale 2 = big."""
         s = str(s).upper()
-        font = _font(13 if scale == 1 else 24 if scale == 2 else 13 * scale)
+        font = _font(scale)
         if font is None:
             return self._pixel_text(x, y, s, c, scale)
         a = _mask(font, s)
@@ -133,6 +136,12 @@ class Canvas:
         region = self.px[y0:y1, x:x1].astype(np.float32)
         self.px[y0:y1, x:x1] = (region * (1 - a) + np.array(c, np.float32) * a).astype(np.uint8)
 
+    def text_in(self, x, top, h, s, c=FG, scale=1):
+        """Text with its capitals centred in the band top .. top + h."""
+        font = _font(scale)
+        cap = font.cap_h if font is not None else 7 * scale
+        self.text(x, top + (h - cap) // 2, s, c, scale)
+
     def _pixel_text(self, x, y, s, c, scale):
         for ch in s:
             g = _glyph(ch)
@@ -145,7 +154,7 @@ class Canvas:
 
     @staticmethod
     def width(s, scale=1):
-        font = _font(13 if scale == 1 else 24 if scale == 2 else 13 * scale)
+        font = _font(scale)
         if font is None:
             return len(str(s)) * 6 * scale
         return int(font.getlength(str(s).upper()) + 0.5)
@@ -183,7 +192,7 @@ def remove():
 
 # ------------------------------------------------------------------ the tape
 
-TOP_H, RULER_Y, RULER_H, LANES_Y, LANE_H, BOTTOM_H = 10, 11, 11, 24, 25, 12
+TOP_H, RULER_Y, RULER_H, LANES_Y, LANE_H, BOTTOM_H = 16, 17, 14, 33, 24, 15
 
 
 def draw_tape(T):
@@ -197,16 +206,16 @@ def draw_tape(T):
     state = "REC" if rec else "PLAY" if T.playing else "STOP"
     if e and e.rec_mode == "overdub" and rec:
         state = "ODUB"
-    c.text(4, 1, state, RED if rec else ACC if T.playing else MID)
-    c.text(40, 1, "%.0f BPM" % (e.bpm if e else 120), MID)
+    c.text_in(4, 0, TOP_H, state, RED if rec else ACC if T.playing else MID)
+    c.text_in(40, 0, TOP_H, "%.0f BPM" % (e.bpm if e else 120), MID)
     if getattr(T, "song", None) is not None and T.song.on and T.song.rows:
-        c.text(96, 1, "SONG", MID)
+        c.text_in(96, 0, TOP_H, "SONG", MID)
     pos = T.position_text(t.pos)[:14]
-    c.text(W - 4 - c.width(pos), 1, pos, FG)
+    c.text_in(W - 4 - c.width(pos), 0, TOP_H, pos, FG)
     if not e:
         return
     fpb = e.frames_per_beat()
-    x0, x1 = 22, W - 4
+    x0, x1 = 26, W - 4
     mid = x0 + (x1 - x0) // 3                                  # the playhead: a third of the way in, more of what's ahead
     ppb = (x1 - x0) / (tape.ZOOMS[t.zoom] * tape.BEATS_PER_BAR)
     # the ruler
@@ -220,10 +229,10 @@ def draw_tape(T):
         if x >= x0:
             in_bar = k % bar
             if abs(in_bar) < 1e-6:
-                c.rect(x, RULER_Y + 3, 1, 8, FG)
-                c.text(x + 3, RULER_Y + 3, str(int(k // bar) + 1), MID)
+                c.rect(x, RULER_Y + 3, 1, RULER_H - 3, FG)
+                c.text_in(x + 3, RULER_Y + 1, RULER_H, str(int(k // bar) + 1), MID)
             elif ppb >= 6:
-                c.rect(x, RULER_Y + 8, 1, 3, DIM)
+                c.rect(x, RULER_Y + 10, 1, 4, DIM)
         k += 1
     region = e.loop_region()
     if region:                                                  # the loop: an amber bar along the top of the ruler
@@ -238,15 +247,12 @@ def draw_tape(T):
         is_sel = n == sel
         if is_sel:
             c.rect(0, top - 1, W, LANE_H, LANE_SEL)
-            c.rect(0, top, 18, LANE_H - 3, FG)
-            c.text(6, top + 8, str(n + 1), BG)
-        else:
-            c.text(6, top + 8, str(n + 1), MID)
-        if n in e.arm_extra:
-            c.rect(19, top + 2, 2, LANE_H - 7, RED)
+            c.rect(0, top, 20, LANE_H - 3, FG)
         muted = not e.audible(n)
-        if muted:
-            c.text(7, top + 17, "M", DIM)
+        label = str(n + 1) + ("M" if muted else "")
+        c.text_in(3, top, LANE_H - 3, label, BG if is_sel else (DIM if muted else MID))
+        if n in e.arm_extra:
+            c.rect(20, top + 2, 2, LANE_H - 7, RED)
         c.rect(x0, top + LANE_H - 2, x1 - x0, 1, (40, 46, 52))
         ch = e.chans(n)[0]
         boxes = e.regions[ch]
@@ -288,16 +294,16 @@ def draw_tape(T):
     # the bottom line: a message if there is one, else the selected track
     c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
     if T.message and time.monotonic() < T.message_until:
-        c.text(4, H - 10, T.message[:50], ACC)
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
         return
     pan = e.pans[sel]
     pan_t = "C" if abs(pan) < 0.05 else ("L%d" % round(-pan * 100) if pan < 0 else "R%d" % round(pan * 100))
-    c.text(4, H - 10, "T%d" % T.armed, FG)
-    c.text(28, H - 10, "VOL %d" % round(e.volumes[sel] * 100), MID)
-    c.text(84, H - 10, "PAN %s" % pan_t, MID)
-    c.text(134, H - 10, "STEREO" if sel in e.stereo else "MONO", MID)
+    c.text_in(4, H - BOTTOM_H, BOTTOM_H, "T%d" % T.armed, FG)
+    c.text_in(28, H - BOTTOM_H, BOTTOM_H, "VOL %d" % round(e.volumes[sel] * 100), MID)
+    c.text_in(84, H - BOTTOM_H, BOTTOM_H, "PAN %s" % pan_t, MID)
+    c.text_in(134, H - BOTTOM_H, BOTTOM_H, "STEREO" if sel in e.stereo else "MONO", MID)
     if region and e.loop_on:
-        c.text(W - 4 - c.width("LOOP"), H - 10, "LOOP", ACC)
+        c.text_in(W - 4 - c.width("LOOP"), H - BOTTOM_H, BOTTOM_H, "LOOP", ACC)
 
 
 # ------------------------------------------------------------------ the zoomed track
@@ -311,11 +317,11 @@ def draw_focus(T):
     c.rect(0, 0, W, TOP_H, BAR)
     rec = bool(T.recording)
     state = "REC" if rec else "PLAY" if T.playing else "STOP"
-    c.text(4, 1, state, RED if rec else ACC if T.playing else MID)
-    c.text(40, 1, "TRACK %d" % n, FG)
-    c.text(100, 1, "%.0f BPM" % (e.bpm if e else 120), MID)
+    c.text_in(4, 0, TOP_H, state, RED if rec else ACC if T.playing else MID)
+    c.text_in(40, 0, TOP_H, "TRACK %d" % n, FG)
+    c.text_in(100, 0, TOP_H, "%.0f BPM" % (e.bpm if e else 120), MID)
     pos = T.position_text(t.pos)[:14]
-    c.text(W - 4 - c.width(pos), 1, pos, FG)
+    c.text_in(W - 4 - c.width(pos), 0, TOP_H, pos, FG)
     if not e:
         return
     fpb = e.frames_per_beat()
@@ -333,12 +339,12 @@ def draw_focus(T):
         if x >= x0:
             in_bar = k % bar
             if abs(in_bar) < 1e-6:
-                c.rect(x, RULER_Y + 3, 1, 8, FG)
-                c.text(x + 3, RULER_Y + 3, str(int(k // bar) + 1), MID)
+                c.rect(x, RULER_Y + 3, 1, RULER_H - 3, FG)
+                c.text_in(x + 3, RULER_Y + 1, RULER_H, str(int(k // bar) + 1), MID)
             elif ppb >= 6 and abs(in_bar - bar / 2) < 1e-6:
-                c.rect(x, RULER_Y + 6, 1, 5, MID)
+                c.rect(x, RULER_Y + 7, 1, 7, MID)
             elif ppb >= 6:
-                c.rect(x, RULER_Y + 8, 1, 3, DIM)
+                c.rect(x, RULER_Y + 10, 1, 4, DIM)
         k += 1
     region = e.loop_region()
     if region:
@@ -346,7 +352,7 @@ def draw_focus(T):
         b = int(round(mid + (region[1] / fpb - t.pos) * ppb))
         c.rect(max(x0, a), RULER_Y, max(0, min(x1, b) - max(x0, a)), 2, ACC if e.loop_on else DIM)
     # the track
-    lane_top, lane_bot = RULER_Y + RULER_H + 3, H - 44
+    lane_top, lane_bot = RULER_Y + RULER_H + 3, H - 56
     centre = (lane_top + lane_bot) // 2
     half = (lane_bot - lane_top) // 2 - 3
     c.rect(x0, lane_top, x1 - x0, lane_bot - lane_top, LANE)
@@ -391,30 +397,30 @@ def draw_focus(T):
     c.rect(mid, RULER_Y, 1, lane_bot - RULER_Y, WHITE)          # the playhead
     c.rect(mid - 3, RULER_Y - 2, 7, 3, WHITE)
     # the settings: what knobs 1, 2 and 4-6 change
-    py = H - 40
-    c.rect(0, py, W, 40, BAR)
+    py = H - 52
+    c.rect(0, py, W, 52, BAR)
     stereo = (n - 1) in e.stereo
     try:
         src = e.input_text(n - 1)
     except Exception:
         src = "?"
-    c.text(6, py + 5, "K1", DIM); c.text(24, py + 5, "STEREO" if stereo else "MONO", FG)
-    c.text(100, py + 5, "K2", DIM); c.text(118, py + 5, "IN " + str(src)[:14], FG)
-    c.text(6, py + 18, "BOX", DIM if here is None else ACC)
+    c.text_in(6, py + 3, 16, "K1", DIM); c.text_in(28, py + 3, 16, "STEREO" if stereo else "MONO", FG)
+    c.text_in(100, py + 3, 16, "K2", DIM); c.text_in(122, py + 3, 16, "IN " + str(src)[:14], FG)
+    c.text_in(6, py + 22, 16, "BOX", DIM if here is None else ACC)
     if here is None:
-        c.text(36, py + 18, "MOVE THE PLAYHEAD ONTO A BOX", DIM)
+        c.text_in(38, py + 22, 16, "MOVE THE PLAYHEAD ONTO A BOX", DIM)
     else:
         gain = here[3] if len(here) > 3 else 0.0
         fin = (here[4] if len(here) > 4 else 0) / 44100.0
         fout = (here[5] if len(here) > 5 else 0) / 44100.0
         def fade(sec):
             return "OFF" if sec <= 0 else ("%d MS" % round(sec * 1000) if sec < 1 else "%.2g S" % sec)
-        c.text(36, py + 18, "K4 GAIN %+.1f DB" % gain, FG)
-        c.text(150, py + 18, "K5 IN " + fade(fin), FG)
-        c.text(236, py + 18, "K6 OUT " + fade(fout), FG)
+        c.text_in(38, py + 22, 16, "K4 GAIN %+.1f DB" % gain, FG)
+        c.text_in(150, py + 22, 16, "K5 IN " + fade(fin), FG)
+        c.text_in(228, py + 22, 16, "K6 OUT " + fade(fout), FG)
     if T.message and time.monotonic() < T.message_until:
-        c.rect(0, H - 12, W, 12, ACC)
-        c.text(4, H - 10, T.message[:50], BG)
+        c.rect(0, H - BOTTOM_H, W, BOTTOM_H, ACC)
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], BG)
 
 
 # ------------------------------------------------------------------ the drum sequencer
@@ -446,14 +452,14 @@ def draw_seq(T):
     knobs = ms.knob_list() if selected else None
     c.rect(0, 0, W, TOP_H, BAR)
     if selected:
-        c.text(4, 1, ms.which(), ACC)
-        c.text(W - 4 - c.width(name[:14]), 1, name[:14], MID)
+        c.text_in(4, 0, TOP_H, ms.which(), ACC)
+        c.text_in(W - 4 - c.width(name[:14]), 0, TOP_H, name[:14], MID)
     else:
-        c.text(4, 1, name[:14], ACC)
-        c.text(W - 4 - c.width(pat), 1, pat, MID)
+        c.text_in(4, 0, TOP_H, name[:14], ACC)
+        c.text_in(W - 4 - c.width(pat), 0, TOP_H, pat, MID)
     # the 16 steps
     at = ms.playing_step()
-    y = 15
+    y = 20
     sel = set(ms.selected) if selected else set()
     for k in range(16):
         i = first + k
@@ -474,7 +480,7 @@ def draw_seq(T):
             c.rect(x + 2, y + 31 - h, 13, h, ACC if is_sel else FG)
         if at is not None and i == at:
             c.rect(x, y + 36, 17, 3, WHITE)
-        c.text(x + (5 if i < 9 else 2), y + 41, str(i + 1), FG if (k % 4 == 0) else MID)
+        c.text(x + (6 if i < 9 else 2), y + 40, str(i + 1), FG if (k % 4 == 0) else MID)
     cur = getattr(ms, "cur", None)
     if cur is not None and not selected and first <= cur < first + 16 and cur < ln.length:     # the step cursor (a drum hit lays a step here)
         x = 4 + (cur - first) * 19
@@ -486,39 +492,40 @@ def draw_seq(T):
     seg = (W - 8 - gap * (npages - 1)) // npages
     for p in range(npages):
         c.rect(4 + p * (seg + gap), y + 56, seg, 4, ACC if p == first // 16 else CELL_LINE)
-    c.text(4, y + 63, "STEPS %d-%d OF %d" % (first + 1, min(first + 16, ln.length), ln.length), DIM)
-    top = 106
+    c.text(4, y + 64, "STEPS %d-%d OF %d" % (first + 1, min(first + 16, ln.length), ln.length), DIM)
+    top = 112
     if not selected:
         # the lane's settings: knobs 1-4
         cw = (W - 8 - 3 * 6) // 4
         for i, (label, value, _locked) in enumerate(knobs_lane(ms)[:4]):
             x = 4 + i * (cw + 6)
-            c.rect(x, top, cw, 66, CELL)
-            c.frame(x, top, cw, 66, CELL_LINE)
-            c.text(x + 6, top + 7, str(label)[:10], MID)
-            c.text(x + 6, top + 26, str(value)[:6], FG, 2)
-            c.text(x + 6, top + 52, "K%d" % (i + 1), DIM)
-        hint = "WHEEL: MOVE THE BOX    HIT A DRUM: ADD ITS STEP"
+            c.rect(x, top, cw, 70, CELL)
+            c.frame(x, top, cw, 70, CELL_LINE)
+            c.text(x + 6, top + 7, str(label)[:9], MID)
+            v = str(value)
+            c.text(x + 6, top + 26 if len(v) <= 4 else top + 31, v[:9] if len(v) > 4 else v, FG, 2 if len(v) <= 4 else 1)
+            c.text(x + 6, top + 55, "K%d" % (i + 1), DIM)
+        hint = "WHEEL: MOVE BOX   HIT DRUM: ADD STEP"
     elif knobs:
         label, value, on = knobs[0]
         key = ms.pad_items()[ms.sel][0]
         ct = ms.chance_text(key)
-        c.rect(4, top, W - 8, 96, CELL)
-        c.frame(4, top, W - 8, 96, ACC)
-        c.text(14, top + 8, str(label)[:20], ACC, 2)
-        c.text(14, top + 40, "K1", DIM)
-        c.text(36, top + 34, str(value)[:8], FG, 3)
+        c.rect(4, top, W - 8, 100, CELL)
+        c.frame(4, top, W - 8, 100, ACC)
+        c.text(14, top + 8, str(label)[:18], ACC, 2)
+        c.text(14, top + 46, "K1", DIM)
+        c.text(44, top + 34, str(value)[:6], FG, 3)
         if key == "vel":
             try:
                 frac = max(0.0, min(1.0, float(value) / 127.0))
             except ValueError:
                 frac = 0.0
-            c.rect(150, top + 44, 156, 8, CELL_LINE)
-            c.rect(150, top + 44, int(156 * frac), 8, ACC)
+            c.rect(150, top + 46, 156, 8, CELL_LINE)
+            c.rect(150, top + 46, int(156 * frac), 8, ACC)
         if ct is not None:
-            c.text(14, top + 74, "K2 CHANCE  %s" % ct, MID)
-        c.text(W - 14 - c.width("SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT"), top + 74, "SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT", DIM)
-        hint = "SEQ: BACK TO STEPS    TAP A STEP: DONE"
+            c.text(14, top + 78, "K2 CHANCE  %s" % ct, MID)
+        c.text(W - 14 - c.width("SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT"), top + 78, "SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT", DIM)
+        hint = "SEQ: BACK TO STEPS  TAP STEP: DONE"
     else:
         # steps selected, no setting picked: knobs 1-8 are the drum's sound page, turning one locks it on the steps
         items = ms.lock_list()
@@ -526,17 +533,17 @@ def draw_seq(T):
         cw = (W - 8 - 3 * 6) // 4
         for i, (label, value, locked, lockable) in enumerate(items[:8]):
             col, row = i % 4, i // 4
-            x, yy = 4 + col * (cw + 6), top + 16 + row * 40
-            c.rect(x, yy, cw, 36, SEL_FILL if locked else CELL)
-            c.frame(x, yy, cw, 36, ACC if locked else CELL_LINE)
-            c.text(x + 5, yy + 5, str(label)[:11], MID if lockable else DIM)
-            c.text(x + 5, yy + 18, str(value)[:7], FG if lockable else DIM)
-        hint = "SHIFT + SEQ: STEP SETTINGS    TAP A STEP: DONE"
-    c.rect(0, H - 12, W, 12, BAR)
+            x, yy = 4 + col * (cw + 6), top + 16 + row * 42
+            c.rect(x, yy, cw, 38, SEL_FILL if locked else CELL)
+            c.frame(x, yy, cw, 38, ACC if locked else CELL_LINE)
+            c.text(x + 5, yy + 4, str(label)[:9], MID if lockable else DIM)
+            c.text(x + 5, yy + 19, str(value)[:9], FG if lockable else DIM)
+        hint = "SHIFT+SEQ: SETTINGS  TAP STEP: DONE"
+    c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
     if T.message and time.monotonic() < T.message_until:
-        c.text(4, H - 10, T.message[:50], ACC)
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
     else:
-        c.text(4, H - 10, hint, DIM)
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, hint, DIM)
 
 
 def knobs_lane(ms):

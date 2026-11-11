@@ -43,7 +43,7 @@ G = runpy.run_path(APP_PY, run_name="console_app")
 main = G["main"]
 try:
     import stepentry
-    stepentry.install(G["MoveBoard"])
+    stepentry.install(G["MoveBoard"], G.get("pad_velocity"))
 except Exception:
     import traceback
     print("step entry is off:\n" + traceback.format_exc(), flush=True)
