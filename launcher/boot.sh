@@ -40,7 +40,7 @@ touch "$TRY"                                         # from here on: if Console 
 systemctl unset-environment LD_PRELOAD 2>/dev/null
 systemctl stop ac50.service
 sleep 2
-"$M/bootmenu" 15 &                                   # the startup menu: PAD 1 = Console, PAD 2 = MPC; no answer = MPC
+"$M/bootmenu" 15 "$M/bootanim.bin" &                                   # the startup menu: PAD 1 = Console, PAD 2 = MPC; no answer = MPC
 P=$!
 ( sleep 40; kill "$P" 2>/dev/null ) &
 W=$!

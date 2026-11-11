@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #else
 extern int open(const char *, int, ...);
 extern int close(int);
@@ -107,6 +108,35 @@ static void flush(void)
     if (fbstride == 1280) { lseek(fbfd, 0, 0); write(fbfd, outbuf, 320 * 240 * 4); }
     else for (int y = 0; y < 240; y++) { lseek(fbfd, (long)(y * fbstride), 0); write(fbfd, &outbuf[y * 320], 320 * 4); }
 #endif
+}
+
+/* The opening animation: launcher/bootanim.bin, made by tools/make-bootanim.py from the Sample Screen Designer's zip.
+ * "CANM", u16 frames, u16 fps, one byte of hold (ticks) per frame, then the frames as raw 320x240 RGB.
+ * Played once; the last frame stays up while Console starts. Returns 1 if it played, 0 for "no file / bad file": the plain text is shown then. */
+static uint8_t animbuf[320 * 240 * 3];
+static int play_anim(const char *path)
+{
+    if (!path) return 0;
+    int fd = open(path, 0);
+    if (fd < 0) return 0;
+    uint8_t h[8], holds[128];
+    if (read(fd, h, 8) != 8 || h[0] != 'C' || h[1] != 'A' || h[2] != 'N' || h[3] != 'M') { close(fd); return 0; }
+    int frames = h[4] | (h[5] << 8), fps = h[6] | (h[7] << 8);
+    if (frames < 1 || frames > 128 || fps < 1 || fps > 60 || read(fd, holds, frames) != frames) { close(fd); return 0; }
+    for (int f = 0; f < frames; f++) {
+        long got = 0;
+        while (got < (long)sizeof animbuf) { long r = read(fd, animbuf + got, sizeof animbuf - got); if (r <= 0) break; got += r; }
+        if (got != (long)sizeof animbuf) { close(fd); return f > 0; }
+        for (int i = 0; i < 320 * 240; i++) shadow[i] = ((uint32_t)animbuf[i * 3] << 16) | ((uint32_t)animbuf[i * 3 + 1] << 8) | animbuf[i * 3 + 2];
+        flush();
+#ifdef HOST_TEST
+        usleep(1000);
+#else
+        if (f + 1 < frames) usleep((unsigned)holds[f] * 1000000u / (unsigned)fps);
+#endif
+    }
+    close(fd);
+    return 1;
 }
 
 static void rect(int x, int y, int w, int h, uint32_t c)
@@ -262,9 +292,14 @@ int main(int argc, char **argv)
         }
         if (picked == 10) {
             choice = 10;
-            rect(0, 0, 320, 240, 0x00101418);
-            text(24, 100, "STARTING CONSOLE", 3, 0x00E8B04B);
-            flush();
+            if (!play_anim(argc > 2 ? argv[2] : 0)) {
+                rect(0, 0, 320, 240, 0x00101418);
+                text(24, 100, "STARTING CONSOLE", 3, 0x00E8B04B);
+                flush();
+            }
+#ifdef HOST_TEST
+            host_ppm("boot_after.ppm");
+#endif
         }
         if (picked == 11) break;
 #ifdef HOST_TEST
