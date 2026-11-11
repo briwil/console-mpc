@@ -75,13 +75,9 @@ def draw(T, nat):
             c.rect(18, by + 3, 3, BOX_H - 6, nat.RED)
         ch = e.chans(n)[0]
         boxes = e.regions[ch]
-        lv = e.levels[ch] if ch < len(e.levels) else None
-        lv = np.asarray(lv) if lv is not None and len(lv) else None
-        body = nat.BOX if not muted else (36, 42, 48)
-        ink = nat.FG if not muted else nat.DIM
+        ink = G[1] if muted else (G[6] if is_sel else OUTLINE[n])     # recorded audio: a plain bar in the track's green
         top = by + 1
         rows_n = BOX_H - 2                                       # the 21 rows inside the outline
-        half = (rows_n - 2) // 2
         for i, r in enumerate(boxes):
             xa = int(round(mid + (r[0] / fpb - t.pos) * ppb))
             xb = int(round(mid + (r[1] / fpb - t.pos) * ppb))
@@ -93,19 +89,7 @@ def draw(T, nat):
             b = min(x1, xb - (1 if spliced_after else 0))
             if b <= a:
                 continue
-            c.rect(a, top, b - a, rows_n, body)
-            if lv is not None:
-                xs = np.arange(a, b)
-                idx = ((t.pos + (xs - mid) / ppb) * tape.RES).astype(int)
-                ok = (idx >= 0) & (idx < len(lv))
-                h = np.zeros(len(xs), int)
-                h[ok] = np.maximum(1, np.rint(np.minimum(1.0, lv[idx[ok]].astype(float)) * half).astype(int))
-                rows = np.arange(rows_n - 2)[:, None]
-                mask = (np.abs(rows - half) <= h[None, :]) & (h[None, :] > 0)
-                sub = c.px[top + 1:top + rows_n - 1, a:b]
-                sub[mask[:sub.shape[0], :sub.shape[1]]] = ink
-            if xa >= x0 and not spliced_before:
-                c.rect(xa, top, 1, rows_n, nat.FG)
+            c.rect(a, top + 6, b - a, rows_n - 12, ink)
             if spliced_after and x0 <= xb < x1:
                 c.rect(xb, top - 1, 1, rows_n + 2, nat.WHITE)
 
@@ -186,6 +170,7 @@ def draw_focus(T, nat):
     boxes = e.regions[ch]
     lv = e.levels[ch] if ch < len(e.levels) else None
     lv = np.asarray(lv) if lv is not None and len(lv) else None
+    bar_col = G[1] if muted else OUTLINE[n - 1]
     here = None
     for i, r in enumerate(boxes):
         xa = int(round(mid + (r[0] / fpb - t.pos) * ppb))
@@ -197,21 +182,9 @@ def draw_focus(T, nat):
         a, b = max(x0, xa), min(x1, xb)
         if b <= a:
             continue
-        c.rect(a, top + 1, b - a, rows_n, nat.BOX)
-        if lv is not None:
-            xs = np.arange(a, b)
-            idx = ((t.pos + (xs - mid) / ppb) * tape.RES).astype(int)
-            ok = (idx >= 0) & (idx < len(lv))
-            h = np.zeros(len(xs), int)
-            h[ok] = np.maximum(1, np.rint(np.minimum(1.0, lv[idx[ok]].astype(float)) * half).astype(int))
-            rows = np.arange(rows_n)[:, None]
-            mask = (np.abs(rows - centre) <= h[None, :]) & (h[None, :] > 0)
-            sub = c.px[top + 1:top + 1 + rows_n, a:b]
-            sub[mask[:sub.shape[0], :sub.shape[1]]] = nat.DIM if muted else nat.FG
-        if xa >= x0:
-            c.rect(xa, top + 1, 1, rows_n, nat.FG)
+        c.rect(a, top + 1 + centre - 14, b - a, 28, bar_col)     # recorded audio: a plain bar
     # light lines down through the box: the grid (thin and dark), the beats, the bars (lightest); they pass behind the waveform
-    ink = np.array(nat.DIM if muted else nat.FG, dtype=c.px.dtype)
+    ink = np.array(bar_col, dtype=c.px.dtype)
     marks = {}
     for size, col in ((t.step, (72, 82, 90)), (1.0, (100, 110, 112)), (float(tape.BEATS_PER_BAR), (150, 156, 160))):
         if size * ppb < 4 and size < tape.BEATS_PER_BAR:
