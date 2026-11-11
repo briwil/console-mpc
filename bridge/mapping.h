@@ -60,8 +60,6 @@ static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47,
 static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
 static volatile int page_nostep;            /* a page with no steps (the sound page): SEQ does nothing there and step mode / step settings don't apply (written by the screen thread) */
-static volatile int page_seq;               /* the drum sequencer page is showing: SEQ RECORD there turns the pads into the 16 steps (and back) */
-static int rec_steps;                       /* step mode was switched on with SEQ RECORD: it ends when the page is left */
 static volatile int page_param;             /* a step is selected on the sequencer page (written by the screen thread): the pads are its settings, as with param_mode */
 static int param_mode;                      /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings), bank = 1-16 / 17-32 */
 static int pad_knob[16];                    /* knob mode: which Move knob (0-7) each held pad is touching, -1 none */
@@ -122,16 +120,8 @@ static void set_btn_light(int note, int on)
 
 static void refresh_buttons(void)
 {
-    for (int i = 0; i < NBUTTONS; i++) {
-        if (BUTTONS[i].mpc == 0x50 && page_seq) continue;           /* SEQ RECORD on the sequencer page: lit while the pads are the steps */
-        set_btn_light(BUTTONS[i].mpc, move_btn[BUTTONS[i].move] ? 1 : 0);
-    }
-    if (page_seq) set_btn_light(0x50, step_mode || move_btn[86]);   /* ... or while recording live into the pattern */
-#ifdef SEQ_BUTTON_ON
+    for (int i = 0; i < NBUTTONS; i++) set_btn_light(BUTTONS[i].mpc, move_btn[BUTTONS[i].move] ? 1 : 0);
     set_btn_light(MPC_SEQ, (step_mode || param_mode) && !page_nostep);
-#else
-    set_btn_light(MPC_SEQ, 0);
-#endif
     set_btn_light(MPC_PADBANK, right_bank);
     set_btn_light(MPC_KNOBFX, knob_mode);
 }
@@ -252,12 +242,7 @@ static void mpc_pad_event(int idx, int vel, int on)
 static void mapping_tick(void)
 {
     tick_n++;
-    { static int seen; int now = page_seq * 8 + page_tape * 4 + page_param * 2 + page_nostep;
-      if (seen != now) {
-          seen = now;
-          if (!page_seq && rec_steps) { rec_steps = 0; step_mode = 0; }      /* left the sequencer page: the pads are the drums again */
-          refresh_pads(); refresh_buttons();
-      } }     /* the pads change meaning on the tape page: new lights */
+    { static int seen; int now = page_tape * 4 + page_param * 2 + page_nostep; if (seen != now) { seen = now; refresh_pads(); } }     /* the pads change meaning on the tape page: new lights */
 #ifdef NO_RETRIG
     return;
 #endif
@@ -281,9 +266,6 @@ static void mpc_button_event(int note, int down)
         return;
     }
     if (note == MPC_ENC_PUSH) { send3(0xBF, 3, down ? 127 : 0); return; }
-#ifndef SEQ_BUTTON_ON
-    if (note == MPC_SEQ) return;                          /* SEQ is not used: SEQ RECORD on a sequencer page turns the pads into the steps (the old SEQ behaviour is kept for the tests) */
-#endif
     if (note == MPC_SEQ && page_nostep) return;                       /* a page with no steps: SEQ does nothing (and nothing carries over to the next page) */
     if (down && note == MPC_SEQ) {
         if (shift_held) param_mode = !param_mode;                     /* Shift + SEQ: the pads are a step's settings */
@@ -300,18 +282,6 @@ static void mpc_button_event(int note, int down)
         else if (down) { send3(0xBF, 49, 0); send3(0xBF, plus ? 55 : 54, 127); send3(0xBF, 49, 127); }   /* Console must not see Shift on it */
         else send3(0xBF, plus ? 55 : 54, 0);
         return;
-    }
-    if (note == 0x50 && page_seq) {                       /* SEQ RECORD on the drum sequencer page: the pads become the 16 steps; again: the drums */
-        if (down && move_btn[86] && !step_mode) { send3(0xBF, 86, 127); send3(0xBF, 86, 0); return; }   /* recording live into the pattern: SEQ RECORD ends that */
-        if (down) { step_mode = !step_mode; rec_steps = step_mode; param_mode = 0; refresh_pads(); refresh_buttons(); }
-        return;
-    }
-    if (note == 0x52 && down && page_seq && rec_steps && step_mode) {
-        /* SEQ RECORD, then PLAY: the pads are the drums / notes again, it plays, and what you play is recorded into the pattern
-           (Console's own Record on these pages; move_btn[86] is its light: on = already recording) */
-        step_mode = 0; rec_steps = 0;
-        if (!move_btn[86]) { send3(0xBF, 86, 127); send3(0xBF, 86, 0); }
-        refresh_pads(); refresh_buttons();
     }
     if ((note == 0x0B && !shift_held) || note == 0x01) {   /* NOTE REPEAT = the arpeggiator page (Shift + step 3), PAD FX = the pads page (Shift + step 2);
                                                                Shift + NOTE REPEAT is still Undo. Both open on a synth's sound pages; again or Back returns */
