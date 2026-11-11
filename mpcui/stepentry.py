@@ -1,5 +1,5 @@
 """Step entry on the drum sequencer page (MPC only): a box (the cursor) sits on one of the 16 steps, the wheel moves it
-along the lane, and hitting a drum pad while the sequence is stopped lays that drum's step on the box's step.
+along the lane, and hitting a drum pad while the sequence is stopped lays that drum's step on the box's step (again: takes it off). The first tap on a different drum only switches to it.
 Installed over Console's MoveBoard by mpc_app.py; Console's own files are not changed."""
 import time
 
@@ -34,7 +34,7 @@ def move(T, way):
 
 
 def lay(T, p):
-    """A drum pad (Move pad number p) was hit while stopped: its step on the cursor's step is switched on."""
+    """A drum pad (Move pad number p) was hit while stopped: its step on the cursor's step is switched on (off if it was on)."""
     ms, sp, e = T.mseq, T.seqp, T.engine
     d = e.drums
     r, c = divmod(p, 8)
@@ -48,7 +48,8 @@ def lay(T, p):
         return
     sp._edit(("toggle", time.monotonic()))                       # (undo works as for a step button)
     with e.seq.lock:
-        e.seq.step(lane, cur).on = True
+        st = e.seq.step(lane, cur)
+        st.on = not st.on                                        # a hit on a step that has one takes it off
     e.seq_changed()
     ms.page[lane] = cur // 16
 
@@ -67,6 +68,10 @@ def install(MoveBoard):
     def pad(self, p, vel):
         T = self.T
         lay_it = bool(vel) and active(T) and not T.engine.playing and not self.shift
+        if lay_it:
+            r, c = divmod(p, 8)
+            if c >= 4 or r * 4 + c != T.seqp.lane:               # another drum's first tap only switches to it
+                lay_it = False
         orig_pad(self, p, vel)
         if lay_it:
             try:
