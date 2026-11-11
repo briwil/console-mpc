@@ -58,6 +58,36 @@ try:
     import stepentry
     stepentry.install(G["MoveBoard"], G.get("pad_velocity"))
     import native as _native
+    try:                                                 # built-in preset names are only read from a synth once you land on
+        import json                                      # them: remember them, so the list fills in and stays filled
+        import movepresets
+        _P = movepresets.Presets
+        _names_file = os.path.join(C, "data", "preset-names.json")
+        _init, _label = _P.__init__, _P.label
+
+        def _init2(self, *a, **k):
+            _init(self, *a, **k)
+            try:
+                with open(_names_file) as fh:
+                    for key, nm in json.load(fh).items():
+                        m, b, n = key.split("|")
+                        self.names[(m, int(b), int(n))] = nm
+            except Exception:
+                pass
+
+        def _label2(self, i):
+            before = len(self.names)
+            out = _label(self, i)
+            if len(self.names) != before:
+                try:
+                    with open(_names_file, "w") as fh:
+                        json.dump({"%s|%s|%s" % k: v for k, v in self.names.items()}, fh)
+                except Exception:
+                    pass
+            return out
+        _P.__init__, _P.label = _init2, _label2
+    except Exception as ex:
+        print("preset name memory is off:", ex, flush=True)
     import pagefx as _pagefx
     _label = _pagefx.label
 

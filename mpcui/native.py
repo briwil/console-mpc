@@ -852,6 +852,60 @@ def draw_settings(T, menu):
     _bottom(None, "WHEEL: PICK ROW  PUSH: EDIT VALUE")
 
 
+# ------------------------------------------------------------------ the song page
+
+def on_song_page(T, menu):
+    if menu is not None and (menu.open or menu.kits.open):
+        return False
+    if T.fx_page or T.seq_page or T.drum_page or T.inst_page or not getattr(T, "song_page", False) or T.engine is None:
+        return False
+    return not T.sbrowse.active
+
+
+def draw_song(T):
+    c = canvas
+    sg = T.song
+    sg.check_song()
+    shift = bool(getattr(T, "shift_held", lambda: False)())
+    _top("SONG " + ("ON" if sg.on else "OFF"), ("ROW %d / %d" % (sg.pick + 1, len(sg.rows))) if sg.rows else "NO ROWS")
+    if not sg.rows:
+        lines = ["PRESS PAD 1 TO ADD A ROW", "EACH ROW: A PATTERN FOR EVERY", "INSTRUMENT, PLAYED X TIMES (KNOB 8)",
+                 "+ / - : SONG MODE ON / OFF"]
+        for i, t in enumerate(lines):
+            c.text_in(14, 50 + i * 26, 20, t, FG if i == 0 else MID, 2 if i == 0 else 1)
+        _bottom(T, "PADS: ADD ROWS")
+        return
+    for i in range(16):
+        x, y = 4 + i * 19, 22
+        have, pick, play = i < len(sg.rows), i == sg.pick, i == sg.playing_row
+        c.rect(x, y, 17, 20, SEL_FILL if pick else (CELL if have else (12, 14, 18)))
+        c.frame(x, y, 17, 20, ACC if pick else (FG if play else CELL_LINE))
+        c.text_in(x + (2 if i < 9 else 1), y, 20, str(i + 1), ACC if pick else (MID if have else DIM))
+    if sg.playing_row is not None and not shift:
+        c.text(4, 46, "ROW %d PLAYING" % (sg.playing_row + 1), DIM)
+    elif shift:
+        c.text(4, 46, "PUNCH FX PATTERNS", ACC)
+    row = sg.rows[sg.pick]
+    slots = sg.slots()
+    for i in range(8):
+        col, r = i % 4, i // 4
+        x, y, w, h = 4 + col * 79, 60 + r * 72, 73, 66
+        c.rect(x, y, w, h, CELL)
+        c.frame(x, y, w, h, CELL_LINE)
+        if i < 7:
+            if i >= len(slots):
+                continue
+            slot = slots[i]
+            v = row.get("punch", {}).get(slot) if shift else row["pats"].get(slot)
+            c.text(x + 6, y + 6, ("%d %s" % (i + 1, sg.short(slot)))[:11], MID)
+            txt = "-" if v is None else ("FX%d" if shift else "P%d") % (v + 1)
+            c.text_in(x + 6, y + 20, 36, txt, DIM if v is None else FG, 3)
+        else:
+            c.text(x + 6, y + 6, "8 PLAYS", MID)
+            c.text_in(x + 6, y + 20, 36, "X%d" % row["repeat"], FG, 3)
+    _bottom(T, "SHIFT: PUNCH FX  SHIFT+PAD: DELETE ROW" if shift else "KNOBS: PATTERNS  PADS: ROWS  +/-: SONG ON/OFF")
+
+
 def on_seq_page(T, menu):
     """True when pages.draw would draw seq_page for a drum lane (not the synth's sequencer, punch FX or automation)."""
     if menu is not None and (menu.open or menu.kits.open):
@@ -894,6 +948,11 @@ def install(pages):
                 return
             if card is None and T.engine and on_inst_list(T, menu):
                 draw_inst_list(T)
+                publish()
+                set_mode("T")
+                return
+            if card is None and T.engine and on_song_page(T, menu):
+                draw_song(T)
                 publish()
                 set_mode("T")
                 return
