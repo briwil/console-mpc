@@ -958,14 +958,8 @@ def install(pages):
                 publish()
                 set_mode("T")
                 return
-            if card is None and T.engine and on_project_menu(menu):
-                draw_project_menu(T, menu)
-                publish()
-                set_mode("N")
-                return
-            if card is None and T.engine and on_settings(menu):
-                draw_settings(T, menu)
-                publish()
+            if card is None and T.engine and (on_project_menu(menu) or on_settings(menu)):
+                remove()                                      # the project menu and settings keep Console's own look (the Move screen, scaled up)
                 set_mode("N")
                 return
             if card is None and T.engine and on_inst_list(T, menu):

@@ -102,6 +102,17 @@ def text_width(font, s, track):
     return int(sum(font.getlength(ch) for ch in s) + track * max(0, len(s) - 1) + 0.5)
 
 
+def by_pad_rows(items, active):
+    """The first four settings go in the bottom row on screen and the next four in the top row, as the pads sit on the MPC (pads 1-4 are
+    the bottom row of pads). Returns the 8 places (empty ones blank) and where `active` went."""
+    out = [("", "", 0.0)] * 8
+    for i, it in enumerate(items[:8]):
+        out[i + 4 if i < 4 else i - 4] = it
+    if active is not None:
+        active = active + 4 if active < 4 else active - 4
+    return out, active
+
+
 def grid(nat, key, top, title, items, active, now, message=None):
     """One page in this style. items = [(label, value, idle)] for up to 8 settings (two rows of four); idle = how bright (0..1) a
     setting is while none is being turned. active = the index being turned / touched, or None. key: a change of it (another page,
@@ -174,6 +185,7 @@ def draw(T, nat):
         top += " OCT %+d" % octave
     msg = T.message if (T.message and now < T.message_until and active is None) else None   # (while a setting is turned, its name and value are on screen)
     items = [(d.label(p), d.value_text(p), 1.0) for p in params]
+    items, active = by_pad_rows(items, active)
     grid(nat, (id(d), voice, page_name, len(params)), top, vname.upper(), items, active, now, msg)
 
 
@@ -224,4 +236,5 @@ def draw_mixer(T, nat):
     if active is not None and not e.slots[active]:
         active = None
     msg = T.message if (T.message and now < T.message_until and active is None) else None
+    items, active = by_pad_rows(items, active)
     grid(nat, "mixer", "KNOBS: LEVEL  SHIFT: PAN", "MIXER", items, active, now, msg)
