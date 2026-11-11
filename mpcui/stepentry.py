@@ -7,7 +7,9 @@ import time
 WHEEL = 14
 PUSH = 3                                                         # the wheel's push (the MPC encoder push)
 BACK = 51
-REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO = 104, 105, 106, 107, 108                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
+REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO = 104, 105, 106, 107, 108
+PROJECT, SONGPAGE, GRIDNEXT = 109, 110, 111                     # Shift + pad 16 / 12 / 14 on the tape-style pages (as printed on the pads)
+ERASE = 119                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
 K1 = 71                                                          # Move knob 1 (relative clicks)
 K1_ABS = 118                                                     # K1's absolute position from the bridge (0-127)
 MAX_LEN = 64
@@ -149,8 +151,9 @@ def in_seq(T):
 
 
 def click(T, shift):
-    """The wheel was pushed. On an empty step: the selected drum's step goes down. On a step that is on: it is selected (it
-    blinks and the pads become its settings); pushed again: back out. Shift + push: the step comes off."""
+    """The wheel was pushed. On an empty step: the selected drum's step goes down. On a step that is on: it joins the selected
+    steps (they blink and the pads become their settings); pushed again on a selected step: it leaves them. Shift + push does the
+    same. ERASE takes steps off (see erase)."""
     import sequencer
     ms, e, sp = T.mseq, T.engine, T.seqp
     lane = sp.lane
@@ -164,30 +167,55 @@ def click(T, shift):
     if sequencer.dark(i, sequencer.TRIPLETS):
         return
     on = bool(e.seq.step(lane, i).on)
-    if shift:                                                    # Shift + push: take the step off
-        if i in ms.selected:
-            ms.selected.remove(i)
-            ms.sel = None
-        if on:
-            sp._edit(("toggle", time.monotonic()))               # (undo works as for a step button)
-            with e.seq.lock:
-                e.seq.step(lane, i).on = False
-            e.seq_changed()
-        return
     if not on:                                                   # an empty step: put it down
         sp._edit(("toggle", time.monotonic()))
         with e.seq.lock:
             e.seq.step(lane, i).on = True
         e.seq_changed()
         return
-    if i in ms.selected:                                         # already selected: back out of its settings
+    if i in ms.selected:                                         # already selected: it leaves the selection
         ms.selected.remove(i)
         ms.sel = None
         return
     if not ms.selected:
         ms.knob_page = getattr(T, "drum_tab", 0)                 # (the knobs start on the sound page you were on)
-    ms.selected = [i]
+    ms.selected = list(ms.selected) + [i]                        # one more selected step (BACK: none)
     ms.sel = None
+
+
+def erase(T):
+    """ERASE on the drum sequencer page: the selected steps come off; none selected: the step under the box."""
+    ms, e, sp = T.mseq, T.engine, T.seqp
+    lane = sp.lane
+    length = e.seq.lane(lane).length
+    which = [i for i in ms.selected if i < length]
+    if not which:
+        if not getattr(ms, "cur_on", False):
+            return
+        which = [_cursor(ms)]
+    which = [i for i in which if i < length and e.seq.step(lane, i).on]
+    ms.selected, ms.sel = [], None
+    if not which:
+        return
+    sp._edit(("toggle", time.monotonic()))                       # (undo works as for a step button)
+    with e.seq.lock:
+        for i in which:
+            e.seq.step(lane, i).on = False
+    e.seq_changed()
+
+
+def deselect(T):
+    """Off the sequencer pages: no steps stay selected (called every frame by the screen)."""
+    try:
+        if T.seq_page:
+            return
+        for ms in (T.mseq, T.msyn):
+            if getattr(ms, "selected", None):
+                ms.selected = []
+                if hasattr(ms, "sel"):
+                    ms.sel = None
+    except Exception:
+        pass
 
 
 def _cursor(ms):
@@ -247,6 +275,15 @@ def install(MoveBoard, pad_velocity=None):
         if num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO):                    # the bridge's tape-page buttons (see bridge/mapping.h)
             if val:
                 tape_button(self, num)
+            return
+        if num in (PROJECT, SONGPAGE, GRIDNEXT):                                # Shift + pad 16 / 12 / 14 (bridge/mapping.h)
+            if val:
+                self.keys.put("FILE" if num == PROJECT else "SONG" if num == SONGPAGE else ("KNOB", 10, 1, False))
+            return
+        if num == ERASE and not self.shift and (in_seq(T) or getattr(self, "_erase_seq", False)):
+            self._erase_seq = bool(val)                                         # (its release is swallowed too)
+            if val:
+                erase(T)
             return
         if 71 <= num <= 74 and on_tape(T):
             # the tape page: K1 = the selected track's volume, K2 = its pan, K3 = nothing, the fader = its volume (Shift: pan)

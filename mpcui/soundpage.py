@@ -175,6 +175,8 @@ def draw(T, nat):
     names = getattr(d, "names", None) or []
     voice = T.drum_voice
     vname = (names[voice] if voice < len(names) else "") or str(getattr(d, "title", ""))
+    if vname == "EMPTY":
+        vname = "EMPTY - PAD %d" % (voice + 1)                     # (so the screen changes as you hit pads with nothing loaded yet)
     now = nat.time.monotonic()
     active = nat._touched[-1] if nat._touched else None
     if active is None:
@@ -413,6 +415,8 @@ def draw_seq(T, nat):
     now = nat.time.monotonic()
     names = getattr(e.drums, "lane_names", None) or []
     name = (names[lane] if lane < len(names) else "LANE %d" % (lane + 1)).upper()
+    if name == "EMPTY":
+        name = "EMPTY - PAD %d" % (lane + 1)
     pat = "PAT %d" % (seq.current + 1) + (">%d" % (seq.queued + 1) if seq.queued is not None else "")
     selected = ms.held is not None
     knobs = ms.knob_list() if selected else None
@@ -430,7 +434,7 @@ def draw_seq(T, nat):
         left = (ms.which() if selected else name)[:16]
         px = 24 if text_width(c.pxfont(24), left, -3) <= 190 else 16
         c.text_px(6, 25, left, WHITE, px, -3 if px == 24 else -1)
-        right = name[:8] if selected else pat
+        right = (("PAD %d" % (lane + 1)) if name.startswith("EMPTY - PAD") else name[:8]) if selected else pat
         c.text_px(314 - text_width(c.pxfont(16), right, -1), 25, right, colour.GREENS[5], 16, -1)
         if msg:
             c.text_px(6, 6, msg[:50], nat.ACC, 8, 0)

@@ -41,6 +41,7 @@ Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit:
 | Shift + TAP TEMPO | Metronome on / off: it clicks while recording. Its volume: SETTINGS > METRONOME |
 | Shift + wheel push | Next grid (1/4, 1/8 ...) |
 | Shift + pad | Arm / disarm that track. SAMPLE REC: arm / disarm the selected track |
+| Shift + pad 16 / 12 / 14 | As printed: PROJECT = the menu, SONG = the song page, TIME CORRECT = the next grid. (16 and 12 also work on the instrument list, song and mixer pages. Not on instrument pages: Shift + pad picks a pattern there) |
 | MINUS / PLUS | Undo / Redo. Shift + them: zoom out / in |
 | CHOP | Split / join the box under the playhead (Shift: all tracks) |
 | ERASE | Cut (hold, move to take several, let go). Shift + ERASE: Copy |
@@ -63,3 +64,5 @@ Step settings (velocity, chance, multiply, pulse, hold, jump, random, ramps, nud
 3. SEQ: back to the steps. Tap any step to finish.
 
 Lane settings (no steps selected): K1 = length, K2 = rate, K3 = Euclid. Shift needs knob 4: KNOB FX on, hold pad 4, turn the encoder.
+
+Drum sequencer with the wheel: push on an empty step puts it down; push on a step that is on adds it to the selected steps (push it again: it leaves them); BACK: none selected. ERASE takes the selected steps off (none selected: the step under the box). Leaving the sequencer page deselects.

@@ -213,6 +213,13 @@ static void release_knob_pads(void)
 static void mpc_pad_event(int idx, int vel, int on)
 {
     if (idx < 0 || idx > 15) return;
+    if (on && shift_held && !knob_mode && page_tape && idx >= 8) {
+        /* Shift + pad, as printed on the pads, on the tape-style pages (pads 9-16 are free there; 1-8 arm / solo):
+           16 PROJECT = the menu, 12 SONG = the song page, 14 TIME CORRECT = the next grid (tape page only). Private CCs: mpcui/stepentry.py.
+           (Not on instrument pages: Shift + pad picks a pattern there, and with SEQ on it selects a step.) */
+        int cc = idx == 15 ? 109 : idx == 11 ? 110 : (idx == 13 && page_tapeonly) ? 111 : 0;
+        if (cc) { send3(0xBF, cc, 127); send3(0xBF, cc, 0); return; }
+    }
     if (on && knob_mode) {
         if (idx < 8) {
             pad_knob[idx] = idx;

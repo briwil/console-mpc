@@ -592,6 +592,8 @@ def install(pages):
         original(f, T, menu)
         try:
             import metronome
+            import stepentry
+            stepentry.deselect(T)
             metronome.tick(T)                        # (while recording with the metronome on: tells the bridge when the beats are)
         except Exception:
             pass

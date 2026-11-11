@@ -395,6 +395,13 @@ int main(int argc, char **argv)
         BTN(0x31, 1); BTN(0x35, 1); BTN(0x35, 0); BTN(0x31, 0);        /* Shift + TAP TEMPO -> the metronome */
         usleep(200000);
         CHECK(expect(b + 1, 0xBF, 108, 127), "tape page: Shift + TAP TEMPO -> metronome on / off");
+        b = ngot;
+#define PADHIT(n) do { send((unsigned char[]){ 0x99, (n), 100 }, 3); send((unsigned char[]){ 0x89, (n), 0 }, 3); } while (0)
+        BTN(0x31, 1); PADHIT(53); PADHIT(43); PADHIT(55); PADHIT(82); BTN(0x31, 0);   /* Shift + pads 16, 12, 14, 4 */
+        usleep(200000);
+        CHECK(expect(b + 1, 0xBF, 109, 127) && expect(b + 2, 0xBF, 109, 0), "tape page: Shift + pad 16 (PROJECT) -> the menu");
+        CHECK(expect(b + 3, 0xBF, 110, 127) && expect(b + 5, 0xBF, 111, 127), "tape page: Shift + pad 12 (SONG), pad 14 (TIME CORRECT)");
+        CHECK(expect(b + 7, 0x9F, 19, 100), "tape page: Shift + pad 4 still arms track 4");
         {   /* the metronome: with the file written the output clicks, without it the output is quiet */
             volatile float *peak = dlsym(lib, "mpcshim_test_click");
             *peak = 0; usleep(300000);
