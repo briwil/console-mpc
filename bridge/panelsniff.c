@@ -1,6 +1,6 @@
 /* panelsniff.so: a listener for finding out what the stock MPC app says to the pad / button panel at start-up.
    LD_PRELOAD it into the stock app: every read and write on /dev/snd/midiC0D0 goes through, unchanged, and is also logged to
-   /tmp/panelsniff.log as   "W|R <ms>: <hex bytes>".  No libc needed except __errno_location (raw system calls, aarch64). */
+   /tmp/panelsniff.log as   "W|R <ms>: <hex bytes>" (the stock app talks to the panel through ALSA sequencer events: 28 bytes each, sysex data after).  No libc needed except __errno_location (raw system calls, aarch64). */
 extern int *__errno_location(void);
 
 static long sc4(long n, long a, long b, long c, long d)
@@ -39,11 +39,13 @@ static int is_midi(int fd)
         char buf[96];
         long r = sc4(SYS_READLINKAT, -100, (long)p, (long)buf, 95);
         int hit = 0;
-        for (long i = 0; r > 7 && i + 8 <= r; i++) {
+        for (long i = 0; r > 7 && i + 8 <= r; i++) {           /* the panel directly (midiC0D0) or through the ALSA sequencer (snd/seq) */
             const char *w = "midiC0D0";
-            int j = 0;
+            const char *q = "snd/seq";
+            int j = 0, h = 0;
             while (j < 8 && buf[i + j] == w[j]) j++;
-            if (j == 8) { hit = 1; break; }
+            while (h < 7 && buf[i + h] == q[h]) h++;
+            if (j == 8 || h == 7) { hit = 1; break; }
         }
         kind[fd] = hit ? 1 : -1;
     }
@@ -58,7 +60,7 @@ static void logev(char dir, const unsigned char *b, long n)
     struct { long s, ns; } ts = { 0, 0 };
     sc4(SYS_CLOCK_GETTIME, 1, (long)&ts, 0, 0);
     long ms = ts.s * 1000 + ts.ns / 1000000;
-    char line[400];
+    char line[700];
     int k = 0;
     line[k++] = dir;
     line[k++] = ' ';
@@ -68,7 +70,7 @@ static void logev(char dir, const unsigned char *b, long n)
     while (m) line[k++] = t[--m];
     line[k++] = ':';
     static const char hx[] = "0123456789abcdef";
-    for (long i = 0; i < n && i < 120; i++) {
+    for (long i = 0; i < n && i < 200; i++) {
         line[k++] = ' ';
         line[k++] = hx[b[i] >> 4];
         line[k++] = hx[b[i] & 15];
