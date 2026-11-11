@@ -9,13 +9,35 @@ from soundpage import text_width
 
 G = colour.GREENS
 OUTLINE = [G[2], G[4], G[5], G[3], G[4], G[5], G[3], G[5]]       # each track's outline colour (from the design)
-BOX_Y = [16, 41, 66, 92, 117, 142, 167, 192]                      # the top of each track's box
-BOX_H = 23
+SHOWN = 4                                                         # tracks on screen at once (Shift + the wheel scrolls through the 8)
+BOX_Y = [14, 64, 114, 164]                                        # the top of each row's box
+BOX_H = 47
 X_BOX, W_BOX = 22, 295                                           # the boxes span x 22 .. 317
 BAR_Y, BAR_H = 217, 4                                            # the grey bar under the tracks
 GREY = (0x95, 0x9B, 0x87)
 BASE = 236                                                       # baseline of the bottom text
 RULER_Y, RULER_H = 1, 10
+
+
+def top_row(T):
+    """The first track on screen: it follows the selected track when that changes, Shift + the wheel moves it."""
+    sel = T.armed - 1
+    top = getattr(T, "_tape_top", 0)
+    if getattr(T, "_tape_last", None) != sel:
+        if sel < top:
+            top = sel
+        elif sel > top + SHOWN - 1:
+            top = sel - SHOWN + 1
+        T._tape_last = sel
+    top = max(0, min(8 - SHOWN, top))
+    T._tape_top = top
+    return top
+
+
+def scroll(T, d):
+    """Shift + the wheel: the view moves a track a click."""
+    T._tape_last = T.armed - 1
+    T._tape_top = max(0, min(8 - SHOWN, getattr(T, "_tape_top", 0) + (1 if d > 0 else -1)))
 
 
 def draw(T, nat):
@@ -65,19 +87,21 @@ def draw(T, nat):
         c.rect(max(x0, a), RULER_Y, max(0, min(x1, b) - max(x0, a)), 2, G[6] if e.loop_on else G[3])
 
     # the tracks
-    for n in range(8):
-        by = BOX_Y[n]
+    top_n = top_row(T)
+    for row in range(SHOWN):
+        n = top_n + row
+        by = BOX_Y[row]
         is_sel = n == sel
         muted = not e.audible(n)
         c.frame(X_BOX, by, W_BOX, BOX_H, nat.WHITE if is_sel else OUTLINE[n])
-        c.text_px(8, 33 + 25 * n, str(n + 1), G[2] if muted else nat.WHITE, 16, 0)
+        c.text_px(2, by + BOX_H // 2 + 9, str(n + 1), G[2] if muted else nat.WHITE, 24, 0)
         if n in e.arm_extra:
-            c.rect(18, by + 3, 3, BOX_H - 6, nat.RED)
+            c.rect(18, by + 6, 3, BOX_H - 12, nat.RED)
         ch = e.chans(n)[0]
         boxes = e.regions[ch]
         ink = G[1] if muted else (G[6] if is_sel else OUTLINE[n])     # recorded audio: a plain bar in the track's green
         top = by + 1
-        rows_n = BOX_H - 2                                       # the 21 rows inside the outline
+        rows_n = BOX_H - 2                                       # the rows inside the outline
         for i, r in enumerate(boxes):
             xa = int(round(mid + (r[0] / fpb - t.pos) * ppb))
             xb = int(round(mid + (r[1] / fpb - t.pos) * ppb))
@@ -89,9 +113,14 @@ def draw(T, nat):
             b = min(x1, xb - (1 if spliced_after else 0))
             if b <= a:
                 continue
-            c.rect(a, top + 6, b - a, rows_n - 12, ink)
+            c.rect(a, top + 11, b - a, rows_n - 22, ink)
             if spliced_after and x0 <= xb < x1:
                 c.rect(xb, top - 1, 1, rows_n + 2, nat.WHITE)
+
+    # the scroll bar (right edge): which 4 of the 8 tracks are showing
+    c.rect(318, BOX_Y[0], 2, BOX_Y[-1] + BOX_H - BOX_Y[0], G[1])
+    span = BOX_Y[-1] + BOX_H - BOX_Y[0]
+    c.rect(318, BOX_Y[0] + span * top_n // 8, 2, span * SHOWN // 8, G[5])
 
     # the playhead
     c.rect(mid, RULER_Y, 1, BAR_Y - RULER_Y - 1, nat.WHITE)

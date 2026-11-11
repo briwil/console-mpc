@@ -61,6 +61,15 @@ def active(T):
         return False
 
 
+def on_tape(T):
+    """The 8-track page (not zoomed, no menu on top)."""
+    try:
+        import native
+        return bool(T.engine) and T.focus.track is None and native.on_tape_page(T, getattr(T, "_mpc_menu", None))
+    except Exception:
+        return False
+
+
 def in_seq(T):
     """Drum sequencer page (steps selected or not): the wheel's box and push are in use."""
     try:
@@ -169,7 +178,7 @@ def lay(T, p, vel=None):
 
 
 def install(MoveBoard, pad_velocity=None):
-    orig_cc, orig_pad = MoveBoard.cc, MoveBoard.pad
+    orig_cc, orig_pad, orig_note = MoveBoard.cc, MoveBoard.pad, MoveBoard.note
 
     def cc(self, num, val):
         T = self.T
@@ -180,6 +189,12 @@ def install(MoveBoard, pad_velocity=None):
                 return                                          # (and its clicks are not used there)
             if num == K1_ABS:
                 return
+        if num == WHEEL and val and self.shift and on_tape(T):
+            step = val - 128 if val > 63 else val
+            if step:
+                import tapepage
+                tapepage.scroll(T, step)                        # Shift + wheel on the tape page: scroll through the 8 tracks
+            return
         if num == PUSH and val and in_seq(T):
             click(T, self.shift)
             return
@@ -198,7 +213,19 @@ def install(MoveBoard, pad_velocity=None):
             return
         orig_cc(self, num, val)
 
+    def note(self, num, val):
+        T = self.T
+        if (num in (17, 18) and val and self.shift and T.seq_page and T.drum_page
+                and not (T.punch.active() or T.auto.active() or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active)
+                and (T.synth_shown() or num == 17)):
+            # NOTE REPEAT / PAD FX from inside a sequencer: out to the sound page first, then on to the arp / pads page
+            T.punch.leave()
+            T.auto_page = T.seq_page = False
+            T.seqp.held, T.synthp.held = {}, {}
+            T.mlfo.tab = None
+        orig_note(self, num, val)
+
     def pad(self, p, vel):
         orig_pad(self, p, vel)                                   # the pads play and pick the drums; they never lay steps here
 
-    MoveBoard.cc, MoveBoard.pad = cc, pad
+    MoveBoard.cc, MoveBoard.pad, MoveBoard.note = cc, pad, note
