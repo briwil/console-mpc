@@ -12,17 +12,16 @@ def mix(a, b, t):
 
 
 def light(c):
-    return mix(c, (255, 255, 255), 0.45)       # the filled part (the value)
+    return mix(c, (255, 255, 255), 0.41)       # the filled part (the value): the colour with 41% white over it
 
 
 def band(c):
-    return mix(c, (60, 60, 72), 0.5)           # the label band: the colour, greyed and darker
+    return mix(c, (0, 0, 0), 0.5)              # the label band: the colour at half strength on black
 
 
 def ink(c):
-    """Text on that colour: white on dark colours, near-black on pale ones."""
-    lum = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
-    return (255, 255, 255) if lum < 150 else (24, 26, 34)
+    """Text on the blocks is always white."""
+    return (255, 255, 255)
 
 
 def pick(key, n):
