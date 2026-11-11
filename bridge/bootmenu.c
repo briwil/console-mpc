@@ -245,8 +245,8 @@ int main(int argc, char **argv)
         uint8_t buf[64];
         int k = midi_read(buf, sizeof buf), picked = 0;
         if (k > 0) heard = 1;
-        if (!heard && t > 0 && t % 100 == 0) {      /* silent so far: let go of the port, reopen it, light the pads again */
-            midi_close(); midi_open(); panel_hello();
+        if (!heard && t > 0 && t % 50 == 0) {       /* silent so far: the panel may still be starting up: say hello again, every second */
+            panel_hello();
             pad_led(0, 0, 110, 20); pad_led(1, 70, 70, 70);
             for (int p = 2; p < 16; p++) pad_led(p, 0, 0, 0);
         }

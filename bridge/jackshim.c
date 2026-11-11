@@ -485,6 +485,8 @@ static void *audio_main(void *arg)
     struct port *cin = find("controls_in"), *ol = find("out_L"), *orr = find("out_R");
     struct port *il = find("in_L"), *ir = find("in_R");
     mapping_init();
+    int heard = 0, hello_n = 0;
+    (void)hello_n;
 #ifndef HOST_TEST
     /* The panel's start-up handshake, exactly what the stock app sends when it starts (recorded with panelsniff): an Identity
        Request, then the message F0 47 7F 5C 42 00 00 F7 (the panel answers with its knob positions). Without it, a panel whose
@@ -501,8 +503,25 @@ static void *audio_main(void *arg)
     while (running) {
         uint8_t raw[64];
         int n;
-        while ((n = hw_midi_read(raw, sizeof raw)) > 0)
+        while ((n = hw_midi_read(raw, sizeof raw)) > 0) {
+            heard = 1;
             for (int i = 0; i < n; i++) mpc_midi_byte(raw[i]);
+        }
+#ifndef HOST_TEST
+        /* nothing from the panel yet: it may still be starting up and have missed the handshake: send it again, about once a
+           second, for up to a minute (two messages a few cycles apart) */
+        if (!heard && hello_n < 20000) {
+            hello_n++;
+            if (hello_n % 344 == 0) {
+                static const uint8_t ident2[6] = { 0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7 };
+                hw_midi_write(ident2, 6);
+            } else if (hello_n % 344 == 50) {
+                static const uint8_t start2[8] = { 0xF0, 0x47, 0x7F, 0x5C, 0x42, 0x00, 0x00, 0xF7 };
+                hw_midi_write(start2, 8);
+                refresh_pads(); refresh_buttons();          /* and the lights again, in case it missed those too */
+            }
+        }
+#endif
         mapping_tick();
 
         if (il) memset(il->audio, 0, sizeof il->audio);

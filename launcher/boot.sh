@@ -34,6 +34,7 @@ UP_MIN=0
 [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (optional extra wait, in seconds of uptime:  echo 40 > $C/UP_MIN)
 up=$(cut -d. -f1 /proc/uptime)
 [ "$up" -lt "$UP_MIN" ] && sleep $((UP_MIN - up))
+echo "panel before: $(grep "^ *3:" /proc/tty/driver/* | sed "s/.*tx/tx/")"
 echo "taking over at uptime $(cut -d. -f1 /proc/uptime) s (firmware tool seen: $seen, waited ${w}s)"
 touch "$TRY"                                         # from here on: if Console never gets through, the next power-on starts the stock app
 systemctl unset-environment LD_PRELOAD 2>/dev/null
