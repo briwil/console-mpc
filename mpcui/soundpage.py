@@ -316,7 +316,7 @@ def draw_inst_list(T, nat):
         else:
             rows.append((str(names.get(mid, mid) or "-").upper(), "MUTE" if i in e.slot_mutes else "", 0.35 if i in e.slot_mutes else 0.6))
     msg = T.message if (T.message and now < T.message_until) else None
-    listview(nat, "insts", "WHEEL: PICK  PUSH: OPEN", "INSTRUMENTS", rows, ip.row, now, msg)
+    listview(nat, "insts", "", "INSTRUMENTS", rows, ip.row, now, msg)
 
 
 # ------------------------------------------------------------------ the song page
@@ -421,9 +421,7 @@ def draw_seq(T, nat):
     blink = int(now * 3) % 2 == 0
     cur = getattr(ms, "cur", None)
     msg = T.message if (T.message and now < T.message_until) else None
-    hint = "WHEEL: BOX  CLICK: SELECT"
-    if selected:
-        hint = "PAD: PICK  CLICK: ON/OFF" if not knobs else ("SAME PAD AGAIN: OFF" if knobs[0][2] else "TURN K1 TO SET IT")
+    hint = ""
 
     def head(c):
         left = (ms.which() if selected else name)[:16]
@@ -431,7 +429,8 @@ def draw_seq(T, nat):
         c.text_px(6, 25, left, WHITE, px, -3 if px == 24 else -1)
         right = name[:8] if selected else pat
         c.text_px(314 - text_width(c.pxfont(16), right, -1), 25, right, colour.GREENS[5], 16, -1)
-        c.text_px(6, 6, (msg or hint)[:50], nat.ACC if msg else colour.GREENS[5], 8, 0)
+        if msg:
+            c.text_px(6, 6, msg[:50], nat.ACC, 8, 0)
         y = 32                                                      # the steps: 17 px wide at 19 px, the height is the velocity
         for k in range(16):
             i = first + k
