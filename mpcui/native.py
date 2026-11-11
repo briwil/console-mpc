@@ -10,6 +10,7 @@ import time
 
 import numpy as np
 
+import colour
 import screen as _screen
 import tape
 
@@ -51,7 +52,9 @@ _masks = {}
 _HERE = os.path.dirname(os.path.abspath(__file__))
 # Jersey 15 (a pixel font, OFL) is the look; Lato / Carlito / Barlow stay as fallbacks. A pixel font is only sharp at its own
 # pixel size and whole multiples of it: Jersey 15's is 18 (so 18 / 36 / 54).
-FONT_CANDIDATES = [(os.environ.get("CONSOLE_FONT", ""), 18),
+FONT_CANDIDATES = [(os.environ.get("CONSOLE_FONT", ""), 16),
+                   (os.path.join(_HERE, "fonts", "Silkscreen-Regular.ttf"), 16),      # Silkscreen (OFL): 16 / 32 / 48 px
+                   (os.path.join(_HERE, "fonts", "Jersey15-Regular.ttf"), 18),
                    (os.path.join(_HERE, "fonts", "Jersey15-Regular.ttf"), 18),
                    (os.path.join(_HERE, "fonts", "Carlito-Bold.ttf"), 13),
                    ("/home/claude/briwil/console-move/move/fonts/BarlowCondensed-SemiBold.ttf", 12)]
@@ -457,11 +460,11 @@ class NotNative(Exception):
 
 
 def draw_seq(T):
-    """The drum sequencer: the lane's 16 steps as big cells (height = velocity), then the lane's settings (nothing
-    selected) or the picked setting of the selected steps (see moveseq.py for how the pads and knobs work)."""
+    """The drum sequencer in colour blocks: the lane (drum) in big letters, its 16 steps (height = velocity), then the lane's
+    settings (nothing selected), the picked setting of the selected steps, or the step settings as a grid like the pads."""
     import sequencer
     c = canvas
-    c.clear()
+    c.clear((0, 0, 0))
     e = T.engine
     ms, sp, seq = T.mseq, T.seqp, e.seq
     lane = sp.lane
@@ -472,112 +475,120 @@ def draw_seq(T):
     pat = "PAT %d" % (seq.current + 1) + (">%d" % (seq.queued + 1) if seq.queued is not None else "")
     selected = ms.held is not None
     knobs = ms.knob_list() if selected else None
-    c.rect(0, 0, W, TOP_H, BAR)
+    lc = colour.pick("lane%d" % lane, 1)[0]
     if selected:
-        c.text_in(4, 0, TOP_H, ms.which(), ACC)
-        c.text_in(W - 4 - c.width(name[:14]), 0, TOP_H, name[:14], MID)
+        c.text(8, 4, ms.which(), WHITE, 2)
+        c.text(W - 8 - c.width(name[:10], 2), 4, name[:10], MID, 2)
     else:
-        c.text_in(4, 0, TOP_H, name[:14], ACC)
-        c.text_in(W - 4 - c.width(pat), 0, TOP_H, pat, MID)
+        c.text(8, 4, name[:12], WHITE, 2)
+        c.text(W - 8 - c.width(pat, 2), 4, pat, MID, 2)
     # the 16 steps
     at = ms.playing_step()
-    y = 20
+    y = 24
     sel = set(ms.selected) if selected else set()
+    blink = int(time.monotonic() * 3) % 2 == 0
     for k in range(16):
         i = first + k
-        x = 4 + k * 19
-        if i >= ln.length:
-            c.rect(x + 7, y + 16, 3, 2, DIM)
-            continue
-        if sequencer.dark(i, sequencer.TRIPLETS):
-            c.rect(x + 3, y + 16, 11, 2, DIM)
+        x = k * 20
+        if i >= ln.length or sequencer.dark(i, sequencer.TRIPLETS):
+            c.rect(x + 8, y + 22, 3, 2, DIM)
             continue
         is_sel = i in sel
-        lit = is_sel and int(time.monotonic() * 3) % 2 == 0      # (selected steps blink)
-        c.rect(x, y, 17, 34, SEL_FILL if lit else CELL)
-        c.frame(x, y, 17, 34, ACC if lit else CELL_LINE)
+        c.rect(x, y, 19, 44, colour.band(lc) if (k // 4) % 2 == 0 else colour.mix(colour.band(lc), (0, 0, 0), 0.35))
         st = ln.steps[i]
         if st.on:
             v = st.vel if st.vel else sequencer.DEFAULT_VELOCITY
-            h = max(3, int(26 * min(127, v) / 127.0))
-            c.rect(x + 2, y + 31 - h, 13, h, ACC if lit else FG)
+            h = max(4, int(44 * min(127, v) / 127.0))
+            c.rect(x, y + 44 - h, 19, h, colour.light(lc) if not is_sel else WHITE)
+        if is_sel and blink:
+            c.rect(x, y, 19, 44, WHITE)
         if at is not None and i == at:
-            c.rect(x, y + 36, 17, 3, WHITE)
-        c.text(x + (6 if i < 9 else 2), y + 40, str(i + 1), FG if (k % 4 == 0) else MID)
+            c.rect(x, y + 46, 19, 3, WHITE)
+        c.text(x + (7 if i < 9 else 3), y + 52, str(i + 1), WHITE if (k % 4 == 0) else MID)
     cur = getattr(ms, "cur", None)
-    if cur is not None and first <= cur < first + 16 and cur < ln.length:     # the step cursor (a drum hit lays a step here)
-        x = 4 + (cur - first) * 19
-        c.frame(x - 1, y - 1, 19, 36, WHITE)
-        c.frame(x - 2, y - 2, 21, 38, WHITE)
-    # the lane's pages: 16 steps each; the shown one is lit
+    if cur is not None and first <= cur < first + 16 and cur < ln.length:
+        x = (cur - first) * 20
+        c.frame(x - 1, y - 1, 21, 46, WHITE)
+        c.frame(x, y, 19, 44, WHITE)
     npages = max(1, (ln.length + 15) // 16)
     gap = 4
-    seg = (W - 8 - gap * (npages - 1)) // npages
+    seg = (W - gap * (npages - 1)) // npages
     for p in range(npages):
-        c.rect(4 + p * (seg + gap), y + 56, seg, 4, ACC if p == first // 16 else CELL_LINE)
-    c.text(4, y + 64, "STEPS %d-%d OF %d" % (first + 1, min(first + 16, ln.length), ln.length), DIM)
-    top = 112
+        c.rect(p * (seg + gap), 82, seg, 3, WHITE if p == first // 16 else (50, 54, 62))
+    top = 98
+    cols = colour.pick("seq%d" % lane, 16)
     if not selected:
-        # the lane's settings: knobs 1-4
-        cw = (W - 8 - 3 * 6) // 4
+        cw = W // 4
         for i, (label, value, _locked) in enumerate(knobs_lane(ms)[:4]):
-            x = 4 + i * (cw + 6)
-            c.rect(x, top, cw, 70, CELL)
-            c.frame(x, top, cw, 70, CELL_LINE)
-            c.text(x + 6, top + 7, str(label)[:9], MID)
-            v = str(value)
-            c.text(x + 6, top + 26 if len(v) <= 4 else top + 31, v[:9] if len(v) > 4 else v, FG, 3 if len(v) <= 4 else 1)
-            c.text(x + 6, top + 57, ("K%d" % (i + 1)) if i < 3 else "FADER", DIM)
-        hint = "WHEEL: MOVE BOX  CLICK: SELECT  HIT DRUM: ADD"
+            block(i * cw, top, cw, 142, cols[i], str(label), str(value), None, vscale=3)
+        hint = "WHEEL: BOX  CLICK: SELECT  HIT DRUM: ADD"
     elif knobs:
         label, value, on = knobs[0]
         key = ms.pad_items()[ms.sel][0]
         ct = ms.chance_text(key)
-        c.rect(4, top, W - 8, 100, CELL)
-        c.frame(4, top, W - 8, 100, ACC)
-        c.text(14, top + 8, str(label)[:18], ACC, 3)
-        c.text(14, top + 46, "K1", DIM)
-        c.text(44, top + 34, str(value)[:6], FG, 4)
+        frac = None
         if key == "vel":
             try:
                 frac = max(0.0, min(1.0, float(value) / 127.0))
             except ValueError:
-                frac = 0.0
-            c.rect(150, top + 46, 156, 8, CELL_LINE)
-            c.rect(150, top + 46, int(156 * frac), 8, ACC)
+                frac = None
+        w1 = W // 2 if ct is not None else W
+        block(0, top, w1, 142, cols[0], "K1 " + str(label)[:10], str(value), frac, vscale=4 if len(str(value)) <= 5 else 3)
         if ct is not None:
-            c.text(14, top + 78, "K2 CHANCE  %s" % ct, MID)
-        c.text(W - 14 - c.width("SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT"), top + 78, "SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT", DIM)
-        hint = "CLICK: ON/OFF  SHIFT+CLICK: ADD  BACK: DONE"
+            block(w1, top, W - w1, 142, cols[1], "K2 CHANCE", ct[:9], None, vscale=2)
+        hint = "SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT"
     else:
-        # steps selected, no setting picked: the pads' settings as a 4 x 4 grid (lit: what the steps have); K1-K8 lock sound settings
         items = ms.pad_items()
-        cw = (W - 8 - 3 * 6) // 4
+        cw, rh = W // 4, 35
         for p in range(16):
             col, row = p % 4, 3 - p // 4
-            x, yy = 4 + col * (cw + 6), top + row * 28
-            c.rect(x, yy, cw, 25, CELL)
+            x, yy = col * cw, top + row * rh
             if p >= len(items):
-                c.frame(x, yy, cw, 25, CELL_LINE)
+                c.rect(x, yy, cw, rh, (14, 16, 20))
                 continue
             key, label = items[p]
             on = ms.engaged(key)
-            c.rect(x, yy, cw, 25, SEL_FILL if on else CELL)
-            c.frame(x, yy, cw, 25, ACC if on else CELL_LINE)
-            c.text(x + 4, yy + 4, str(label)[:11], ACC if on else MID)
+            body = cols[p] if on else colour.mix(cols[p], (20, 22, 28), 0.82)
+            c.rect(x, yy, cw, rh - 1, body)
+            c.text(x + 4, yy + 4, str(label)[:11], colour.ink(body))
             if on:
-                c.text(x + 4, yy + 15, str(ms.item_value(key))[:11], FG)
-        hint = "PAD: PICK A SETTING  CLICK: ON/OFF  BACK: DONE"
-    c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
+                c.text(x + 4, yy + 18, str(ms.item_value(key))[:11], colour.ink(body), 1)
+        hint = "PAD: PICK  CLICK: ON/OFF  BACK: DONE"
     if T.message and time.monotonic() < T.message_until:
-        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
-    else:
-        c.text_in(4, H - BOTTOM_H, BOTTOM_H, hint, DIM)
+        hint = T.message[:36]
+    c.text(8, 88, hint[:44], ACC if (T.message and time.monotonic() < T.message_until) else MID)
 
 
 def knobs_lane(ms):
     return ms.knob_list()
 
+
+
+# ------------------------------------------------------------------ the colour blocks
+
+def block(x, y, w, h, body, label, value="", frac=None, hot=False, band_h=19, vscale=None, label_scale=2):
+    """A colour block: a darker label band on top, the body below, the value in it (large) and, from the bottom up, a
+    lighter part showing how far the value is (frac 0..1; None: a flat block, e.g. a menu choice). hot: a white frame."""
+    c = canvas
+    lab = colour.band(body)
+    c.rect(x, y, w, band_h, lab)
+    c.rect(x, y + band_h, w, h - band_h, body)
+    if frac is not None:
+        fh = int((h - band_h) * max(0.0, min(1.0, frac)))
+        if fh:
+            c.rect(x, y + h - fh, w, fh, colour.light(body))
+    ink = colour.ink(body)
+    c.text_in(x + 4, y, band_h, str(label)[:max(3, (w - 6) // 12)], colour.ink(lab), label_scale)
+    v = str(value)
+    if vscale is None:
+        vscale = 3 if c.width(v, 3) <= w - 8 else 2
+    if c.width(v, vscale) > w - 6:
+        vscale, v = 1, v[:max(1, (w - 8) // 6)]
+    ink = colour.ink(colour.light(body)) if frac is not None and frac > 0.5 else ink
+    c.text_in(x + 4, y + band_h, h - band_h, v, ink, vscale)
+    if hot:
+        c.frame(x, y, w, h, WHITE)
+        c.frame(x + 1, y + 1, w - 2, h - 2, WHITE)
 
 
 # ------------------------------------------------------------------ the sound pages
@@ -595,10 +606,11 @@ def set_touch(knob, down):
 
 
 def draw_sound(T):
-    """An instrument's sound page: its settings as eight cards in knob order, the page names as tabs. A touched knob
-    (a pad held in knob mode) or one being turned gets its card lit and its name and value large along the bottom."""
+    """An instrument's sound page in colour blocks: the instrument (or drum) in big letters, its eight settings as blocks in
+    knob order. A touched knob (a pad held in knob mode) or one being turned: its block gets a white frame and the top
+    shows its name and value large."""
     c = canvas
-    c.clear()
+    c.clear((0, 0, 0))
     e = T.engine
     d = e.drums
     pages = T.drum_pages()
@@ -606,25 +618,8 @@ def draw_sound(T):
     page_name, params = pages[T.drum_tab]
     names = getattr(d, "names", None) or []
     voice = T.drum_voice
-    vname = names[voice] if voice < len(names) else ""
+    vname = (names[voice] if voice < len(names) else "") or str(getattr(d, "title", ""))
     octave = getattr(T, "octave", 0)
-    c.rect(0, 0, W, TOP_H, BAR)
-    c.text_in(4, 0, TOP_H, vname[:14], ACC)
-    right = ("OCT %+d   " % octave if octave else "") + "%d / %d" % (T.drum_tab + 1, len(pages))
-    c.text_in(W - 4 - c.width(right), 0, TOP_H, right, MID)
-    # the page names as tabs (scrolled so the shown one is always in view)
-    first = max(0, T.drum_tab - 2)
-    x = 4
-    for i in range(first, len(pages)):
-        nm = str(pages[i][0]).upper()[:10]
-        w = c.width(nm) + 12
-        if x + w > W - 4 and i > T.drum_tab:
-            break
-        here = i == T.drum_tab
-        c.rect(x, 20, w, 16, ACC if here else CELL)
-        c.text_in(x + 6, 20, 16, nm, BG if here else MID)
-        x += w + 4
-    # who is being touched / turned
     now = time.monotonic()
     active = _touched[-1] if _touched else None
     if active is None:
@@ -633,41 +628,32 @@ def draw_sound(T):
             when = T.drumpage.edited.get(i + 1, 0.0)
             if now - when < 1.0 and when > newest:
                 active, newest = i, when
-    # the eight cards
-    cw, ch = 73, 62
-    for i, p in enumerate(params[:8]):
-        col, row = i % 4, i // 4
-        x, y = 4 + col * (cw + 6), 42 + row * (ch + 6)
-        hot = i == active
-        c.rect(x, y, cw, ch, SEL_FILL if hot else CELL)
-        c.frame(x, y, cw, ch, ACC if hot else CELL_LINE)
-        c.text(x + 6, y + 6, ("%d %s" % (i + 1, d.label(p)))[:11], ACC if hot else MID)
-        v = str(d.value_text(p))
-        big = len(v) <= 4
-        c.text_in(x + 6, y + 18, 28, v[:9], FG, 3 if big else 2)
-        if d.kind(p) not in MENU_KINDS:
-            frac = max(0.0, min(1.0, d.fraction(p)))
-            c.rect(x + 6, y + ch - 10, cw - 12, 4, CELL_LINE)
-            c.rect(x + 6, y + ch - 10, int((cw - 12) * frac), 4, ACC if hot else FG)
-    c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
+    top = "PAGE %d/%d" % (T.drum_tab + 1, len(pages))
+    if len(pages) > 1:
+        top += "  " + str(page_name).upper()[:12]
+    if octave:
+        top += "  OCT %+d" % octave
+    c.text(10, 12, top, WHITE, 2)
     if active is not None and active < len(params):
         p = params[active]
-        py = 174
-        c.rect(0, py, W, H - BOTTOM_H - py, (12, 14, 18))
-        c.rect(0, py, W, 1, ACC)
-        c.text(10, py + 5, "KNOB %d" % (active + 1), MID)
         label = str(d.label(p)).upper()
         value = str(d.value_text(p))
-        c.text(10, py + 13, label[:18], ACC, 3 if len(label) <= 9 else 2)
-        c.text(W - 10 - c.width(value[:8], 3), py + 13, value[:8], FG, 3)
-        if d.kind(p) not in MENU_KINDS:
-            frac = max(0.0, min(1.0, d.fraction(p)))
-            c.rect(10, py + 42, W - 20, 4, CELL_LINE)
-            c.rect(10, py + 42, int((W - 20) * frac), 4, ACC)
-    if T.message and time.monotonic() < T.message_until:
-        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
+        c.text(10, 32, label, ACC, 3 if c.width(label, 3) <= W - 20 else 2)
+        vs = 4 if c.width(value, 4) <= W - 20 else 3 if c.width(value, 3) <= W - 20 else 2
+        c.text(10, 66, value, WHITE, vs)
     else:
-        c.text_in(4, H - BOTTOM_H, BOTTOM_H, "< > OR WHEEL: PAGES   PAD + ENCODER: KNOB", DIM)
+        title = vname.upper()
+        ts = 3 if c.width(title, 3) <= W - 20 else 2
+        c.text(10, 32, title, WHITE, ts)
+        if T.message and now < T.message_until:
+            c.text(10, 74, T.message[:24], ACC, 2)
+    cols = colour.pick("%s/%s/%s" % (getattr(d, "id", getattr(d, "machine", "")), voice, page_name), 8)
+    cw, ch = W // 4, 71
+    for i, p in enumerate(params[:8]):
+        col, row = i % 4, i // 4
+        x, y = col * cw, 98 + row * ch
+        flat = d.kind(p) in MENU_KINDS
+        block(x, y, cw, ch, cols[i], d.label(p), d.value_text(p), None if flat else d.fraction(p), hot=(i == active))
 
 
 def on_sound_page(T, menu):
@@ -707,42 +693,34 @@ def on_mixer_page(T, menu):
 
 
 def draw_mixer(T):
-    """MIXER: 8 strips with the instrument, level fader, level number, pan and a MUTE tag."""
+    """MIXER in colour blocks: each instrument's level as a fill, its name, its pan; muted ones greyed."""
     from console import mix_pan_text
     c = canvas
-    c.clear()
+    c.clear((0, 0, 0))
     e = T.engine
-    c.rect(0, 0, W, TOP_H, BAR)
-    c.text_in(4, 0, TOP_H, "MIXER", ACC)
-    c.text_in(W - 4 - c.width("SHIFT: PAN"), 0, TOP_H, "SHIFT: PAN", MID)
-    for i in range(8):
-        x, y, w, h = 4 + i * 39, 22, 35, 172
-        mid = e.slots[i]
-        muted = bool(mid) and i in e.slot_mutes
-        c.rect(x, y, w, h, CELL)
-        c.frame(x, y, w, h, CELL_LINE)
-        c.text(x + 3, y + 4, str(i + 1), ACC if mid else DIM)
-        if not mid:
-            c.text(x + 3, y + 14, "-", DIM)
-            continue
-        c.text(x + 3, y + 14, str(T.instp.title(mid)).upper()[:5], MID)
-        lvl = max(0.0, min(1.0, float(e.inst_levels[i])))
-        fx, fy, fh = x + 5, y + 30, 92
-        top = int(fh * (1 - lvl))
-        c.rect(fx, fy, 10, fh, CELL_LINE)
-        c.rect(fx, fy + top, 10, fh - top, DIM if muted else ACC)
-        c.text(x + 3, y + 128, "%d" % round(lvl * 100), DIM if muted else FG)
-        c.text(x + 3, y + 142, mix_pan_text(e.inst_pans[i]), MID)
-        if muted:
-            c.rect(x + 3, y + 156, 29, 10, (60, 30, 30))
-            c.text(x + 6, y + 157, "MUTE", FG)
-        else:
-            c.rect(x + 3, y + 156, 29, 10, CELL_LINE)
-    c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
+    c.text(10, 12, "SHIFT: PAN", WHITE, 2)
+    c.text(10, 32, "MIXER", WHITE, 3)
     if T.message and time.monotonic() < T.message_until:
-        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
+        c.text(10, 74, T.message[:24], ACC, 2)
     else:
-        c.text_in(4, H - BOTTOM_H, BOTTOM_H, "KNOBS: LEVEL   PAD: MUTE   SHIFT+PAD: SOLO", DIM)
+        c.text(10, 78, "KNOBS: LEVEL   PAD: MUTE   SHIFT+PAD: SOLO", MID)
+    cols = colour.pick("mixer", 8)
+    cw, ch = W // 4, 71
+    for i in range(8):
+        x, y = (i % 4) * cw, 98 + (i // 4) * ch
+        mid = e.slots[i]
+        if not mid:
+            c.rect(x, y, cw, ch, (14, 16, 20))
+            c.text_in(x + 4, y, 19, "%d -" % (i + 1), DIM, 2)
+            continue
+        muted = i in e.slot_mutes
+        lvl = max(0.0, min(1.0, float(e.inst_levels[i])))
+        body = colour.mix(cols[i], (70, 70, 76), 0.8) if muted else cols[i]
+        name = str(T.instp.title(mid)).upper()
+        block(x, y, cw, ch, body, name, "MUTE" if muted else "%d" % round(lvl * 100),
+              None if muted else lvl, vscale=2 if muted else None)
+        c.text(x + 4, y + ch - 11, str(i + 1), colour.ink(body))
+        c.text(x + cw - 4 - c.width(mix_pan_text(e.inst_pans[i])), y + ch - 11, mix_pan_text(e.inst_pans[i]), colour.ink(body))
 
 
 # ------------------------------------------------------------------ instruments list, project menu, settings
@@ -784,22 +762,27 @@ def draw_inst_list(T):
         names = {m: title for m, title in instpage.machines()}
     except Exception:
         pass
-    _top("INSTRUMENTS", "8 SLOTS")
+    c.clear((0, 0, 0))
+    c.text(8, 4, "INSTRUMENTS", WHITE, 2)
+    if T.message and time.monotonic() < T.message_until:
+        c.text(W - 8 - c.width(T.message[:18]), 4, T.message[:18], ACC)
+    cols = colour.pick("instruments", 8)
     for i in range(8):
-        y = 22 + i * 24
+        y = 22 + i * 27
         mid = e.slots[i]
         on = i == ip.row
-        name = str(names.get(mid, mid) or "-").upper() if mid else "-"
-        c.rect(4, y, W - 8, 21, SEL_FILL if on else CELL)
-        c.frame(4, y, W - 8, 21, ACC if on else CELL_LINE)
-        c.text_in(12, y, 21, str(i + 1), ACC if on else MID)
-        c.text_in(34, y, 21, name[:18], FG if mid else DIM, 2)
-        if not mid:
-            c.text_in(W - 12 - c.width("EMPTY"), y, 21, "EMPTY", DIM)
-        elif i in e.slot_mutes:
-            c.rect(W - 62, y + 4, 50, 13, (60, 30, 30))
-            c.text_in(W - 57, y + 4, 13, "MUTE", FG)
-    _bottom(T, "WHEEL: PICK  PUSH: OPEN  PAD: MUTE")
+        body = cols[i] if mid else (28, 30, 36)
+        c.rect(0, y, 30, 26, colour.band(body))
+        c.rect(30, y, W - 30, 26, body)
+        c.text_in(9, y, 26, str(i + 1), colour.ink(colour.band(body)), 2)
+        name = str(names.get(mid, mid) or "-").upper() if mid else "EMPTY"
+        c.text_in(38, y, 26, name[:16], colour.ink(body) if mid else DIM, 2)
+        if mid and i in e.slot_mutes:
+            c.rect(W - 62, y + 5, 54, 16, (60, 30, 30))
+            c.text_in(W - 58, y + 5, 16, "MUTE", WHITE, 2)
+        if on:
+            c.frame(0, y, W, 27, WHITE)
+            c.frame(1, y + 1, W - 2, 25, WHITE)
 
 
 def on_project_menu(menu):
@@ -811,16 +794,23 @@ def draw_project_menu(T, menu):
     c = canvas
     shift = bool(getattr(T, "shift_held", lambda: False)())
     e = menu.engine
-    _top(((e.song or "UNTITLED") if e else "DEMO").upper()[:21], "PROJECT")
+    c.clear((0, 0, 0))
+    title = ((e.song or "UNTITLED") if e else "DEMO").upper()[:18]
+    c.text(8, 4, title, WHITE, 2)
+    msg = str(getattr(menu, "msg", "") or "").upper()
+    if msg:
+        c.text(W - 8 - c.width(msg[:16]), 4, msg[:16], ACC)
+    cols = colour.pick("projectmenu", 4)
     for i, (label, _) in enumerate(menu_mod.ITEMS):
         text = {"NEW": "DELETE PROJECT" if shift else "NEW PROJECT", "SAVE": "RENAME PROJECT" if shift else "SAVE PROJECT",
                 "LOAD": "LOAD PROJECT", "SETTINGS": "SETTINGS"}[label]
-        y = 30 + i * 44
-        on = i == menu.choice
-        c.rect(12, y, W - 24, 38, SEL_FILL if on else CELL)
-        c.frame(12, y, W - 24, 38, ACC if on else CELL_LINE)
-        c.text_in(24, y, 38, text, ACC if on else FG, 3 if len(text) <= 14 else 2)
-    _bottom(T, "SHIFT + PUSH: DELETE / RENAME", str(getattr(menu, "msg", "") or "").upper())
+        y = 22 + i * 55
+        c.rect(0, y, W, 52, cols[i])
+        c.rect(0, y, 8, 52, colour.band(cols[i]))
+        c.text_in(20, y, 52, text, colour.ink(cols[i]), 3 if c.width(text, 3) <= W - 30 else 2)
+        if i == menu.choice:
+            c.frame(0, y, W, 52, WHITE)
+            c.frame(1, y + 1, W - 2, 50, WHITE)
 
 
 def on_settings(menu):
@@ -830,33 +820,37 @@ def on_settings(menu):
 def draw_settings(T, menu):
     import menu as menu_mod
     c = canvas
-    names = {"TIMESIG": "TIME SIGNATURE", "FORMAT": "EXPORT FORMAT", "UPDATE": "SOFTWARE UPDATE", "SCREEN": "EXTERNAL SCREEN"}
-    _top("SETTINGS", "TURN, PUSH: DONE" if menu.editing else "PUSH: CHANGE IT")
+    names = {"TIMESIG": "TIME SIG", "FORMAT": "EXPORT", "UPDATE": "UPDATE", "SCREEN": "SCREEN"}
+    c.clear((0, 0, 0))
+    c.text(8, 4, "SETTINGS", WHITE, 2)
     rows = menu_mod.SETTINGS
     fit = 6
     first = max(0, min(menu.row - fit + 1, len(rows) - fit)) if len(rows) > fit else 0
+    full = str(menu.setting_text(rows[menu.row]) or "")
+    msg = str(getattr(menu, "msg", "") or "") or (menu.update_message() if rows[menu.row] == "UPDATE" else "") or full
+    note = ("TURN, PUSH: DONE" if menu.editing else msg).upper()
+    c.text(W - 8 - c.width(note[:30]), 8, note[:30], ACC if menu.editing else MID)
+    cols = colour.pick("settings", len(rows))
     for i, what in enumerate(rows):
         if not first <= i < first + fit:
             continue
-        y = 22 + (i - first) * 30
+        y = 22 + (i - first) * 36
         on = i == menu.row
-        full = str(menu.setting_text(what) or "")
-        short = full.split("  ")[0].split(": ")[0].upper()[:14]
         label = names.get(what, menu_mod.LABELS.get(what, what))
-        c.rect(4, y, W - 8, 27, SEL_FILL if on else CELL)
-        c.frame(4, y, W - 8, 27, ACC if on else CELL_LINE)
-        c.text_in(12, y, 27, label, ACC if on else MID)
-        vx = W - 12 - c.width(short, 2)
+        short = str(menu.setting_text(what) or "").split("  ")[0].split(": ")[0].upper()[:12]
+        body = cols[i]
+        c.rect(0, y, 128, 34, colour.band(body))
+        c.rect(128, y, W - 128, 34, body)
+        c.text_in(8, y, 34, str(label).upper()[:10], colour.ink(colour.band(body)), 2)
+        vx = W - 8 - c.width(short, 2)
         if on and menu.editing:
-            c.rect(vx - 5, y + 3, c.width(short, 2) + 10, 21, ACC)
-            c.text_in(vx, y, 27, short, BG, 2)
+            c.rect(vx - 5, y + 4, c.width(short, 2) + 10, 26, WHITE)
+            c.text_in(vx, y, 34, short, (24, 26, 34), 2)
         else:
-            c.text_in(vx, y, 27, short, FG, 2)
-    full = str(menu.setting_text(rows[menu.row]) or "")
-    msg = str(getattr(menu, "msg", "") or "") or (menu.update_message() if rows[menu.row] == "UPDATE" else "") or full
-    c.rect(0, 206, W, 19, (12, 14, 18))
-    c.text_in(6, 206, 19, msg.upper()[:44], MID)
-    _bottom(None, "WHEEL: PICK ROW  PUSH: EDIT VALUE")
+            c.text_in(vx, y, 34, short, colour.ink(body), 2)
+        if on:
+            c.frame(0, y, W, 35, WHITE)
+            c.frame(1, y + 1, W - 2, 33, WHITE)
 
 
 # ------------------------------------------------------------------ the song page
@@ -874,43 +868,45 @@ def draw_song(T):
     sg = T.song
     sg.check_song()
     shift = bool(getattr(T, "shift_held", lambda: False)())
-    _top("SONG " + ("ON" if sg.on else "OFF"), ("ROW %d / %d" % (sg.pick + 1, len(sg.rows))) if sg.rows else "NO ROWS")
+    c.clear((0, 0, 0))
+    c.text(8, 4, "SONG " + ("ON" if sg.on else "OFF"), WHITE, 2)
+    r = ("ROW %d/%d" % (sg.pick + 1, len(sg.rows))) if sg.rows else "NO ROWS"
+    c.text(W - 8 - c.width(r, 2), 4, r, MID, 2)
     if not sg.rows:
-        lines = ["PRESS PAD 1 TO ADD A ROW", "EACH ROW: A PATTERN FOR EVERY", "INSTRUMENT, PLAYED X TIMES (KNOB 8)",
-                 "+ / - : SONG MODE ON / OFF"]
+        lines = ["PRESS PAD 1", "TO ADD A ROW"]
         for i, t in enumerate(lines):
-            c.text_in(14, 50 + i * 26, 20, t, FG if i == 0 else MID, 2 if i == 0 else 1)
-        _bottom(T, "PADS: ADD ROWS")
+            c.text(14, 50 + i * 30, t, WHITE, 3)
+        for i, t in enumerate(["EACH ROW: A PATTERN PER INSTRUMENT,", "PLAYED X TIMES (KNOB 8)", "+ / - : SONG MODE ON / OFF"]):
+            c.text(14, 130 + i * 14, t, MID)
         return
+    rc = colour.pick("songrows", 16)
     for i in range(16):
-        x, y = 4 + i * 19, 22
+        x, y = i * 20, 22
         have, pick, play = i < len(sg.rows), i == sg.pick, i == sg.playing_row
-        c.rect(x, y, 17, 20, SEL_FILL if pick else (CELL if have else (12, 14, 18)))
-        c.frame(x, y, 17, 20, ACC if pick else (FG if play else CELL_LINE))
-        c.text_in(x + (2 if i < 9 else 1), y, 20, str(i + 1), ACC if pick else (MID if have else DIM))
-    if sg.playing_row is not None and not shift:
-        c.text(4, 46, "ROW %d PLAYING" % (sg.playing_row + 1), DIM)
-    elif shift:
-        c.text(4, 46, "PUNCH FX PATTERNS", ACC)
+        c.rect(x, y, 19, 22, rc[i] if have else (22, 24, 30))
+        c.text_in(x + (4 if i < 9 else 1), y, 22, str(i + 1), colour.ink(rc[i]) if have else DIM, 1)
+        if play:
+            c.rect(x, y + 19, 19, 3, WHITE)
+        if pick:
+            c.frame(x, y, 19, 22, WHITE)
+    if shift:
+        c.text(8, 48, "PUNCH FX PATTERNS", ACC)
     row = sg.rows[sg.pick]
     slots = sg.slots()
+    cols = colour.pick("song", 8)
+    cw, ch = W // 4, 90
     for i in range(8):
-        col, r = i % 4, i // 4
-        x, y, w, h = 4 + col * 79, 60 + r * 72, 73, 66
-        c.rect(x, y, w, h, CELL)
-        c.frame(x, y, w, h, CELL_LINE)
+        x, y = (i % 4) * cw, 60 + (i // 4) * ch
         if i < 7:
             if i >= len(slots):
+                c.rect(x, y, cw, ch, (14, 16, 20))
                 continue
             slot = slots[i]
             v = row.get("punch", {}).get(slot) if shift else row["pats"].get(slot)
-            c.text(x + 6, y + 6, ("%d %s" % (i + 1, sg.short(slot)))[:11], MID)
             txt = "-" if v is None else ("FX%d" if shift else "P%d") % (v + 1)
-            c.text_in(x + 6, y + 20, 36, txt, DIM if v is None else FG, 3)
+            block(x, y, cw, ch, cols[i], "%d %s" % (i + 1, sg.short(slot)), txt, None, vscale=3)
         else:
-            c.text(x + 6, y + 6, "8 PLAYS", MID)
-            c.text_in(x + 6, y + 20, 36, "X%d" % row["repeat"], FG, 3)
-    _bottom(T, "SHIFT: PUNCH FX  SHIFT+PAD: DELETE ROW" if shift else "KNOBS: PATTERNS  PADS: ROWS  +/-: SONG ON/OFF")
+            block(x, y, cw, ch, cols[i], "8 PLAYS", "X%d" % row["repeat"], None, vscale=3)
 
 
 def on_seq_page(T, menu):
