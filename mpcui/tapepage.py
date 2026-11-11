@@ -64,27 +64,9 @@ def draw(T, nat):
     else:
         c.frame(6, 2, 9, 9, G[4])
 
-    # the ruler
-    c.rect(x0, RULER_Y, x1 - x0, RULER_H, nat.BOX)
-    bar = tape.BEATS_PER_BAR
-    k = int(t.pos - (mid - x0) / ppb) - 1
-    while True:
-        x = int(round(mid + (k - t.pos) * ppb))
-        if x >= x1:
-            break
-        if x >= x0:
-            in_bar = k % bar
-            if abs(in_bar) < 1e-6:
-                c.rect(x, RULER_Y + 2, 1, RULER_H - 2, nat.MID)
-                c.text_px(x + 3, RULER_Y + 8, str(int(k // bar) + 1), nat.MID, 8, 0)
-            elif ppb >= 6:
-                c.rect(x, RULER_Y + 7, 1, 3, nat.DIM)
-        k += 1
-    region = e.loop_region()
-    if region:                                                   # the loop: a bar along the top of the ruler
-        a = int(round(mid + (region[0] / fpb - t.pos) * ppb))
-        b = int(round(mid + (region[1] / fpb - t.pos) * ppb))
-        c.rect(max(x0, a), RULER_Y, max(0, min(x1, b) - max(x0, a)), 2, G[6] if e.loop_on else G[3])
+    # the ruler: tick marks along the top and the bottom, on the black
+    _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb, RULER_Y, True)
+    _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb, BAR_Y - 4, False)
 
     # the tracks
     top_n = top_row(T)
@@ -123,9 +105,7 @@ def draw(T, nat):
     c.rect(318, BOX_Y[0] + span * top_n // 8, 2, span * SHOWN // 8, G[5])
 
     # the playhead
-    c.rect(mid, RULER_Y, 1, BAR_Y - RULER_Y - 1, nat.WHITE)
-    # the grey bar under the tracks
-    c.rect(X_BOX, BAR_Y, W_BOX + 2, BAR_H, GREY)
+    c.rect(mid, RULER_Y, 1, BAR_Y + 10 - RULER_Y, nat.WHITE)
 
     # the bottom line: the message (or the selected track), and the tempo
     bpm = "%.0f BPM" % e.bpm
@@ -143,8 +123,8 @@ def draw(T, nat):
     c.text_px(20, BASE, txt[:60 if px == 8 else 40], col, px, -1 if px == 16 else 0)
 
 
-def _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb):
-    c.rect(x0, RULER_Y, x1 - x0, RULER_H, nat.BOX)
+def _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb, y, loop):
+    """Bar lines (with their numbers) and beat ticks from y down: no background. loop: the loop's bar along the top edge."""
     bar = tape.BEATS_PER_BAR
     k = int(t.pos - (mid - x0) / ppb) - 1
     while True:
@@ -152,18 +132,17 @@ def _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb):
         if x >= x1:
             break
         if x >= x0:
-            in_bar = k % bar
-            if abs(in_bar) < 1e-6:
-                c.rect(x, RULER_Y + 2, 1, RULER_H - 2, nat.MID)
-                c.text_px(x + 3, RULER_Y + 8, str(int(k // bar) + 1), nat.MID, 8, 0)
+            if abs(k % bar) < 1e-6:
+                c.rect(x, y + 2, 1, RULER_H - 2, nat.MID)
+                c.text_px(x + 3, y + 8, str(int(k // bar) + 1), nat.MID, 8, 0)
             elif ppb >= 6:
-                c.rect(x, RULER_Y + 7, 1, 3, nat.DIM)
+                c.rect(x, y + 7, 1, 3, nat.DIM)
         k += 1
     region = e.loop_region()
-    if region:
+    if region and loop:
         a = int(round(mid + (region[0] / fpb - t.pos) * ppb))
         b = int(round(mid + (region[1] / fpb - t.pos) * ppb))
-        c.rect(max(x0, a), RULER_Y, max(0, min(x1, b) - max(x0, a)), 2, G[6] if e.loop_on else G[3])
+        c.rect(max(x0, a), y - 1, max(0, min(x1, b) - max(x0, a)), 2, G[6] if e.loop_on else G[3])
 
 
 _GY = None
