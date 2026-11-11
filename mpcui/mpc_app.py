@@ -41,5 +41,11 @@ def song_after_punch(handle):
 # run app.py as a module (not __main__: its main() is called below), put the wrapper in where main() looks for handle
 G = runpy.run_path(APP_PY, run_name="console_app")
 main = G["main"]
+try:
+    import stepentry
+    stepentry.install(G["MoveBoard"])
+except Exception:
+    import traceback
+    print("step entry is off:\n" + traceback.format_exc(), flush=True)
 main.__globals__["handle"] = song_after_punch(G["handle"])
 main()

@@ -48,10 +48,14 @@ def _glyph(ch):
 
 _fonts = {}
 _masks = {}
-FONT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "fonts", "BarlowCondensed-Medium.ttf")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+# Lato first if you drop it in (mpc/fonts/Lato-Bold.ttf); Carlito (a Lato-based, OFL font) ships with this; Barlow last
 FONT_CANDIDATES = [os.environ.get("CONSOLE_FONT", ""),
-                   "/data/UserData/console/move/fonts/BarlowCondensed-Medium.ttf",
-                   "/home/claude/briwil/console-move/move/fonts/BarlowCondensed-Medium.ttf"]
+                   os.path.join(_HERE, "fonts", "Lato-Bold.ttf"),
+                   os.path.join(_HERE, "fonts", "Carlito-Bold.ttf"),
+                   "/data/UserData/console/move/fonts/BarlowCondensed-SemiBold.ttf",
+                   "/home/claude/briwil/console-move/move/fonts/BarlowCondensed-SemiBold.ttf"]
+GAMMA = 0.6                                                      # boosts the soft edges of the letters: crisper text
 
 
 def _font(size):
@@ -62,7 +66,7 @@ def _font(size):
         from PIL import ImageFont
         for path in FONT_CANDIDATES:
             if path and os.path.exists(path):
-                f = ImageFont.truetype(path, size)
+                f = ImageFont.truetype(path, size, layout_engine=ImageFont.Layout.BASIC)      # (hinted)
                 top = f.getbbox("H")[1]                          # where the capital letters start below the line's top
                 f.cap_pad = top
                 break
@@ -83,7 +87,7 @@ def _mask(font, s):
             _masks.clear()
         im = Image.new("L", (max(1, w), font.size + 6), 0)
         ImageDraw.Draw(im).text((0, 0), s, font=font, fill=255)
-        m = np.asarray(im, np.float32) / 255.0
+        m = (np.asarray(im, np.float32) / 255.0) ** GAMMA
         _masks[key] = m
     return m
 
@@ -112,7 +116,7 @@ class Canvas:
         """Smooth text (Barlow Condensed, anti-aliased) if the font file is there, else the 5 x 7 pixel font.
         (x, y) is the top of the capital letters, the same place the pixel font had them; scale 2 = big."""
         s = str(s).upper()
-        font = _font(12 if scale == 1 else 22 if scale == 2 else 12 * scale)
+        font = _font(13 if scale == 1 else 24 if scale == 2 else 13 * scale)
         if font is None:
             return self._pixel_text(x, y, s, c, scale)
         a = _mask(font, s)
@@ -141,7 +145,7 @@ class Canvas:
 
     @staticmethod
     def width(s, scale=1):
-        font = _font(12 if scale == 1 else 22 if scale == 2 else 12 * scale)
+        font = _font(13 if scale == 1 else 24 if scale == 2 else 13 * scale)
         if font is None:
             return len(str(s)) * 6 * scale
         return int(font.getlength(str(s).upper()) + 0.5)
@@ -471,6 +475,11 @@ def draw_seq(T):
         if at is not None and i == at:
             c.rect(x, y + 36, 17, 3, WHITE)
         c.text(x + (5 if i < 9 else 2), y + 41, str(i + 1), FG if (k % 4 == 0) else MID)
+    cur = getattr(ms, "cur", None)
+    if cur is not None and not selected and first <= cur < first + 16 and cur < ln.length:     # the step cursor (a drum hit lays a step here)
+        x = 4 + (cur - first) * 19
+        c.frame(x - 1, y - 1, 19, 36, WHITE)
+        c.frame(x - 2, y - 2, 21, 38, WHITE)
     # the lane's pages: 16 steps each; the shown one is lit
     npages = max(1, (ln.length + 15) // 16)
     gap = 4
@@ -489,7 +498,7 @@ def draw_seq(T):
             c.text(x + 6, top + 7, str(label)[:10], MID)
             c.text(x + 6, top + 26, str(value)[:6], FG, 2)
             c.text(x + 6, top + 52, "K%d" % (i + 1), DIM)
-        hint = "SHIFT + STEPS: SELECT    SHIFT + SEQ: SETTINGS PADS"
+        hint = "WHEEL: MOVE THE BOX    HIT A DRUM: ADD ITS STEP"
     elif knobs:
         label, value, on = knobs[0]
         key = ms.pad_items()[ms.sel][0]
@@ -509,7 +518,7 @@ def draw_seq(T):
         if ct is not None:
             c.text(14, top + 74, "K2 CHANCE  %s" % ct, MID)
         c.text(W - 14 - c.width("SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT"), top + 74, "SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT", DIM)
-        hint = "SEQ: BACK TO THE STEPS    TAP A STEP: DONE"
+        hint = "SEQ: BACK TO STEPS    TAP A STEP: DONE"
     else:
         # steps selected, no setting picked: knobs 1-8 are the drum's sound page, turning one locks it on the steps
         items = ms.lock_list()
@@ -522,7 +531,7 @@ def draw_seq(T):
             c.frame(x, yy, cw, 36, ACC if locked else CELL_LINE)
             c.text(x + 5, yy + 5, str(label)[:11], MID if lockable else DIM)
             c.text(x + 5, yy + 18, str(value)[:7], FG if lockable else DIM)
-        hint = "PADS (SHIFT + SEQ): STEP SETTINGS    TAP A STEP: DONE"
+        hint = "SHIFT + SEQ: STEP SETTINGS    TAP A STEP: DONE"
     c.rect(0, H - 12, W, 12, BAR)
     if T.message and time.monotonic() < T.message_until:
         c.text(4, H - 10, T.message[:50], ACC)
