@@ -43,6 +43,8 @@ try:
     freerec.install_menu(_menu2)                                     # SETTINGS > REC TIMING: FREE / GRID
     import nolink
     nolink.install(_menu2)                                           # SETTINGS > SYNC: no Link on the MPC
+    import nobigscreen
+    nobigscreen.install(_menu2)                                      # no extended screen (web page) and no EXTERNAL SCREEN row
 except Exception:
     import traceback
     print("free recording is off:\n" + traceback.format_exc(), flush=True)
