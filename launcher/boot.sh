@@ -21,6 +21,7 @@ while ! systemctl is-active --quiet ac50.service && [ $n -lt 90 ]; do sleep 1; n
 # Let the stock app finish starting before taking over: stopping it early left Console frozen on some power-ons (it ran, nothing
 # responded), while starting Console by hand minutes after power-on always worked. So: not before the MPC has been up UP_MIN seconds.
 UP_MIN=60
+[ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")               # to try other waits without an update:  echo 40 > /data/UserData/console/UP_MIN
 up=$(cut -d. -f1 /proc/uptime)
 [ "$up" -lt "$UP_MIN" ] && sleep $((UP_MIN - up))
 echo "taking over at uptime $(cut -d. -f1 /proc/uptime) s (was $up s when the stock app came up); ulimit -s $(ulimit -s); PATH=$PATH"
