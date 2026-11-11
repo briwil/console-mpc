@@ -14,3 +14,4 @@ bridge/bridge_demo
 bridge/demo.o
 bridge/bootmenu
 bridge/bootmenu.o
+__pycache__/
