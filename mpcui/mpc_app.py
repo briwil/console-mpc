@@ -34,12 +34,20 @@ def song_after_punch(handle):
         except Exception:
             import traceback
             print("song page step failed:\n" + traceback.format_exc(), flush=True)
+        from_song = name == "DRUMS" and bool(getattr(T, "song_page", False)) and not (m.open or m.kits.open)
         handle(name, T, m, e)
         try:
-            if name == "DRUMS" and T.inst_page and T.instp.mode == "pick" and not T.drum_page:
-                T.instp.mode = None                      # from the song page: the INSTRUMENTS list, not the instrument picker
+            if from_song and T.inst_page and not T.drum_page:
+                T.instp.mode = None                      # from the song page: not the instrument picker ...
+                eng = T.engine
+                if eng is not None and eng.slot is not None and eng.slots[eng.slot]:
+                    T.instp.row = eng.slot
+                    T.instp.open()                       # ... but the last instrument's sound page
+            elif name == "DRUMS" and T.inst_page and T.instp.mode == "pick" and not T.drum_page:
+                T.instp.mode = None
         except Exception:
-            pass
+            import traceback
+            print("leave song failed:\n" + traceback.format_exc(), flush=True)
     return wrapped
 
 
