@@ -30,7 +30,7 @@ while [ $w -lt 90 ]; do
   sleep 1; w=$((w + 1))
 done
 sleep 1
-UP_MIN=25
+UP_MIN=0
 [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (optional extra wait, in seconds of uptime:  echo 40 > $C/UP_MIN)
 up=$(cut -d. -f1 /proc/uptime)
 [ "$up" -lt "$UP_MIN" ] && sleep $((UP_MIN - up))
