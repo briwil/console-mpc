@@ -37,4 +37,6 @@ echo "5/5  Checking"
 GOT=$(mpc "cat $C/mpc/BUILD")
 [ "$GOT" = "$NEW" ] || { echo "MISMATCH: MPC has '$GOT'. Do NOT restart; run this again."; exit 1; }
 echo "Done: the MPC has build $GOT, safely written. Restarting the MPC now (it comes back into Console in about a minute)."
-mpc "reboot" || true
+# (run detached so the ssh session ending doesn't cancel it; try every way a reboot can be asked for)
+mpc "nohup sh -c 'sleep 1; sync; systemctl reboot || /sbin/reboot || reboot -f || echo b > /proc/sysrq-trigger' >/dev/null 2>&1 &" || true
+echo "(if the MPC has not restarted in 15 seconds, power-cycle it: the update itself is safely written)"
