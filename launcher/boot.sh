@@ -18,13 +18,22 @@ if [ -e "$TRY" ]; then rm -f "$TRY"; exit 0; fi      # last time it never got th
 
 n=0
 while ! systemctl is-active --quiet ac50.service && [ $n -lt 90 ]; do sleep 1; n=$((n + 1)); done
-# Let the stock app finish starting before taking over: stopping it early left Console frozen on some power-ons (it ran, nothing
-# responded), while starting Console by hand minutes after power-on always worked. So: not before the MPC has been up UP_MIN seconds.
-UP_MIN=60
-[ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")               # to try other waits without an update:  echo 40 > /data/UserData/console/UP_MIN
+# The stock launcher first runs az0x-firmware-tool (it talks to the pad / button panel over the serial port), then starts the app.
+# Stopping the service while that tool is still running left the panel half started: Console ran and nothing responded. So wait for
+# the tool to finish (or the app to be up), then take over at once: no need to wait for the stock app to load.
+w=0; seen=0
+while [ $w -lt 90 ]; do
+  if ps | grep -q '[a]z0x-firmware-too[l]'; then seen=1
+  elif [ $seen = 1 ] || ps | grep -q '[M]PC Sampl[e]'; then break
+  fi
+  sleep 1; w=$((w + 1))
+done
+sleep 2
+UP_MIN=0
+[ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (optional extra wait, in seconds of uptime:  echo 40 > $C/UP_MIN)
 up=$(cut -d. -f1 /proc/uptime)
 [ "$up" -lt "$UP_MIN" ] && sleep $((UP_MIN - up))
-echo "taking over at uptime $(cut -d. -f1 /proc/uptime) s (was $up s when the stock app came up); ulimit -s $(ulimit -s); PATH=$PATH"
+echo "taking over at uptime $(cut -d. -f1 /proc/uptime) s (firmware tool seen: $seen, waited ${w}s)"
 touch "$TRY"                                         # from here on: if Console never gets through, the next power-on starts the stock app
 systemctl unset-environment LD_PRELOAD 2>/dev/null
 systemctl stop ac50.service
