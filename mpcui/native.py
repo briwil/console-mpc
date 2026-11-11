@@ -525,99 +525,9 @@ class NotNative(Exception):
 
 
 def draw_seq(T):
-    """The drum sequencer in colour blocks: the lane (drum) in big letters, its 16 steps (height = velocity), then the lane's
-    settings (nothing selected), the picked setting of the selected steps, or the step settings as a grid like the pads."""
-    import sequencer
-    c = canvas
-    begin()
-    e = T.engine
-    ms, sp, seq = T.mseq, T.seqp, e.seq
-    lane = sp.lane
-    ln = seq.lane(lane)
-    first = ms.first()
-    names = getattr(e.drums, "lane_names", None) or []
-    name = names[lane] if lane < len(names) else "LANE %d" % (lane + 1)
-    pat = "PAT %d" % (seq.current + 1) + (">%d" % (seq.queued + 1) if seq.queued is not None else "")
-    selected = ms.held is not None
-    knobs = ms.knob_list() if selected else None
-    lc = colour.pick("lane%d" % lane, 1)[0]
-    left = ms.which() if selected else name[:10]
-    c.text(6, 7, left, WHITE, 2, -2)
-    right = name[:8] if selected else pat
-    c.text(CW - 4 - c.width(right, 2, -2), 7, right, MID, 2, -2)
-    at = ms.playing_step()
-    y = 24
-    sel = set(ms.selected) if selected else set()
-    blink = int(time.monotonic() * 3) % 2 == 0
-    for k in range(16):
-        i = first + k
-        x = k * 17
-        if i >= ln.length or sequencer.dark(i, sequencer.TRIPLETS):
-            c.rect(x + 7, y + 22, 2, 2, DIM)
-            continue
-        is_sel = i in sel
-        c.rect(x, y, 16, 44, colour.band(lc) if (k // 4) % 2 == 0 else colour.mix(colour.band(lc), (0, 0, 0), 0.4))
-        st = ln.steps[i]
-        if st.on:
-            v = st.vel if st.vel else sequencer.DEFAULT_VELOCITY
-            h = max(4, int(44 * min(127, v) / 127.0))
-            c.rect(x, y + 44 - h, 16, h, colour.light(lc) if not is_sel else WHITE)
-        if is_sel and blink:
-            c.rect(x, y, 16, 44, WHITE)
-        if at is not None and i == at:
-            c.rect(x, y + 46, 16, 3, WHITE)
-        c.text(x + (6 if i < 9 else 2), y + 52, str(i + 1), WHITE if (k % 4 == 0) else MID)
-    cur = getattr(ms, "cur", None)
-    if cur is not None and first <= cur < first + 16 and cur < ln.length:
-        x = (cur - first) * 17
-        c.frame(x - 1, y - 1, 18, 46, WHITE)
-        c.frame(x, y, 16, 44, WHITE)
-    npages = max(1, (ln.length + 15) // 16)
-    gap = 4
-    seg = (CW - gap * (npages - 1)) // npages
-    for p in range(npages):
-        c.rect(p * (seg + gap), 82, seg, 3, WHITE if p == first // 16 else (50, 54, 62))
-    top = 98
-    cols = colour.pick("seq%d" % lane, 16)
-    cw = CW // 4
-    if not selected:
-        for i, (label, value, _locked) in enumerate(knobs_lane(ms)[:4]):
-            block(i * cw, top, cw, 142, cols[i], str(label), str(value), None)
-        hint = "WHEEL: BOX  CLICK: SELECT"
-    elif knobs:
-        label, value, on = knobs[0]
-        key = ms.pad_items()[ms.sel][0]
-        ct = ms.chance_text(key)
-        frac = None
-        if key == "vel":
-            try:
-                frac = max(0.0, min(1.0, float(value) / 127.0))
-            except ValueError:
-                frac = None
-        w1 = CW // 2 if ct is not None else CW
-        block(0, top, w1, 142, cols[0], "K1 " + str(label)[:10], str(value), frac)
-        if ct is not None:
-            block(w1, top, CW - w1, 142, cols[1], "K2 CHANCE", ct[:9], None)
-        hint = "SAME PAD AGAIN: OFF" if on else "TURN K1 TO SET IT"
-    else:
-        items = ms.pad_items()
-        cw, rh = CW // 4, 35
-        for p in range(16):
-            col, row = p % 4, 3 - p // 4
-            x, yy = col * cw, top + row * rh
-            if p >= len(items):
-                c.rect(x, yy, cw, rh - 1, (14, 16, 20))
-                continue
-            key, label = items[p]
-            on = ms.engaged(key)
-            body = cols[p] if on else colour.mix(cols[p], (0, 0, 0), 0.75)
-            c.rect(x, yy, cw, rh - 1, body)
-            c.text(x + 3, yy + 4, str(label)[:11], WHITE)
-            if on:
-                c.text(x + 3, yy + 18, str(ms.item_value(key))[:11], WHITE)
-        hint = "PAD: PICK  CLICK: ON/OFF"
-    msg = T.message and time.monotonic() < T.message_until
-    c.text(6, 88, (T.message[:40] if msg else hint[:40]), ACC if msg else MID)
+    """The drum sequencer in the sound page's style: see soundpage.py."""
+    import soundpage
+    soundpage.draw_seq(T, sys.modules[__name__])
 
 
 def knobs_lane(ms):
@@ -767,35 +677,9 @@ def _bottom(T, hint, msg=""):
 
 
 def draw_inst_list(T):
-    c = canvas
-    e, ip = T.engine, T.instp
-    names = {}
-    try:
-        import instpage
-        names = {m: title for m, title in instpage.machines()}
-    except Exception:
-        pass
-    begin()
-    c.text(6, 7, "INSTRUMENTS", WHITE, 2, -2)
-    if T.message and time.monotonic() < T.message_until:
-        c.text(CW - 4 - c.width(T.message[:14]), 8, T.message[:14], ACC)
-    cols = colour.pick("instruments", 8)
-    for i in range(8):
-        y = 22 + i * 27
-        mid = e.slots[i]
-        on = i == ip.row
-        body = cols[i] if mid else (28, 30, 36)
-        c.rect(0, y, 26, 26, colour.band(body))
-        c.rect(26, y, CW - 26, 26, body)
-        c.text_in(9, y, 26, str(i + 1), WHITE, 2, -2)
-        name = str(names.get(mid, mid) or "-").upper() if mid else "EMPTY"
-        c.text_in(32, y, 26, name[:13], WHITE if mid else DIM, 2, -2)
-        if mid and i in e.slot_mutes:
-            c.rect(CW - 52, y + 5, 48, 16, (60, 30, 30))
-            c.text_in(CW - 48, y + 5, 16, "MUTE", WHITE, 2, -2)
-        if on:
-            c.frame(0, y, CW, 27, WHITE)
-            c.frame(1, y + 1, CW - 2, 25, WHITE)
+    """The instruments list in the sound page's style: see soundpage.py."""
+    import soundpage
+    soundpage.draw_inst_list(T, sys.modules[__name__])
 
 
 def on_project_menu(menu):
@@ -880,48 +764,9 @@ def on_song_page(T, menu):
 
 
 def draw_song(T):
-    c = canvas
-    sg = T.song
-    sg.check_song()
-    shift = bool(getattr(T, "shift_held", lambda: False)())
-    begin()
-    c.text(6, 7, "SONG " + ("ON" if sg.on else "OFF"), WHITE, 2, -2)
-    r = ("ROW %d/%d" % (sg.pick + 1, len(sg.rows))) if sg.rows else "NO ROWS"
-    c.text(CW - 4 - c.width(r, 2, -2), 7, r, MID, 2, -2)
-    if not sg.rows:
-        c.text(3, 40, "PRESS PAD 1", WHITE, 3, -3)
-        c.text(3, 76, "TO ADD A ROW", WHITE, 3, -3)
-        for i, t in enumerate(["EACH ROW: A PATTERN PER", "INSTRUMENT, PLAYED X TIMES", "(KNOB 8). + / - : SONG ON/OFF"]):
-            c.text(6, 130 + i * 14, t, MID)
-        return
-    rc = colour.pick("songrows", 16)
-    for i in range(16):
-        x, y = i * 17, 22
-        have, pick, play = i < len(sg.rows), i == sg.pick, i == sg.playing_row
-        c.rect(x, y, 16, 22, rc[i] if have else (22, 24, 30))
-        c.text_in(x + (4 if i < 9 else 2), y, 22, str(i + 1), WHITE if have else DIM, 1)
-        if play:
-            c.rect(x, y + 19, 16, 3, WHITE)
-        if pick:
-            c.frame(x, y, 16, 22, WHITE)
-    if shift:
-        c.text(6, 48, "PUNCH FX PATTERNS", ACC)
-    row = sg.rows[sg.pick]
-    slots = sg.slots()
-    cols = colour.pick("song", 8)
-    cw, ch = CW // 4, 90
-    for i in range(8):
-        x, y = (i % 4) * cw, 60 + (i // 4) * ch
-        if i < 7:
-            if i >= len(slots):
-                c.rect(x, y, cw, ch, (14, 16, 20))
-                continue
-            slot = slots[i]
-            v = row.get("punch", {}).get(slot) if shift else row["pats"].get(slot)
-            txt = "-" if v is None else ("FX%d" if shift else "P%d") % (v + 1)
-            block(x, y, cw, ch, cols[i], sg.short(slot), txt, None)
-        else:
-            block(x, y, cw, ch, cols[i], "PLAYS", "X%d" % row["repeat"], None)
+    """The song page in the sound page's style: see soundpage.py."""
+    import soundpage
+    soundpage.draw_song(T, sys.modules[__name__])
 
 
 def on_seq_page(T, menu):

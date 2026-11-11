@@ -31,7 +31,7 @@ OTHER_ROW = 89.4                             # ... and in the row above it (it r
 TAU = 0.06                                   # seconds: how quickly things ease
 LAST = {"key": None, "t": 0.0, "state": None}
 
-_bands = None
+_bands = {}
 
 
 def _band_stroke(mask, y, xend, r, w):
@@ -44,19 +44,19 @@ def _band_stroke(mask, y, xend, r, w):
     mask |= (abs(xx - (xend + r)) <= w / 2) & (yy >= cy)                # and down the right side
 
 
-def bands():
-    """The two green bands as a picture (built once): the lighter one outside, the darker one inside."""
-    global _bands
-    if _bands is None:
+def bands(dy=0):
+    """The two green bands as a picture (built once per offset): the lighter one outside, the darker one inside. dy: moved down."""
+    img = _bands.get(dy)
+    if img is None:
         img = np.zeros((H, W, 3), np.uint8)
         outer = np.zeros((H, W), bool)
         inner = np.zeros((H, W), bool)
-        _band_stroke(outer, 72.4, 248.6, 59.5, 10.5)
-        _band_stroke(inner, 85.4, 248.7, 46.4, 10.5)
+        _band_stroke(outer, 72.4 + dy, 248.6, 59.5, 10.5)
+        _band_stroke(inner, 85.4 + dy, 248.7, 46.4, 10.5)
         img[outer] = colour.GREENS[3]
         img[inner] = colour.GREENS[2]
-        _bands = img
-    return _bands
+        _bands[dy] = img
+    return img
 
 
 def targets(n, active, texts):
@@ -102,6 +102,15 @@ def text_width(font, s, track):
     return int(sum(font.getlength(ch) for ch in s) + track * max(0, len(s) - 1) + 0.5)
 
 
+def title_line(c, title, y=45):
+    """The page's name as large as fits (48 px, then 32, 24, 16), its capitals centred on y."""
+    for px, tr in ((48, -6), (32, -4), (24, -3), (16, -2)):
+        if text_width(c.pxfont(px), title, tr) <= W - 6 or px == 16:
+            cap = c.pxfont(px).cap_h
+            c.text_px(3, y + cap // 2, title, WHITE, px, tr)
+            return
+
+
 def by_pad_rows(items, active):
     """The first four settings go in the bottom row on screen and the next four in the top row, as the pads sit on the MPC (pads 1-4 are
     the bottom row of pads). Returns the 8 places (empty ones blank) and where `active` went."""
@@ -113,23 +122,22 @@ def by_pad_rows(items, active):
     return out, active
 
 
-def grid(nat, key, top, title, items, active, now, message=None):
+def grid(nat, key, top, title, items, active, now, message=None, head=None, band_dy=0):
     """One page in this style. items = [(label, value, idle)] for up to 8 settings (two rows of four); idle = how bright (0..1) a
     setting is while none is being turned. active = the index being turned / touched, or None. key: a change of it (another page,
     another instrument) snaps everything to its place instead of easing."""
     c = nat.canvas
     c.clear((0, 0, 0))
-    c.px[:] = bands()
+    c.px[:] = bands(band_dy)
     n = len(items)
-    colr = WHITE
-    if message:
-        top, colr = message[:24], nat.ACC
-    c.text_px(6, 19, top, colr, 16, -1)
-    for px, tr in ((48, -6), (32, -4), (24, -3), (16, -2)):
-        if text_width(c.pxfont(px), title, tr) <= W - 6 or px == 16:
-            cap = c.pxfont(px).cap_h
-            c.text_px(3, 45 + cap // 2, title, WHITE, px, tr)
-            break
+    if head is not None:
+        head(c)
+    else:
+        colr = WHITE
+        if message:
+            top, colr = message[:24], nat.ACC
+        c.text_px(6, 19, top, colr, 16, -1)
+        title_line(c, title)
     texts = [(str(a).upper(), str(b).upper()) for a, b, _i in items]
     goal = targets(n, active, texts)
     for g, (_a, _b, idle) in zip(goal, items):
@@ -238,3 +246,268 @@ def draw_mixer(T, nat):
     msg = T.message if (T.message and now < T.message_until and active is None) else None
     items, active = by_pad_rows(items, active)
     grid(nat, "mixer", "KNOBS: LEVEL  SHIFT: PAN", "MIXER", items, active, now, msg)
+
+
+# ------------------------------------------------------------------ a list: the selected row grows, the rest dim
+
+LST = {"key": None, "t": 0.0, "rows": None}
+
+
+def listview(nat, key, top, title, rows, focus, now, message=None):
+    """rows = [(name, tag, idle)]: one row each, `focus` the selected one (24 px, white; the others 16 px and dimmer, sliding out of
+    its way). tag: small text at the right (MUTE...)."""
+    c = nat.canvas
+    c.clear((0, 0, 0))
+    c.px[:] = bands()
+    colr = WHITE
+    if message:
+        top, colr = message[:24], nat.ACC
+    c.text_px(6, 19, top, colr, 16, -1)
+    title_line(c, title)
+    n = len(rows)
+    y, goal = 97.0, []
+    for i, (_name, _tag, idle) in enumerate(rows):
+        f = i == focus
+        goal.append(dict(y=y, size=24 if f else 16, t=1.0 if f else idle))
+        y += 28 if f else 16
+    snap = LST["key"] != key or now - LST["t"] > 0.4 or LST["rows"] is None or len(LST["rows"]) != n
+    if snap:
+        LST["rows"] = [dict() for _ in rows]
+    dt = 0.0 if snap else min(0.05, max(0.0, now - LST["t"]))
+    k = 1.0 if snap else 1.0 - math.exp(-dt / TAU)
+    for s, g in zip(LST["rows"], goal):
+        for kk in ("y", "size", "t"):
+            s[kk] = g[kk] if kk not in s or snap else s[kk] + (g[kk] - s[kk]) * k
+    LST["key"], LST["t"] = key, now
+    for i, (name, tag, _idle) in enumerate(rows):
+        s = LST["rows"][i]
+        px = max(8, int(round(s["size"] / 8.0)) * 8)
+        col = colour.mix(DARK, WHITE, max(0.0, min(1.0, s["t"])))
+        h = 28 if i == focus else 16
+        base = int(round(s["y"] + 16 / 2.0 + 0.3125 * px)) if i != focus else int(round(s["y"] + 14 + 0.3125 * px))
+        nx = 8 + int(1.25 * px)                                     # the name starts after the number
+        room = 285 - nx - (c_w(c, 8, tag) + 8 if tag else 0)
+        while px > 8 and text_width(c.pxfont(px), name, -(px // 8)) > room:
+            px -= 8
+        c.text_px(8, base, str(i + 1), col, px, 0)
+        c.text_px(nx, base, name, col, px, -(px // 8))
+        if tag:
+            c.text_px(286 - c_w(c, 8, tag), base, tag, col, 8, 0)
+
+
+def c_w(c, px, s):
+    return text_width(c.pxfont(px), s, 0)
+
+
+def draw_inst_list(T, nat):
+    e, ip = T.engine, T.instp
+    names = {}
+    try:
+        import instpage
+        names = {m: title for m, title in instpage.machines()}
+    except Exception:
+        pass
+    now = nat.time.monotonic()
+    rows = []
+    for i in range(8):
+        mid = e.slots[i]
+        if not mid:
+            rows.append(("EMPTY", "", 0.3))
+        else:
+            rows.append((str(names.get(mid, mid) or "-").upper(), "MUTE" if i in e.slot_mutes else "", 0.35 if i in e.slot_mutes else 0.6))
+    msg = T.message if (T.message and now < T.message_until) else None
+    listview(nat, "insts", "WHEEL: PICK  PUSH: OPEN", "INSTRUMENTS", rows, ip.row, now, msg)
+
+
+# ------------------------------------------------------------------ the song page
+
+SONG = {"prev": None, "when": {}}
+
+
+def draw_song(T, nat):
+    c = nat.canvas
+    sg = T.song
+    sg.check_song()
+    now = nat.time.monotonic()
+    shift = False
+    try:
+        shift = bool(T.shift_held())
+    except Exception:
+        pass
+    title = "SONG " + ("ON" if sg.on else "OFF")
+    if not sg.rows:
+        c.clear((0, 0, 0))
+        c.px[:] = bands()
+        c.text_px(6, 19, "NO ROWS", WHITE, 16, -1)
+        title_line(c, title)
+        c.text_px(8, 124, "PRESS PAD 1 TO ADD A ROW", WHITE, 16, -1)
+        for i, line in enumerate(["EACH ROW: A PATTERN PER", "INSTRUMENT, PLAYED X TIMES", "(KNOB 8). + / - : SONG ON/OFF"]):
+            c.text_px(8, 150 + i * 14, line, (0x6E, 0x99, 0x3F), 8, 0)
+        LST["key"] = None
+        LAST["key"] = None
+        return
+    row = sg.rows[sg.pick]
+    slots = sg.slots()
+    items = []
+    for i in range(7):
+        if i >= len(slots):
+            items.append(("", "", 0.0))
+            continue
+        slot = slots[i]
+        v = row.get("punch", {}).get(slot) if shift else row["pats"].get(slot)
+        txt = "-" if v is None else ("FX%d" if shift else "P%d") % (v + 1)
+        items.append((sg.short(slot), txt, 1.0))
+    items.append(("PLAYS", "X%d" % row["repeat"], 1.0))
+    cur = [it[1] for it in items]
+    sig = (sg.pick, shift)
+    prev = SONG["prev"]
+    if prev is not None and prev[0] == sig:
+        for i in range(8):
+            if cur[i] != prev[1][i]:
+                SONG["when"][i] = now
+    else:
+        SONG["when"] = {}
+    SONG["prev"] = (sig, cur)
+    active = nat._touched[-1] if nat._touched else None
+    if active is None:
+        newest = 0.0
+        for i in range(8):
+            w = SONG["when"].get(i, -9.0)
+            if now - w < 1.0 and w > newest:
+                active, newest = i, w
+    if active is not None and not items[active][0]:
+        active = None
+    items, active = by_pad_rows(items, active)
+
+    def head(c):
+        c.text_px(6, 19, "PUNCH FX PATTERNS" if shift else "ROW %d/%d" % (sg.pick + 1, len(sg.rows)), WHITE if not shift else nat.ACC, 16, -1)
+        title_line(c, title)
+        for i in range(16):                                         # the rows: 16 chips, as the 16 pads
+            x, y = 6 + i * 17, 97
+            have = i < len(sg.rows)
+            c.rect(x, y, 16, 14, colour.GREENS[3] if have else colour.GREENS[0])
+            num = str(i + 1)
+            c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 10, num, WHITE if have else colour.GREENS[2], 8, 0)
+            if i == sg.playing_row:
+                c.rect(x, y + 12, 16, 2, WHITE)
+            if i == sg.pick:
+                c.frame(x, y, 16, 14, WHITE)
+    msg = T.message if (T.message and now < T.message_until and active is None) else None
+    grid(nat, ("song", sg.pick, shift), "", title, items, active, now, msg, head=head)
+
+
+# ------------------------------------------------------------------ the drum sequencer
+
+SEQ = {"prev": None, "when": {}}
+SEQ_DY = 30                                                         # the green frame sits lower here: the steps are above it
+
+
+def draw_seq(T, nat):
+    import sequencer
+    c = nat.canvas
+    e = T.engine
+    ms, sp, seq = T.mseq, T.seqp, e.seq
+    lane = sp.lane
+    ln = seq.lane(lane)
+    first = ms.first()
+    now = nat.time.monotonic()
+    names = getattr(e.drums, "lane_names", None) or []
+    name = (names[lane] if lane < len(names) else "LANE %d" % (lane + 1)).upper()
+    pat = "PAT %d" % (seq.current + 1) + (">%d" % (seq.queued + 1) if seq.queued is not None else "")
+    selected = ms.held is not None
+    knobs = ms.knob_list() if selected else None
+    sel = set(ms.selected) if selected else set()
+    at = ms.playing_step()
+    blink = int(now * 3) % 2 == 0
+    cur = getattr(ms, "cur", None)
+    msg = T.message if (T.message and now < T.message_until) else None
+    hint = "WHEEL: BOX  CLICK: SELECT"
+    if selected:
+        hint = "PAD: PICK  CLICK: ON/OFF" if not knobs else ("SAME PAD AGAIN: OFF" if knobs[0][2] else "TURN K1 TO SET IT")
+
+    def head(c):
+        left = (ms.which() if selected else name)[:16]
+        px = 24 if text_width(c.pxfont(24), left, -3) <= 190 else 16
+        c.text_px(6, 25, left, WHITE, px, -3 if px == 24 else -1)
+        right = name[:8] if selected else pat
+        c.text_px(314 - text_width(c.pxfont(16), right, -1), 25, right, colour.GREENS[5], 16, -1)
+        c.text_px(6, 6, (msg or hint)[:50], nat.ACC if msg else colour.GREENS[5], 8, 0)
+        y = 32                                                      # the steps: 17 px wide at 19 px, the height is the velocity
+        for k in range(16):
+            i = first + k
+            x = 8 + k * 19
+            if i >= ln.length or sequencer.dark(i, sequencer.TRIPLETS):
+                c.rect(x + 7, y + 20, 3, 3, colour.GREENS[2])
+                continue
+            c.rect(x, y, 17, 40, colour.GREENS[1] if (k // 4) % 2 == 0 else colour.GREENS[0])
+            st = ln.steps[i]
+            is_sel = i in sel
+            if st.on:
+                v = st.vel if st.vel else sequencer.DEFAULT_VELOCITY
+                h = max(4, int(40 * min(127, v) / 127.0))
+                c.rect(x, y + 40 - h, 17, h, WHITE if is_sel else colour.GREENS[5])
+            if is_sel and blink:
+                c.rect(x, y, 17, 40, WHITE)
+            if at is not None and i == at:
+                c.rect(x, y + 42, 17, 3, WHITE)
+            num = str(i + 1)
+            c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 54, num, WHITE if k % 4 == 0 else colour.GREENS[4], 8, 0)
+        if cur is not None and first <= cur < first + 16 and cur < ln.length:
+            x = 8 + (cur - first) * 19
+            c.frame(x - 1, y - 1, 19, 42, WHITE)
+        npages = max(1, (ln.length + 15) // 16)
+        seg = (W - 16 - 4 * (npages - 1)) // npages
+        for p in range(npages):
+            c.rect(8 + p * (seg + 4), 91, seg, 3, WHITE if p == first // 16 else colour.GREENS[1])
+
+    if selected and not knobs:                                      # the step settings as a grid, like the pads
+        c.clear((0, 0, 0))
+        c.px[:] = bands(SEQ_DY)
+        head(c)
+        items = ms.pad_items()
+        key_lane = colour.GREENS
+        for p in range(16):
+            col, row = p % 4, 3 - p // 4
+            x, y = 6 + col * 70, 124 + row * 29
+            if p >= len(items):
+                continue
+            key, label = items[p]
+            on = ms.engaged(key)
+            c.rect(x, y, 68, 27, colour.GREENS[3] if on else colour.GREENS[0])
+            c.text_px(x + 4, y + 10, str(label)[:11], WHITE if on else colour.GREENS[4], 8, 0)
+            if on:
+                c.text_px(x + 4, y + 22, str(ms.item_value(key))[:11], WHITE, 8, 0)
+        LAST["key"] = None
+        return
+    if selected:
+        label, value, on = knobs[0]
+        key = ms.pad_items()[ms.sel][0]
+        ct = ms.chance_text(key)
+        items = [("K1 " + str(label)[:10], str(value), 1.0)]
+        if ct is not None:
+            items.append(("K2 CHANCE", ct[:9], 1.0))
+        active = 0
+        gkey = ("seqsel", lane, key, ct is not None)
+    else:
+        items = [(str(lb), str(v), 1.0) for lb, v, _l in ms.knob_list()[:4]]
+        cur_vals = [it[1] for it in items]
+        prev = SEQ["prev"]
+        if prev is not None and prev[0] == lane:
+            for i in range(len(items)):
+                if i < len(prev[1]) and cur_vals[i] != prev[1][i]:
+                    SEQ["when"][i] = now
+        else:
+            SEQ["when"] = {}
+        SEQ["prev"] = (lane, cur_vals)
+        active = nat._touched[-1] if nat._touched else None
+        if active is None:
+            newest = 0.0
+            for i in range(len(items)):
+                w = SEQ["when"].get(i, -9.0)
+                if now - w < 1.0 and w > newest:
+                    active, newest = i, w
+        if active is not None and active >= len(items):
+            active = None
+        gkey = ("seqlane", lane)
+    items, active = by_pad_rows(items, active)
+    grid(nat, gkey, "", "", items, active, now, None, head=head, band_dy=SEQ_DY)
