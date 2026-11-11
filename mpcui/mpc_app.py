@@ -41,6 +41,8 @@ try:
     freerec.load()
     freerec.install(_seq2.Sequencer, _notes2.NoteSequencer, _seq2)   # recording into a sequencer keeps your timing (the steps' NUDGE)
     freerec.install_menu(_menu2)                                     # SETTINGS > REC TIMING: FREE / GRID
+    import nolink
+    nolink.install(_menu2)                                           # SETTINGS > SYNC: no Link on the MPC
 except Exception:
     import traceback
     print("free recording is off:\n" + traceback.format_exc(), flush=True)
@@ -90,8 +92,19 @@ def song_after_punch(handle):
     return wrapped
 
 
+# the stress test (Console's own, move/stress.py): `echo 60 > /data/UserData/console/stress`. It has to pick its own data folder
+# before anything reads CONSOLE_DATA, so it is asked here, before app.py is loaded.
+_STRESS = None
+try:
+    import stress as _stress
+    _STRESS = _stress.prepare()
+except Exception:
+    import traceback
+    print("stress test is off:\n" + traceback.format_exc(), flush=True)
 # run app.py as a module (not __main__: its main() is called below), put the wrapper in where main() looks for handle
 G = runpy.run_path(APP_PY, run_name="console_app")
+if _STRESS:
+    G["main"].__globals__["STRESS_MINUTES"] = _STRESS      # (where main() looks it up)
 main = G["main"]
 try:
     import stepentry

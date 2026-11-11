@@ -13,6 +13,19 @@ SMP=""
 for d in /media/sample /data/UserData/UserLibrary/Samples /data/UserData/console/samples; do [ -d "$d" ] && SMP="$SMP${SMP:+:}$d"; done
 export CONSOLE_SAMPLES="$SMP"
 mkdir -p "$C/data"
+# Projects, presets and settings (CONSOLE_DATA) live on the SD card: /media/sample/Console/data, made if it isn't there. The first time,
+# what is on the internal drive is copied across (the internal copy stays where it is). No card, or it can't be written: the internal drive.
+DATA="$C/data"
+if grep -q " /media/sample " /proc/mounts 2>/dev/null; then
+  SD=/media/sample/Console
+  if [ ! -d "$SD/data" ]; then
+    mkdir -p "$SD" && rm -rf "$SD/data.new" && cp -r "$C/data" "$SD/data.new" && mv "$SD/data.new" "$SD/data" && sync
+    [ -f "$C/knob-sensitivity" ] && cp "$C/knob-sensitivity" "$SD/knob-sensitivity" 2>/dev/null
+  fi
+  if [ -d "$SD/data" ] && touch "$SD/data/.writable" 2>/dev/null; then rm -f "$SD/data/.writable"; DATA="$SD/data"; fi
+fi
+export CONSOLE_DATA="$DATA"
+echo "$DATA" > "$C/data-folder.txt"
 
 restore() { systemctl start ac50.service; }
 trap 'touch "$C/STOP"' INT TERM

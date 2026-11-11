@@ -627,6 +627,11 @@ def install(pages):
                 publish()
                 set_mode("T")
                 return
+            if card is None and T.engine and fxpages.on_fx_page(T, menu):
+                fxpages.draw_fx(T, sys.modules[__name__])
+                publish()
+                set_mode("O")
+                return
             if card is None and T.engine and fxpages.on_lfo_page(T, menu):
                 fxpages.draw_lfo(T, sys.modules[__name__])
                 publish()

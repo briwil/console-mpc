@@ -88,6 +88,34 @@ def draw_lfo(T, nat):
     knob_page(T, nat, ("lfo", ml.tab), "PAT %d" % (e.seq.current + 1), "LFO %d" % (ml.tab + 1), pairs)
 
 
+def on_fx_page(T, menu):
+    """REVERB, DELAY and SONG INSERT 1 / 2 (not the mixer, and not while the effect picker is up)."""
+    if menu is not None and (menu.open or menu.kits.open):
+        return False
+    try:
+        if T.engine is None or T.fx_page not in ("reverb", "delay", "song1", "song2"):
+            return False
+        return not (T.fx_page in ("song1", "song2") and T.fxpick.active)
+    except Exception:
+        return False
+
+
+def draw_fx(T, nat):
+    which = T.fx_page
+    if which in ("song1", "song2"):
+        p = 0 if which == "song1" else 1
+        sf = T.songfx(p)
+        pairs = []
+        for i in range(8):
+            label, shown = sf.text(i)
+            pairs.append((label, shown if label else ""))
+        top = str(sf.error).upper()[:24] if sf.error else "SONG INSERT %d" % (p + 1)
+        knob_page(T, nat, ("songfx", p, sf.name()), top, str(sf.name()).upper()[:14] or "NONE", pairs)
+        return
+    pairs = [(name, str(T.fx_value_text(key)).upper()) for key, name in T.FX_KNOBS[which]]
+    knob_page(T, nat, ("fx", which), "SEND FX", which.upper(), pairs)
+
+
 def on_lfo_page(T, menu):
     """LFO 1 / 2, INSERT 1 / 2, SENDS, ARP and PADS (not the effect picker or the sample browser)."""
     if menu is not None and (menu.open or menu.kits.open):

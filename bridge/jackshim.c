@@ -47,6 +47,8 @@ extern long snd_pcm_writei(void *, const void *, unsigned long);
 extern long snd_pcm_readi(void *, void *, unsigned long);
 extern int snd_pcm_recover(void *, int, int);
 extern int snd_pcm_close(void *);
+extern int snd_pcm_start(void *);
+extern int snd_pcm_prepare(void *);
 extern void *memcpy(void *, const void *, unsigned long);
 extern void *memset(void *, int, unsigned long);
 extern int memcmp(const void *, const void *, unsigned long);
@@ -135,6 +137,27 @@ EXPORT volatile int32_t mpcshim_test_peak;                /* the loudest output 
 EXPORT volatile float mpcshim_test_click;                 /* how much the metronome has added */
 #endif
 
+/* a line in console/input-status.txt (added to; the file is small): "<a> <x> <b> <y>" */
+static void in_status(const char *a, int x, const char *b, int y)
+{
+#ifndef HOST_TEST
+    char t[160]; int n = 0;
+    const char *w[2] = { a, b }; int v[2] = { x, y };
+    for (int j = 0; j < 2; j++) {
+        for (const char *q = w[j]; *q && n < 60 + j * 60; q++) t[n++] = *q;
+        t[n++] = ' ';
+        int z = v[j]; unsigned u = z < 0 ? (unsigned)(-(long)z) : (unsigned)z;
+        if (z < 0) t[n++] = '-';
+        char d[12]; int m = 0;
+        do { d[m++] = (char)('0' + u % 10); u /= 10; } while (u);
+        while (m) t[n++] = d[--m];
+        t[n++] = j ? '\n' : ' ';
+    }
+    int fd = open("/data/UserData/console/input-status.txt", 01 | 0100 | 02000, 0644);      /* write, create, append */
+    if (fd >= 0) { write(fd, t, (unsigned long)n); close(fd); }
+#endif
+}
+
 static int hw_audio_open(void)
 {
 #ifdef HOST_TEST
@@ -146,10 +169,19 @@ static int hw_audio_open(void)
             if (snd_pcm_set_params(pcm, 10, 3, 2, RATE, 0, 9000) == 0) {
                 /* the inputs: SND_PCM_STREAM_CAPTURE = 1; if it can't be opened Console simply hears silence there */
                 /* OFF unless the file /data/UserData/console/ENABLE_INPUT exists: the first try broke the audio output */
+                /* Opened NON-BLOCKING (mode 1) and only ever read without waiting (hw_audio_read): whatever the inputs do,
+                   the output's timing is never held up by them. What happened is written to console/input-status.txt. */
                 int want_in = access("/data/UserData/console/ENABLE_INPUT", 0) == 0;
-                if (want_in && snd_pcm_open(&pcm_in, "hw:2,0", 1, 0) == 0) {
-                    if (snd_pcm_set_params(pcm_in, 10, 3, 2, RATE, 0, 9000) != 0) { snd_pcm_close(pcm_in); pcm_in = 0; }
-                } else pcm_in = 0;
+                pcm_in = 0;
+                if (want_in) {
+                    int ro = snd_pcm_open(&pcm_in, "hw:2,0", 1, 1), rp = -999;
+                    if (ro == 0) {
+                        rp = snd_pcm_set_params(pcm_in, 10, 3, 2, RATE, 0, 20000);
+                        if (rp != 0) { snd_pcm_close(pcm_in); pcm_in = 0; }
+                        else snd_pcm_start(pcm_in);
+                    } else pcm_in = 0;
+                    in_status("open", ro, "params", rp);
+                }
                 return 0;
             }
             snd_pcm_close(pcm);
@@ -165,31 +197,44 @@ static int hw_audio_open(void)
 EXPORT float mpcshim_test_input = 0.f;                   /* what the fake inputs hear */
 #endif
 
-/* one period of the inputs into in_L / in_R (silence when there is no capture device or it failed) */
+/* one period of the inputs into in_L / in_R (silence when there is no capture device, it failed, or nothing has arrived yet).
+   Never waits: it takes what the card has ready into a small queue and hands a period out of that. */
+#define IN_RING 2048                                     /* frames (a power of two) */
 static void hw_audio_read(float *l, float *r)
 {
 #ifdef HOST_TEST
     for (int i = 0; i < PERIOD; i++) l[i] = r[i] = mpcshim_test_input;
 #else
-    static int32_t in32[PERIOD * 2];
+    static int32_t ring[IN_RING * 2], tmp[PERIOD * 4];
+    static int rd, fill, fails;
+    static long total, calls;
     if (!pcm_in) return;
-    long got = 0;
-    int fails = 0;
-    while (got < PERIOD) {
-        long k = snd_pcm_readi(pcm_in, in32 + got * 2, (unsigned long)(PERIOD - got));
+    for (int pass = 0; pass < 6; pass++) {
+        long k = snd_pcm_readi(pcm_in, tmp, PERIOD * 2);
+        if (k == -11 || k == 0) break;                   /* EAGAIN: nothing ready */
         if (k < 0) {
-            if (snd_pcm_recover(pcm_in, (int)k, 1) < 0 || ++fails > 3) {      /* a persistent error: the inputs stay silent */
-                if (fails > 3) pcm_in = 0;
-                break;
-            }
-            continue;
+            if (++fails > 400) { in_status("gave-up", (int)k, "frames", (int)total); pcm_in = 0; return; }
+            snd_pcm_prepare(pcm_in);                     /* an overrun (or a suspend): start again */
+            snd_pcm_start(pcm_in);
+            break;
         }
-        got += k;
+        for (long i = 0; i < k; i++) {
+            int w = (rd + fill) & (IN_RING - 1);
+            ring[w * 2] = tmp[i * 2]; ring[w * 2 + 1] = tmp[i * 2 + 1];
+            if (fill < IN_RING) fill++; else rd = (rd + 1) & (IN_RING - 1);
+        }
+        total += k;
+        if (k < PERIOD * 2) break;
     }
-    for (int i = 0; i < got; i++) {
-        l[i] = (float)in32[i * 2] * (1.0f / 2147483648.0f);
-        r[i] = (float)in32[i * 2 + 1] * (1.0f / 2147483648.0f);
+    if (++calls == 1723) in_status("after-5s-frames", (int)total, "errors", fails);      /* about 5 s in: is anything arriving? */
+    if (fill > PERIOD * 6) { int drop = fill - PERIOD * 2; rd = (rd + drop) & (IN_RING - 1); fill -= drop; }   /* fallen behind: catch up */
+    if (fill < PERIOD) return;                           /* (silence this period) */
+    for (int i = 0; i < PERIOD; i++) {
+        int k = (rd + i) & (IN_RING - 1);
+        l[i] = (float)ring[k * 2] * (1.0f / 2147483648.0f);
+        r[i] = (float)ring[k * 2 + 1] * (1.0f / 2147483648.0f);
     }
+    rd = (rd + PERIOD) & (IN_RING - 1); fill -= PERIOD;
 #endif
 }
 

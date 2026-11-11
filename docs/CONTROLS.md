@@ -68,3 +68,9 @@ Lane settings (no steps selected): K1 = length, K2 = rate, K3 = Euclid. Shift ne
 Drum sequencer with the wheel: push on an empty step puts it down; push on a step that is on adds it to the selected steps (push it again: it leaves them); BACK: none selected. ERASE takes the selected steps off (none selected: the step under the box). Leaving the sequencer page deselects.
 
 Recording into a sequencer keeps your timing (SETTINGS > REC TIMING: FREE). A hit lands on the nearest step and the step's NUDGE is set to how early or late you played (drums: 10% of a step at a time, synth notes: 1%; half a step at most). GRID: recording snaps to the steps.
+
+Where things are saved: projects, presets and settings go to the SD card, in `Console/data` (made if it isn't there; the first time, what was on the internal drive is copied across). No card: the internal drive.
+
+Stress test (Console's own): `echo 60 > /data/UserData/console/stress` over SSH (60 = minutes); the report is `console/stress-report.txt`. Shift + STOP ends it early.
+
+Audio inputs are off unless turned on: `sh tools/input-check.sh on` from the Mac (`off` to turn them off, no argument: a report of the sound card).
