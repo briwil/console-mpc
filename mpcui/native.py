@@ -605,7 +605,7 @@ def install(pages):
             if card is None and T.engine and on_seq_page(T, menu):
                 draw_seq(T)
                 publish()
-                set_mode("P" if T.mseq.selected else "O")
+                set_mode("P" if T.mseq.selected else "S")
                 return
         except Exception:
             import traceback

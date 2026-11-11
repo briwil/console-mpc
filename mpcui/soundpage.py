@@ -420,6 +420,9 @@ def draw_seq(T, nat):
     at = ms.playing_step()
     blink = int(now * 3) % 2 == 0
     cur = getattr(ms, "cur", None)
+    if now - SEQ.get("seen", 0) > 0.5:
+        ms.cur_on = False                                       # back on this page: no box until the wheel is turned
+    SEQ["seen"] = now
     msg = T.message if (T.message and now < T.message_until) else None
     hint = ""
 
@@ -451,7 +454,7 @@ def draw_seq(T, nat):
                 c.rect(x, y + 42, 17, 3, WHITE)
             num = str(i + 1)
             c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 54, num, WHITE if k % 4 == 0 else colour.GREENS[4], 8, 0)
-        if cur is not None and first <= cur < first + 16 and cur < ln.length:
+        if cur is not None and getattr(ms, "cur_on", False) and first <= cur < first + 16 and cur < ln.length:
             x = 8 + (cur - first) * 19
             c.frame(x - 1, y - 1, 19, 42, WHITE)
         npages = max(1, (ln.length + 15) // 16)
