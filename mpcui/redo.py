@@ -74,3 +74,47 @@ def install(Engine):
         return ok
 
     Engine.undo, Engine.redo = undo, redo
+
+
+def install_seq(Sequencer):
+    """REDO for the sequencers (drum, synth, punch FX patterns): what an undo replaced is kept; a new edit (snapshot) ends the redo."""
+    import copy
+    orig_undo, orig_snap = Sequencer.undo, Sequencer.snapshot
+
+    def where(self, n):
+        if isinstance(n, tuple) and n and n[0] == "punch":
+            import punch
+            return punch.state(self).patterns, n[1]
+        return self.patterns, n
+
+    def snapshot(self):
+        orig_snap(self)
+        self._redo = []
+
+    def undo(self):
+        with self.lock:
+            entry = self.undo_stack[-1] if self.undo_stack else None
+            now = None
+            if entry is not None:
+                lst, i = where(self, entry[0])
+                now = (entry[0], copy.deepcopy(lst[i]))
+        r = orig_undo(self)
+        if r is not None and now is not None:
+            if not hasattr(self, "_redo"):
+                self._redo = []
+            self._redo.append(now)
+            del self._redo[:-20]
+        return r
+
+    def redo(self):
+        """Put back what the last undo took away. Returns the pattern number, or None."""
+        with self.lock:
+            if not getattr(self, "_redo", None):
+                return None
+            n, pattern = self._redo.pop()
+            lst, i = where(self, n)
+            self.undo_stack.append((n, copy.deepcopy(lst[i])))      # (so UNDO takes it back again)
+            lst[i] = pattern
+            return self.current if (isinstance(n, tuple) and n[:1] == ("punch",)) else n
+
+    Sequencer.snapshot, Sequencer.undo, Sequencer.redo = snapshot, undo, redo

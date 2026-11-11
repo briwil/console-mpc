@@ -105,6 +105,20 @@ def tape_button(board, num):
     if not e:
         return
     if num == REDO:
+        try:
+            seqish = T.seq_page and not (T.fx_page or T.punch.active() or T.auto.active())
+        except Exception:
+            seqish = False
+        if seqish:                                              # Shift + PLUS on a sequencer page: the pattern's redo
+            sp = T.sp()
+            n = sp.seq.redo()
+            if n is None:
+                T.say("NOTHING TO REDO", 2)
+            else:
+                sp._gesture = None
+                e.seq_changed()
+                T.say("REDONE%s" % ("" if n == sp.seq.current else " IN PATTERN %d" % (n + 1)), 2)
+            return
         T.say("REDONE" if e.redo() else "NOTHING TO REDO", 2)
     elif num == LOOPMARK:
         loop_mark(T)

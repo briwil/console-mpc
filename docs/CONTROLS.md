@@ -48,6 +48,8 @@ Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit:
 | LOOP | Loop on / off. Shift + LOOP: the first press marks a loop point, the second sets the other (earlier = IN, later = OUT). Both at the same spot: points cleared |
 | KNOB FX, SEQ, PAD BANK, PAD FX, TAP TEMPO, 16 LEVELS | do nothing here |
 
+On the drum and synth sequencer pages: Shift + MINUS = Undo, Shift + PLUS = Redo (as printed on the buttons; PLUS / MINUS alone are still the arrows).
+
 Off the tape page: Shift + NOTE REPEAT (labelled TRIPLET) turns triplets on / off; 16 LEVELS is Undo (the sequencer's undo too).
 
 ## Starting without a computer

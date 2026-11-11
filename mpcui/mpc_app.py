@@ -37,6 +37,8 @@ try:
     import audio
     import redo
     redo.install(audio.Engine)           # PLUS on the tape page: REDO (Console only has UNDO)
+    import sequencer as _sequencer
+    redo.install_seq(_sequencer.Sequencer)   # ... and Shift + PLUS on a sequencer page
 except Exception:
     import traceback
     print("redo is off:\n" + traceback.format_exc(), flush=True)

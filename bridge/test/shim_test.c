@@ -410,6 +410,14 @@ int main(int argc, char **argv)
             *peak = 0; usleep(600000);
             CHECK(*peak == 0, "metronome: quiet again once the file is gone");
         }
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('S', pf); fclose(pf);
+        usleep(250000);
+        b = ngot;
+        BTN(0x31, 1); BTN(0x37, 1); BTN(0x37, 0); BTN(0x36, 1); BTN(0x36, 0); BTN(0x31, 0);   /* sequencer: Shift + MINUS / PLUS */
+        BTN(0x37, 1); BTN(0x37, 0);                                                           /* MINUS alone: still the left arrow */
+        usleep(200000);
+        CHECK(expect(b + 1, 0xBF, 56, 127) && expect(b + 2, 0xBF, 56, 0) && expect(b + 3, 0xBF, 104, 127) && expect(b + 4, 0xBF, 104, 0), "sequencer: Shift + MINUS -> Undo, Shift + PLUS -> redo");
+        CHECK(expect(b + 6, 0xBF, 62, 127), "sequencer: MINUS alone is still the left arrow");
         pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
         usleep(250000);
         b = ngot;

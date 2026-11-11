@@ -306,6 +306,12 @@ static void mpc_button_event(int note, int down)
     if (down && note == MPC_PADBANK) { right_bank = !right_bank; refresh_pads(); refresh_buttons(); return; }
     if (down && note == MPC_KNOBFX) { release_knob_pads(); knob_mode = !knob_mode; refresh_pads(); refresh_buttons(); return; }
     if (note == MPC_SEQ || note == MPC_PADBANK || note == MPC_KNOBFX) return;
+    if ((note == 0x36 || note == 0x37) && page_seq) {          /* a sequencer page: Shift + MINUS = Undo, Shift + PLUS = Redo (as printed on the buttons) */
+        static uint8_t sq[2];
+        int i = note == 0x37;
+        if (down) sq[i] = shift_held;
+        if (sq[i]) { send3(0xBF, i ? 56 : 104, down ? 127 : 0); if (!down) sq[i] = 0; return; }
+    }
     if (note == 0x36 || note == 0x37) {                   /* PLUS / MINUS = right / left arrow; with Shift: the Move's + / - */
         int plus = note == 0x36;
         if (!shift_held) send3(0xBF, plus ? 63 : 62, down ? 127 : 0);
