@@ -74,7 +74,14 @@ def move(T, way):
     ms, sp, e = T.mseq, T.seqp, T.engine
     lane = sp.lane
     length = e.seq.lane(lane).length
-    cur = max(0, min(length - 1, _cursor(ms) + (1 if way > 0 else -1)))
+    import sequencer
+    d = 1 if way > 0 else -1
+    cur = _cursor(ms)
+    nxt = cur + d
+    while 0 <= nxt < length and sequencer.dark(nxt, sequencer.TRIPLETS):
+        nxt += d                                                 # triplets: the dark steps (every 4th) don't play, the box skips them
+    if 0 <= nxt < length:
+        cur = nxt
     ms.cur = cur
     ms.page[lane] = cur // 16                                    # the 16 steps shown follow the box
 
