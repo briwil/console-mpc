@@ -19,16 +19,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Tools
+        continue-on-error: true
         run: |
-          for i in 1 2 3 4 5 6; do
-            sudo apt-get -o Acquire::Retries=3 update && sudo apt-get -o Acquire::Retries=3 install -y clang lld llvm && break
-            echo "package server not reachable, retrying ($i)"; sleep 30
-          done
-          command -v clang >/dev/null
-          for t in nm strip; do sudo ln -sf "$(ls /usr/bin/llvm-$t-* | head -n 1)" /usr/local/bin/llvm-$t; done
-          command -v ld.lld >/dev/null || sudo ln -sf "$(ls /usr/bin/ld.lld-* | head -n 1)" /usr/local/bin/ld.lld
+          # (the package server is sometimes unreachable: give up after 4 minutes and use the binaries committed in bridge/prebuilt)
+          timeout 240 bash -c '
+            sudo apt-get -o Acquire::Retries=2 update && sudo apt-get -o Acquire::Retries=2 install -y clang lld llvm || exit 1
+            for t in nm strip; do sudo ln -sf "$(ls /usr/bin/llvm-$t-* | head -n 1)" /usr/local/bin/llvm-$t; done
+            command -v ld.lld >/dev/null || sudo ln -sf "$(ls /usr/bin/ld.lld-* | head -n 1)" /usr/local/bin/ld.lld
+          '
       - name: Build
-        run: cd bridge && ./build.sh
+        run: |
+          if command -v clang >/dev/null && command -v ld.lld >/dev/null; then
+            cd bridge && ./build.sh
+          else
+            echo "no compiler: using the binaries committed in bridge/prebuilt"
+            cp bridge/prebuilt/libjack_mpc.so bridge/prebuilt/bridge_demo bridge/prebuilt/bootmenu bridge/prebuilt/panelsniff.so bridge/
+          fi
       - name: Host test of the menu (fake hardware)
         run: |
           gcc -O1 -fPIC -shared -DHOST_TEST -fvisibility=hidden -Wno-unused-variable bridge/jackshim.c -o /tmp/libjack_mpc_host.so -lpthread
