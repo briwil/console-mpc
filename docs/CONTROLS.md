@@ -7,7 +7,7 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | B1 | Instruments; again goes round an instrument's pages: sound, sequencer, automation, punch FX, then SONG, then back |
 | B2 | Mixer (again: reverb, delay, ...; Back leaves) |
 | B3 | Tape recorder (again: the selected track zoomed) |
-| PAD FX | not used yet |
+| PAD FX | The pads page of a synth (key, scale, octave, pad velocity and curve): the Move's Shift + step 2. Again: back |
 | Song mode on / off | on the SONG page: Shift + PLUS / MINUS |
 | Pads 1-16 | The left 4x4 pads (the drums) |
 | PAD BANK (latching) | Pads become the right 4x4 (chromatic) |
@@ -26,7 +26,8 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | CHOP | Splice (Shift + CHOP: splice all) |
 | SAMPLE REC | not used yet |
 | STOP | While playing: stops playback. Otherwise: Back. Shift + STOP: always Back (saves and quits from the top level) |
-| ERASE, MUTE, TAP TEMPO, NOTE REPEAT, 16 LEVELS | Delete, Mute, Copy, Undo, Capture |
+| NOTE REPEAT | The arpeggiator page of a synth (the Move's Shift + step 3). Again: back. Shift + NOTE REPEAT = Undo |
+| ERASE, MUTE, TAP TEMPO, 16 LEVELS | Delete, Mute, Copy, Capture |
 | SHIFT | Shift |
 
 Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit: Shift + STOP.

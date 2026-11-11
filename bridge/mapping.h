@@ -283,6 +283,14 @@ static void mpc_button_event(int note, int down)
         else send3(0xBF, plus ? 55 : 54, 0);
         return;
     }
+    if ((note == 0x0B && !shift_held) || note == 0x01) {   /* NOTE REPEAT = the arpeggiator page (Shift + step 3), PAD FX = the pads page (Shift + step 2);
+                                                               Shift + NOTE REPEAT is still Undo. Both open on a synth's sound pages; again or Back returns */
+        if (down) {
+            int step = note == 0x0B ? 18 : 17;
+            send3(0xBF, 49, 127); send3(0x9F, step, 100); send3(0x8F, step, 0); send3(0xBF, 49, 0);
+        }
+        return;
+    }
     for (int i = 0; i < NBUTTONS; i++)
         if (BUTTONS[i].mpc == note) { send3(0xBF, BUTTONS[i].move, down ? 127 : 0); return; }
 }
