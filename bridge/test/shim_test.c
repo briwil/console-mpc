@@ -299,6 +299,20 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);                   /* SEQ: normal pads again */
 
+    /* K1 turned left to its stop and held there: it keeps clicking left (a pot has an end, a Move knob doesn't) */
+    {
+        int b = ngot;
+        send((unsigned char[]){ 0xB0, 0x10, 5 }, 3);
+        send((unsigned char[]){ 0xB0, 0x10, 0 }, 3);
+        usleep(700000);
+        int rep = 0;
+        for (int i = b; i < ngot; i++) if (got[i][0] == 0xBF && got[i][1] == 71 && got[i][2] == 127) rep++;
+        CHECK(rep > 5 + 2, "A: K1 held at its left stop keeps clicking left");
+        send((unsigned char[]){ 0xB0, 0x10, 3 }, 3);                  /* let go of the stop */
+        b = ngot;
+        usleep(400000);
+        CHECK(ngot == b, "A: ... and stops when the knob leaves the stop");
+    }
     /* lights and screen */
     sent_lights = 1;
     int g0 = ngot;
