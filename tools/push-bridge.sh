@@ -36,4 +36,7 @@ mpc "cd $C && rm -rf mpc.old && { [ -d mpc ] && mv mpc mpc.old || true; } && mv 
 echo "5/5  Checking"
 GOT=$(mpc "cat $C/mpc/BUILD")
 [ "$GOT" = "$NEW" ] || { echo "MISMATCH: MPC has '$GOT'. Do NOT restart; run this again."; exit 1; }
-echo "Done: the MPC has build $GOT, safely written. Now restart the MPC the way you normally do (power off and on)."
+echo "Done: the MPC has build $GOT, safely written. Restarting the MPC now..."
+# clear the boot safety catch (this restart is ours, not a failed start), flush, restart. The connection drops as it goes down: that is fine.
+mpc "rm -f $C/boot-attempt; sync; sleep 1; (sleep 1; reboot) >/dev/null 2>&1 &" || true
+echo "The MPC is restarting: the startup menu comes up in a few seconds."
