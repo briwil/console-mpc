@@ -126,7 +126,7 @@ static void refresh_buttons(void)
         if (BUTTONS[i].mpc == 0x50 && page_seq) continue;           /* SEQ RECORD on the sequencer page: lit while the pads are the steps */
         set_btn_light(BUTTONS[i].mpc, move_btn[BUTTONS[i].move] ? 1 : 0);
     }
-    if (page_seq) set_btn_light(0x50, step_mode);
+    if (page_seq) set_btn_light(0x50, step_mode || move_btn[86]);   /* ... or while recording live into the pattern */
 #ifdef SEQ_BUTTON_ON
     set_btn_light(MPC_SEQ, (step_mode || param_mode) && !page_nostep);
 #else
@@ -302,8 +302,16 @@ static void mpc_button_event(int note, int down)
         return;
     }
     if (note == 0x50 && page_seq) {                       /* SEQ RECORD on the drum sequencer page: the pads become the 16 steps; again: the drums */
+        if (down && move_btn[86] && !step_mode) { send3(0xBF, 86, 127); send3(0xBF, 86, 0); return; }   /* recording live into the pattern: SEQ RECORD ends that */
         if (down) { step_mode = !step_mode; rec_steps = step_mode; param_mode = 0; refresh_pads(); refresh_buttons(); }
         return;
+    }
+    if (note == 0x52 && down && page_seq && rec_steps && step_mode) {
+        /* SEQ RECORD, then PLAY: the pads are the drums / notes again, it plays, and what you play is recorded into the pattern
+           (Console's own Record on these pages; move_btn[86] is its light: on = already recording) */
+        step_mode = 0; rec_steps = 0;
+        if (!move_btn[86]) { send3(0xBF, 86, 127); send3(0xBF, 86, 0); }
+        refresh_pads(); refresh_buttons();
     }
     if ((note == 0x0B && !shift_held) || note == 0x01) {   /* NOTE REPEAT = the arpeggiator page (Shift + step 3), PAD FX = the pads page (Shift + step 2);
                                                                Shift + NOTE REPEAT is still Undo. Both open on a synth's sound pages; again or Back returns */

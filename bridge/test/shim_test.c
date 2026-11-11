@@ -292,6 +292,20 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x89, 37, 0 }, 3);
         CHECK(expect(b, 0x9F, 20, 80) && expect(b + 2, 0x9F, 68, 70) && expect(b + 4, 0x9F, 68, 71) && ngot == b + 6,
               "A: sequencer page: SEQ RECORD = pads are the steps, again = drums, and it ends when the page is left");
+        /* SEQ RECORD then PLAY: Record + Play go to Console (live recording into the pattern) and the pads are drums again */
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('S', pf); fclose(pf);
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x50, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x50, 0x00 }, 3);
+        send((unsigned char[]){ 0x90, 0x52, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x52, 0x00 }, 3);
+        send((unsigned char[]){ 0x99, 37, 70 }, 3);
+        send((unsigned char[]){ 0x89, 37, 0 }, 3);
+        CHECK(expect(b, 0xBF, 86, 127) && expect(b + 1, 0xBF, 86, 0) && expect(b + 2, 0xBF, 85, 127) && expect(b + 3, 0xBF, 85, 0)
+              && expect(b + 4, 0x9F, 68, 70), "A: sequencer page: SEQ RECORD then PLAY = Record + Play to Console, pads are drums");
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
+        usleep(200000);
         remove("/tmp/console-pagemode");
     }
     int s0 = ngot;
