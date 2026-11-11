@@ -63,10 +63,10 @@ try:
         import movepresets
         _P = movepresets.Presets
         _names_file = os.path.join(C, "data", "preset-names.json")
-        _init, _label = _P.__init__, _P.label
+        _p_init, _p_label = _P.__init__, _P.label
 
-        def _init2(self, *a, **k):
-            _init(self, *a, **k)
+        def _p_init2(self, *a, **k):
+            _p_init(self, *a, **k)
             try:
                 with open(_names_file) as fh:
                     for key, nm in json.load(fh).items():
@@ -75,9 +75,9 @@ try:
             except Exception:
                 pass
 
-        def _label2(self, i):
+        def _p_label2(self, i):
             before = len(self.names)
-            out = _label(self, i)
+            out = _p_label(self, i)
             if len(self.names) != before:
                 try:
                     with open(_names_file, "w") as fh:
@@ -85,7 +85,7 @@ try:
                 except Exception:
                     pass
             return out
-        _P.__init__, _P.label = _init2, _label2
+        _P.__init__, _P.label = _p_init2, _p_label2
     except Exception as ex:
         print("preset name memory is off:", ex, flush=True)
     import pagefx as _pagefx
