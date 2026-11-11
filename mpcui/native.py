@@ -59,7 +59,10 @@ _chosen = []
 
 
 def _font(scale):
-    """The font at 1x / 2x / 3x of its base size, with cap_h (capital height) and cap_pad (its top), or None."""
+    """Text sizes: 1 = Console's own 5 x 7 pixel font (small labels); 2 / 3 / 4 = the pixel font (Jersey 15) at 1x / 2x / 3x of
+    its pixel size (medium / big / huge). Returns the font with cap_h (capital height) and cap_pad, or None for size 1."""
+    if scale == 1:
+        return None
     if scale in _fonts:
         return _fonts[scale]
     f = None
@@ -67,7 +70,7 @@ def _font(scale):
         from PIL import ImageFont
         for path, base in FONT_CANDIDATES:
             if path and os.path.exists(path):
-                f = ImageFont.truetype(path, base * scale)
+                f = ImageFont.truetype(path, base * (scale - 1))
                 box = f.getbbox("H")
                 f.cap_pad, f.cap_h = box[1], box[3] - box[1]
                 break
@@ -121,7 +124,7 @@ class Canvas:
         s = str(s).upper()
         font = _font(scale)
         if font is None:
-            return self._pixel_text(x, y, s, c, scale)
+            return self._pixel_text(x, y, s, c, 1 if scale == 1 else scale - 1)
         a = _mask(font, s)
         if a is None:
             return
@@ -139,7 +142,7 @@ class Canvas:
     def text_in(self, x, top, h, s, c=FG, scale=1):
         """Text with its capitals centred in the band top .. top + h."""
         font = _font(scale)
-        cap = font.cap_h if font is not None else 7 * scale
+        cap = font.cap_h if font is not None else 7 * (1 if scale == 1 else scale - 1)
         self.text(x, top + (h - cap) // 2, s, c, scale)
 
     def _pixel_text(self, x, y, s, c, scale):
@@ -156,7 +159,7 @@ class Canvas:
     def width(s, scale=1):
         font = _font(scale)
         if font is None:
-            return len(str(s)) * 6 * scale
+            return len(str(s)) * 6 * (1 if scale == 1 else scale - 1)
         return int(font.getlength(str(s).upper()) + 0.5)
 
     def bytes(self, seq):
@@ -503,8 +506,8 @@ def draw_seq(T):
             c.frame(x, top, cw, 70, CELL_LINE)
             c.text(x + 6, top + 7, str(label)[:9], MID)
             v = str(value)
-            c.text(x + 6, top + 26 if len(v) <= 4 else top + 31, v[:9] if len(v) > 4 else v, FG, 2 if len(v) <= 4 else 1)
-            c.text(x + 6, top + 55, "K%d" % (i + 1), DIM)
+            c.text(x + 6, top + 26 if len(v) <= 4 else top + 31, v[:9] if len(v) > 4 else v, FG, 3 if len(v) <= 4 else 1)
+            c.text(x + 6, top + 57, ("K%d" % (i + 1)) if i < 3 else "FADE", DIM)
         hint = "WHEEL: MOVE BOX   HIT DRUM: ADD STEP"
     elif knobs:
         label, value, on = knobs[0]
@@ -512,9 +515,9 @@ def draw_seq(T):
         ct = ms.chance_text(key)
         c.rect(4, top, W - 8, 100, CELL)
         c.frame(4, top, W - 8, 100, ACC)
-        c.text(14, top + 8, str(label)[:18], ACC, 2)
+        c.text(14, top + 8, str(label)[:18], ACC, 3)
         c.text(14, top + 46, "K1", DIM)
-        c.text(44, top + 34, str(value)[:6], FG, 3)
+        c.text(44, top + 34, str(value)[:6], FG, 4)
         if key == "vel":
             try:
                 frac = max(0.0, min(1.0, float(value) / 127.0))
