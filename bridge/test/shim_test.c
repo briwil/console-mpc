@@ -259,6 +259,19 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x99, 48, 71 }, 3);                   /* pad 9 -> note 76 */
         send((unsigned char[]){ 0x89, 48, 0 }, 3);
         CHECK(expect(b, 0x9F, 69, 70) && expect(b + 2, 0x9F, 76, 71), "A: steps selected (P): pads are the step settings in order");
+        /* N: a page with no steps (the sound page): SEQ does nothing there, and nothing is left over on the next page */
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('N', pf); fclose(pf);
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
+        send((unsigned char[]){ 0x99, 37, 70 }, 3);
+        send((unsigned char[]){ 0x89, 37, 0 }, 3);
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
+        usleep(200000);
+        send((unsigned char[]){ 0x99, 37, 71 }, 3);
+        send((unsigned char[]){ 0x89, 37, 0 }, 3);
+        CHECK(expect(b, 0x9F, 68, 70) && expect(b + 2, 0x9F, 68, 71), "A: no-steps page: SEQ does nothing, the pads stay drum pads (also on the next page)");
         remove("/tmp/console-pagemode");
     }
     int s0 = ngot;

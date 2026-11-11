@@ -135,7 +135,7 @@ def draw(T, nat):
     if octave:
         top += " OCT %+d" % octave
     colr = WHITE
-    if T.message and now < T.message_until:
+    if T.message and now < T.message_until and active is None:      # (while a setting is being turned its name and value are on screen already)
         top, colr = T.message[:24], nat.ACC
     c.text_px(6, 19, top, colr, 16, -1)
     title = vname.upper()

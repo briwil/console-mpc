@@ -396,15 +396,15 @@ static uint8_t nbuf[8 + 320 * 240 * 3];
 
 static int was_native;
 
-/* /tmp/console-pagemode: one letter from Console: T = the tape page (the pads are the step buttons there), anything else = not */
+/* /tmp/console-pagemode: one letter from Console: T = the tape page (the pads are the step buttons there), P = steps selected, N = a page with no steps (SEQ does nothing), anything else = not */
 static void pagemode_poll(void)
 {
     int fd = open("/tmp/console-pagemode", 0);
-    if (fd < 0) { page_tape = 0; page_param = 0; return; }
+    if (fd < 0) { page_tape = 0; page_param = 0; page_nostep = 0; return; }
     char ch = 0;
     long n = read(fd, &ch, 1);
     close(fd);
-    if (n == 1) { page_tape = (ch == 'T'); page_param = (ch == 'P'); }
+    if (n == 1) { page_tape = (ch == 'T'); page_param = (ch == 'P'); page_nostep = (ch == 'N'); }
 }
 
 static int native_poll(void)

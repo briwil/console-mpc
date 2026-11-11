@@ -988,12 +988,12 @@ def install(pages):
             if card is None and T.engine and on_project_menu(menu):
                 draw_project_menu(T, menu)
                 publish()
-                set_mode("O")
+                set_mode("N")
                 return
             if card is None and T.engine and on_settings(menu):
                 draw_settings(T, menu)
                 publish()
-                set_mode("O")
+                set_mode("N")
                 return
             if card is None and T.engine and on_inst_list(T, menu):
                 draw_inst_list(T)
@@ -1013,7 +1013,7 @@ def install(pages):
             if card is None and T.engine and on_sound_page(T, menu):
                 draw_sound(T)
                 publish()
-                set_mode("O")
+                set_mode("N")
                 return
             if card is None and T.engine and on_seq_page(T, menu):
                 draw_seq(T)
