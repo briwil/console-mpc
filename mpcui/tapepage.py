@@ -43,7 +43,7 @@ def draw(T, nat):
         c.frame(6, 2, 9, 9, G[4])
 
     # the ruler
-    c.rect(x0, RULER_Y, x1 - x0, RULER_H, G[0])
+    c.rect(x0, RULER_Y, x1 - x0, RULER_H, nat.BOX)
     bar = tape.BEATS_PER_BAR
     k = int(t.pos - (mid - x0) / ppb) - 1
     while True:
@@ -53,10 +53,10 @@ def draw(T, nat):
         if x >= x0:
             in_bar = k % bar
             if abs(in_bar) < 1e-6:
-                c.rect(x, RULER_Y + 2, 1, RULER_H - 2, nat.WHITE)
-                c.text_px(x + 3, RULER_Y + 8, str(int(k // bar) + 1), G[6], 8, 0)
+                c.rect(x, RULER_Y + 2, 1, RULER_H - 2, nat.MID)
+                c.text_px(x + 3, RULER_Y + 8, str(int(k // bar) + 1), nat.MID, 8, 0)
             elif ppb >= 6:
-                c.rect(x, RULER_Y + 7, 1, 3, G[4])
+                c.rect(x, RULER_Y + 7, 1, 3, nat.DIM)
         k += 1
     region = e.loop_region()
     if region:                                                   # the loop: a bar along the top of the ruler
@@ -77,8 +77,8 @@ def draw(T, nat):
         boxes = e.regions[ch]
         lv = e.levels[ch] if ch < len(e.levels) else None
         lv = np.asarray(lv) if lv is not None and len(lv) else None
-        body = (nat.BOX_SEL if is_sel else nat.BOX) if not muted else (36, 42, 48)
-        ink = (G[6] if is_sel else nat.FG) if not muted else nat.DIM
+        body = nat.BOX if not muted else (36, 42, 48)
+        ink = nat.FG if not muted else nat.DIM
         top = by + 1
         rows_n = BOX_H - 2                                       # the 21 rows inside the outline
         half = (rows_n - 2) // 2
@@ -119,7 +119,7 @@ def draw(T, nat):
     c.text_px(317 - text_width(c.pxfont(16), bpm, -1), BASE, bpm, nat.WHITE, 16, -1)
     room = 317 - text_width(c.pxfont(16), bpm, -1) - 20 - 8
     if T.message and now < T.message_until:
-        txt, col = T.message.upper(), nat.ACC
+        txt, col = T.message.upper(), nat.WHITE
     else:
         pan = e.pans[sel]
         pan_t = "C" if abs(pan) < 0.05 else ("L%d" % round(-pan * 100) if pan < 0 else "R%d" % round(pan * 100))
