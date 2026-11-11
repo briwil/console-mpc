@@ -32,6 +32,20 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 
 Start: `sh /data/UserData/console/mpc/mpc-console.sh` from the root shell. Quit: Shift + STOP.
 
+## The tape page (8 tracks, 4 on screen; also the zoomed track)
+
+| Control | Does |
+|---|---|
+| Shift + wheel | Scroll through the 8 tracks. K1-K3 and the FADER are the volumes of the 4 tracks on screen (Shift: pan) |
+| Shift + wheel push | Next grid (1/4, 1/8 ...) |
+| Shift + pad | Arm / disarm that track. SAMPLE REC: arm / disarm the selected track |
+| MINUS / PLUS | Undo / Redo. Shift + them: zoom out / in |
+| CHOP | Split / join the box under the playhead (Shift: all tracks) |
+| ERASE | Cut (hold, move to take several, let go). Shift + ERASE: Copy |
+| NOTE REPEAT | Drop (Shift: drop and push the rest later) |
+| LOOP | Loop on / off. Shift + LOOP: the first press marks a loop point, the second sets the other (earlier = IN, later = OUT). Both at the same spot: points cleared |
+| KNOB FX, SEQ, PAD BANK, PAD FX, TAP TEMPO, 16 LEVELS | do nothing here |
+
 ## Starting without a computer
 `sh /data/UserData/console/mpc/install-boot.sh` adds a startup menu (PAD 1 = Console, PAD 2 = stock MPC, no answer = MPC) to the SD card's autorun; `... install-boot.sh remove` undoes it; a file named NOCONSOLE on the SD card skips it once.
 

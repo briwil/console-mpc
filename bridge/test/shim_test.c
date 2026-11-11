@@ -356,6 +356,43 @@ int main(int argc, char **argv)
         pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
         usleep(200000);
     }
+    /* the tape page ('A'): its own buttons */
+    {
+        FILE *pf = fopen("/tmp/console-pagemode", "wb"); fputc('A', pf); fclose(pf);
+        usleep(250000);
+        ngot = 0;                                        /* (the list of messages is nearly full by now) */
+        int b = 0;
+#define BTN(n, dn) send((unsigned char[]){ (dn) ? 0x90 : 0x80, (n), (dn) ? 0x7F : 0 }, 3)
+        BTN(0x0B, 1); BTN(0x0B, 0);                      /* NOTE REPEAT -> Drop */
+        BTN(0x37, 1); BTN(0x37, 0);                      /* MINUS -> Undo */
+        BTN(0x36, 1); BTN(0x36, 0);                      /* PLUS -> 104 (redo) */
+        BTN(0x09, 1); BTN(0x09, 0);                      /* ERASE -> Delete */
+        BTN(0x49, 1); BTN(0x49, 0);                      /* SAMPLE REC -> 106 */
+        BTN(0x35, 1); BTN(0x35, 0); BTN(0x28, 1); BTN(0x28, 0); BTN(0x01, 1); BTN(0x01, 0);   /* TAP TEMPO, 16 LEVELS, PAD FX: nothing */
+        BTN(0x00, 1); BTN(0x00, 0); BTN(0x07, 1); BTN(0x07, 0); BTN(0x23, 1); BTN(0x23, 0);   /* KNOB FX, SEQ, PAD BANK: nothing */
+        usleep(200000);
+        CHECK(expect(b, 0xBF, 52, 127) && expect(b + 1, 0xBF, 52, 0), "tape page: NOTE REPEAT -> Drop");
+        CHECK(expect(b + 2, 0xBF, 56, 127) && expect(b + 3, 0xBF, 56, 0), "tape page: MINUS -> Undo");
+        CHECK(expect(b + 4, 0xBF, 104, 127) && expect(b + 5, 0xBF, 104, 0), "tape page: PLUS -> redo");
+        CHECK(expect(b + 6, 0xBF, 119, 127) && expect(b + 7, 0xBF, 119, 0), "tape page: ERASE -> Delete (cut)");
+        CHECK(expect(b + 8, 0xBF, 106, 127) && ngot == b + 9, "tape page: SAMPLE REC -> arm the selected track; TAP TEMPO, 16 LEVELS, PAD FX, KNOB FX, SEQ, PAD BANK send nothing");
+        b = ngot;
+        BTN(0x31, 1);                                    /* Shift */
+        BTN(0x09, 1); BTN(0x09, 0);                      /* Shift + ERASE -> Copy, without Shift */
+        BTN(0x4A, 1); BTN(0x4A, 0);                      /* Shift + LOOP -> 105 */
+        BTN(0x37, 1); BTN(0x37, 0);                      /* Shift + MINUS -> the Move's - (zoom) */
+        BTN(0x31, 0);
+        usleep(200000);
+        CHECK(expect(b, 0xBF, 49, 127), "tape page: Shift goes through");
+        CHECK(expect(b + 1, 0xBF, 49, 0) && expect(b + 2, 0xBF, 60, 127) && expect(b + 3, 0xBF, 49, 127) && expect(b + 4, 0xBF, 60, 0), "tape page: Shift + ERASE -> Copy");
+        CHECK(expect(b + 5, 0xBF, 105, 127), "tape page: Shift + LOOP -> loop point");
+        CHECK(expect(b + 6, 0xBF, 49, 0) && expect(b + 7, 0xBF, 54, 127), "tape page: Shift + MINUS -> the Move's - (zoom)");
+        BTN(0x4A, 1); BTN(0x4A, 0);
+        usleep(200000);
+        CHECK(expect(ngot - 2, 0xBF, 58, 127) && expect(ngot - 1, 0xBF, 58, 0), "tape page: LOOP alone -> Loop on / off");
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
+        usleep(250000);
+    }
     CHECK(c_deactivate(cl) == 0, "A: deactivate");
 
     /* B: the real core on the shim */

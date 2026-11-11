@@ -258,7 +258,7 @@ _mode = None
 
 
 def set_mode(ch):
-    """Tells the bridge which page is up: "T" = the tape (the pads are the step buttons there), "O" = anything else."""
+    """Tells the bridge which page is up: "A" = the tape recorder page (its own buttons), "T" = the tape-style pages (instruments, song, mixer: the pads are the step buttons), "O" = anything else."""
     global _mode
     if ch == _mode:
         return
@@ -599,7 +599,7 @@ def install(pages):
             if card is None and T.engine and on_tape_page(T, menu):
                 (draw_tape if T.focus.track is None else draw_focus)(T)
                 publish()
-                set_mode("T")
+                set_mode("A")
                 return
             if card is None and T.engine and (on_project_menu(menu) or on_settings(menu)):
                 remove()                                      # the project menu and settings keep Console's own look (the Move screen, scaled up)

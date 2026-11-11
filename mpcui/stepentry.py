@@ -7,6 +7,7 @@ import time
 WHEEL = 14
 PUSH = 3                                                         # the wheel's push (the MPC encoder push)
 BACK = 51
+REDO, LOOPMARK, ARMSEL = 104, 105, 106                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
 K1 = 71                                                          # Move knob 1 (relative clicks)
 K1_ABS = 118                                                     # K1's absolute position from the bridge (0-127)
 MAX_LEN = 64
@@ -68,6 +69,47 @@ def on_tape(T):
         return bool(T.engine) and T.focus.track is None and native.on_tape_page(T, getattr(T, "_mpc_menu", None))
     except Exception:
         return False
+
+
+def pos_text(T):
+    try:
+        return T.position_text(T.tape.pos)
+    except Exception:
+        return ""
+
+
+def loop_mark(T):
+    """Shift + LOOP: the first press marks a point (the loop is there, four bars long, until you mark the other one), the second sets the
+    other end: whichever is earlier is the IN point, the later the OUT point. Both at the same spot: the points are taken away."""
+    e = T.engine
+    here = T.tape.pos
+    mark = getattr(T, "_loop_mark", None)
+    if mark is None:
+        T._loop_mark = here
+        e.set_loop_point("in", here)
+        T.say("LOOP POINT 1 AT %s  (SHIFT + LOOP AGAIN FOR THE OTHER)" % pos_text(T), 4)
+        return
+    T._loop_mark = None
+    a, b = (mark, here) if mark <= here else (here, mark)
+    if abs(b - a) < 1e-6:
+        e.clear_region()
+        T.say("IN / OUT POINTS CLEARED", 2)
+        return
+    e.set_region(a, b, True)
+    T.say("LOOP ON: IN %s  OUT %s" % (T.position_text(a), T.position_text(b)), 3)
+
+
+def tape_button(board, num):
+    T = board.T
+    e = T.engine
+    if not e:
+        return
+    if num == REDO:
+        T.say("REDONE" if e.redo() else "NOTHING TO REDO", 2)
+    elif num == LOOPMARK:
+        loop_mark(T)
+    elif num == ARMSEL:
+        board.keys.put("ARM%d" % T.armed)
 
 
 def in_seq(T):
@@ -182,6 +224,13 @@ def install(MoveBoard, pad_velocity=None):
 
     def cc(self, num, val):
         T = self.T
+        if num in (REDO, LOOPMARK, ARMSEL):                    # the bridge's tape-page buttons (see bridge/mapping.h)
+            if val:
+                tape_button(self, num)
+            return
+        if 71 <= num <= 74 and on_tape(T):
+            import tapepage                                     # K1-K3 and the fader: the tracks on screen (not always 1-4)
+            num += tapepage.top_row(T)
         if num == K1_ABS or num == K1:
             if length_page(T):
                 if num == K1_ABS:
@@ -226,9 +275,31 @@ def install(MoveBoard, pad_velocity=None):
             T.auto_page = T.seq_page = False
             T.seqp.held, T.synthp.held = {}, {}
             T.mlfo.tab = None
+            T._from_seq = "pending"                         # (the page opens next; closing it goes back to the sequencer)
         orig_note(self, num, val)
 
     def pad(self, p, vel):
         orig_pad(self, p, vel)                                   # the pads play and pick the drums; they never lay steps here
 
     MoveBoard.cc, MoveBoard.pad, MoveBoard.note = cc, pad, note
+    try:                                                         # the arp / pads page opened from a sequencer: its icon again goes back there
+        import movelfo
+        for name in ("goto_arp", "goto_pads"):
+            orig = getattr(movelfo.MoveLFO, name)
+
+            def wrapped(self, _orig=orig):
+                T = self.T
+                was_open = self.tab is not None
+                _orig(self)
+                state = getattr(T, "_from_seq", None)
+                if not was_open and self.tab is not None:
+                    T._from_seq = "armed" if state == "pending" else None
+                elif was_open and self.tab is None and state == "armed":
+                    T._from_seq = None
+                    T.seq_page = True
+                elif was_open:
+                    T._from_seq = None
+            setattr(movelfo.MoveLFO, name, wrapped)
+    except Exception:
+        import traceback
+        print("arp / pads return failed:\n" + traceback.format_exc(), flush=True)

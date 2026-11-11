@@ -26,6 +26,13 @@ except Exception:
     print("native screens are off:\n" + traceback.format_exc(), flush=True)
 sys.argv[0] = APP_PY
 try:
+    import audio
+    import redo
+    redo.install(audio.Engine)           # PLUS on the tape page: REDO (Console only has UNDO)
+except Exception:
+    import traceback
+    print("redo is off:\n" + traceback.format_exc(), flush=True)
+try:
     import sf2link
     sf2link.sync()                    # soundfonts on the SD card (sf2 folder) or in the samples: SF2 SYNTH sees them
 except Exception:

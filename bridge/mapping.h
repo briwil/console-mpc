@@ -59,6 +59,7 @@ static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47,
 /* ---- state ---- */
 static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
+static volatile int page_tapeonly;          /* the tape recorder page itself (not the instrument list, song or mixer): its own button layout */
 static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
 static volatile int page_nostep;            /* a page with no steps (the sound page): SEQ does nothing there and step mode / step settings don't apply (written by the screen thread) */
 static volatile int page_param;             /* a step is selected on the sequencer page (written by the screen thread): the pads are its settings, as with param_mode */
@@ -122,7 +123,7 @@ static void set_btn_light(int note, int on)
 static void refresh_buttons(void)
 {
     for (int i = 0; i < NBUTTONS; i++) set_btn_light(BUTTONS[i].mpc, move_btn[BUTTONS[i].move] ? 1 : 0);
-    set_btn_light(MPC_SEQ, (step_mode || param_mode) && !page_nostep);
+    set_btn_light(MPC_SEQ, (step_mode || param_mode) && !page_nostep && !page_tapeonly);
     set_btn_light(MPC_PADBANK, right_bank);
     set_btn_light(MPC_KNOBFX, knob_mode);
 }
@@ -247,7 +248,7 @@ static void mpc_pad_event(int idx, int vel, int on)
 static void mapping_tick(void)
 {
     tick_n++;
-    { static int seen; int now = page_tape * 4 + page_param * 2 + page_nostep; if (seen != now) { seen = now; refresh_pads(); } }     /* the pads change meaning on the tape page: new lights */
+    { static int seen; int now = page_tape * 8 + page_tapeonly * 16 + page_param * 2 + page_nostep; if (seen != now) { seen = now; if (page_tapeonly && knob_mode) { release_knob_pads(); knob_mode = 0; } refresh_pads(); refresh_buttons(); } }     /* the pads change meaning on the tape page: new lights */
 #ifdef NO_RETRIG
     return;
 #endif
@@ -271,6 +272,27 @@ static void mpc_button_event(int note, int down)
         return;
     }
     if (note == MPC_ENC_PUSH) { send3(0xBF, 3, down ? 127 : 0); return; }
+    if (page_tapeonly && note != MPC_SHIFT) {                         /* the tape page has its own layout */
+        static uint8_t alt[128];                                       /* a button pressed with Shift is released as that, whatever Shift does by then */
+        if (down) alt[note] = shift_held;
+        int was_alt = alt[note];
+        switch (note) {
+        case MPC_KNOBFX: case MPC_SEQ: case MPC_PADBANK: case 0x01: case 0x35: case 0x28:
+            return;                                                    /* KNOB FX, SEQ, PAD BANK, PAD FX, TAP TEMPO, 16 LEVELS: nothing here */
+        case 0x0B: send3(0xBF, 52, down ? 127 : 0); return;           /* NOTE REPEAT = Drop (Shift: Drop and push the rest later) */
+        case 0x09:                                                     /* ERASE = Cut; Shift + ERASE = Copy (Console must not see Shift on it) */
+            if (was_alt) { if (down) { send3(0xBF, 49, 0); send3(0xBF, 60, 127); send3(0xBF, 49, 127); } else send3(0xBF, 60, 0); }
+            else send3(0xBF, 119, down ? 127 : 0);
+            return;
+        case 0x36: case 0x37:                                          /* MINUS = Undo, PLUS = Redo; Shift + them = zoom (the Move's + / -) */
+            if (!was_alt) { send3(0xBF, note == 0x36 ? 104 : 56, down ? 127 : 0); return; }
+            break;
+        case 0x4A:                                                     /* LOOP = loop on / off; Shift + LOOP = set a loop point (Console works out in or out) */
+            if (was_alt) { if (down) send3(0xBF, 105, 127); return; }
+            break;
+        case 0x49: if (down) send3(0xBF, 106, 127); return;           /* SAMPLE REC = arm / disarm the selected track */
+        }
+    }
     if (note == MPC_SEQ && page_nostep) return;                       /* a page with no steps: SEQ does nothing (and nothing carries over to the next page) */
     if (down && note == MPC_SEQ) {
         if (shift_held) param_mode = !param_mode;                     /* Shift + SEQ: the pads are a step's settings */
