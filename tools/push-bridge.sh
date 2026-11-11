@@ -3,7 +3,7 @@
 # Why this instead of curl | ssh tar: it (1) downloads fresh (no cached old copy) and checks the file is whole,
 # (2) quits Console on the MPC first so no file is replaced while it's running (that froze it),
 # (3) unpacks beside the old copy, then swaps, (4) flushes to flash (sync) and (5) checks the build on the MPC
-# matches what it sent. Only then does it restart the MPC for you.
+# matches what it sent. Only then does it tell you it is safe to restart.
 set -eu
 KEY=${MPC_CLIENT_KEY:-$HOME/.ssh/mpc_sample_client_ed25519}
 HOST=root@192.168.155.1
@@ -36,7 +36,4 @@ mpc "cd $C && rm -rf mpc.old && { [ -d mpc ] && mv mpc mpc.old || true; } && mv 
 echo "5/5  Checking"
 GOT=$(mpc "cat $C/mpc/BUILD")
 [ "$GOT" = "$NEW" ] || { echo "MISMATCH: MPC has '$GOT'. Do NOT restart; run this again."; exit 1; }
-echo "Done: the MPC has build $GOT, safely written. Restarting the MPC now (it comes back into Console in about a minute)."
-# (run detached so the ssh session ending doesn't cancel it; try every way a reboot can be asked for)
-mpc "nohup sh -c 'sleep 1; sync; systemctl reboot || /sbin/reboot || reboot -f || echo b > /proc/sysrq-trigger' >/dev/null 2>&1 &" || true
-echo "(if the MPC has not restarted in 15 seconds, power-cycle it: the update itself is safely written)"
+echo "Done: the MPC has build $GOT, safely written. Now restart the MPC the way you normally do (power off and on)."
