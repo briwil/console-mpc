@@ -19,7 +19,7 @@ sleep 1
 rm -f "$C/STOP"
 rm -f "$C/app.pid"        # a leftover note from an earlier run makes Console think another copy is running
 while :; do
-  rm -f /tmp/console-native.rgb
+  rm -f /tmp/console-native.rgb /tmp/console-pagemode
   if [ -f "$C/mpc/mpc_app.py" ]; then APP="$C/mpc/mpc_app.py"; else APP="$C/move/app.py"; fi      # mpc_app.py = Console with its native 320x240 screens
   "$C/python/bin/python3" "$APP" > "$C/app.log" 2>&1 &
   PID=$!
@@ -32,6 +32,6 @@ while :; do
   wait "$PID"; CODE=$?
   [ "$CODE" = 75 ] && [ ! -f "$C/STOP" ] || break      # 75 = the app wants a restart
 done
-rm -f "$C/STOP" /tmp/console-native.rgb
+rm -f "$C/STOP" /tmp/console-native.rgb /tmp/console-pagemode
 restore
 echo "Console ended (exit code $CODE). The stock MPC app is starting again. Log: $C/app.log"

@@ -35,6 +35,11 @@ def song_after_punch(handle):
             import traceback
             print("song page step failed:\n" + traceback.format_exc(), flush=True)
         handle(name, T, m, e)
+        try:
+            if name == "DRUMS" and T.inst_page and T.instp.mode == "pick" and not T.drum_page:
+                T.instp.mode = None                      # from the song page: the INSTRUMENTS list, not the instrument picker
+        except Exception:
+            pass
     return wrapped
 
 

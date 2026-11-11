@@ -11,7 +11,7 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | Song mode on / off | on the SONG page: Shift + PLUS / MINUS |
 | Pads 1-16 | The left 4x4 pads (the drums) |
 | PAD BANK (latching) | Pads become the right 4x4 (chromatic) |
-| SEQ (latching) | Pads become the 16 step buttons |
+| SEQ (latching) | Pads become the 16 step buttons (on the tape page they always are: step 1-8 = tracks, Shift + step = arm) |
 | Shift + SEQ | Pads become a step's settings: Move pads 1-32 in order (PAD BANK flips 1-16 / 17-32). SEQ again goes back to the steps |
 | K1, K2, K3 | Move knobs 1-3 (always) |
 | KNOB FX (latching) | Knob mode: pads 1-8 = Move knobs 1-8. Hold a pad and turn the encoder; pads 9-16 are silent. No pad held: the encoder is the jog wheel again |

@@ -184,9 +184,28 @@ def publish():
     os.replace(tmp, PATH)
 
 
+MODE_PATH = os.environ.get("CONSOLE_PAGEMODE", "/tmp/console-pagemode")
+_mode = None
+
+
+def set_mode(ch):
+    """Tells the bridge which page is up: "T" = the tape (the pads are the step buttons there), "O" = anything else."""
+    global _mode
+    if ch == _mode:
+        return
+    _mode = ch
+    try:
+        with open(MODE_PATH + ".tmp", "w") as f:
+            f.write(ch)
+        os.replace(MODE_PATH + ".tmp", MODE_PATH)
+    except OSError:
+        pass
+
+
 def remove():
     global _last
     _last = None
+    set_mode("O")
     try:
         os.remove(PATH)
     except OSError:
@@ -418,9 +437,9 @@ def draw_focus(T):
         fout = (here[5] if len(here) > 5 else 0) / 44100.0
         def fade(sec):
             return "OFF" if sec <= 0 else ("%d MS" % round(sec * 1000) if sec < 1 else "%.2g S" % sec)
-        c.text_in(38, py + 22, 16, "K4 GAIN %+.1f DB" % gain, FG)
-        c.text_in(150, py + 22, 16, "K5 IN " + fade(fin), FG)
-        c.text_in(228, py + 22, 16, "K6 OUT " + fade(fout), FG)
+        c.text_in(38, py + 22, 16, "FADER GAIN %+.1f DB" % gain, FG)
+        c.text_in(150, py + 22, 16, "PAD5 IN " + fade(fin), FG)
+        c.text_in(228, py + 22, 16, "PAD6 OUT " + fade(fout), FG)
     if T.message and time.monotonic() < T.message_until:
         c.rect(0, H - BOTTOM_H, W, BOTTOM_H, ACC)
         c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], BG)
@@ -507,7 +526,7 @@ def draw_seq(T):
             c.text(x + 6, top + 7, str(label)[:9], MID)
             v = str(value)
             c.text(x + 6, top + 26 if len(v) <= 4 else top + 31, v[:9] if len(v) > 4 else v, FG, 3 if len(v) <= 4 else 1)
-            c.text(x + 6, top + 57, ("K%d" % (i + 1)) if i < 3 else "FADE", DIM)
+            c.text(x + 6, top + 57, ("K%d" % (i + 1)) if i < 3 else "FADER", DIM)
         hint = "WHEEL: MOVE BOX   HIT DRUM: ADD STEP"
     elif knobs:
         label, value, on = knobs[0]
@@ -594,10 +613,12 @@ def install(pages):
             if card is None and T.engine and on_tape_page(T, menu):
                 (draw_tape if T.focus.track is None else draw_focus)(T)
                 publish()
+                set_mode("T")
                 return
             if card is None and T.engine and on_seq_page(T, menu):
                 draw_seq(T)
                 publish()
+                set_mode("O")
                 return
         except Exception:
             import traceback

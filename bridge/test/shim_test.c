@@ -223,6 +223,25 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x80, 0x4A, 0x00 }, 3);
         CHECK(expect(b, 0xBF, 58, 127), "A: LOOP -> Move Loop");
     }
+    {   /* the tape page (Console writes T to /tmp/console-pagemode): pads are the step buttons there */
+        int b = ngot;
+        FILE *pf = fopen("/tmp/console-pagemode", "wb"); fputc('T', pf); fclose(pf);
+        usleep(200000);
+        send((unsigned char[]){ 0x99, 37, 70 }, 3);
+        send((unsigned char[]){ 0x89, 37, 0 }, 3);
+        send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);
+        send((unsigned char[]){ 0x99, 36, 71 }, 3);                   /* Shift + pad 2: Shift + step 2, not a pattern pad */
+        send((unsigned char[]){ 0x89, 36, 0 }, 3);
+        send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);
+        CHECK(expect(b, 0x9F, 16, 70) && expect(b + 2, 0xBF, 49, 127) && expect(b + 3, 0x9F, 17, 71), "A: tape page: pads are the step buttons (also with Shift)");
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x99, 37, 70 }, 3);
+        send((unsigned char[]){ 0x89, 37, 0 }, 3);
+        CHECK(expect(b, 0x9F, 68, 70), "A: other pages: the pads are drum pads again");
+        remove("/tmp/console-pagemode");
+    }
     int s0 = ngot;
     /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings); PAD BANK = 17-32; SEQ goes to steps */
     send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);

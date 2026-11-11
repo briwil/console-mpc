@@ -353,6 +353,17 @@ static uint8_t nbuf[8 + 320 * 240 * 3];
 
 static int was_native;
 
+/* /tmp/console-pagemode: one letter from Console: T = the tape page (the pads are the step buttons there), anything else = not */
+static void pagemode_poll(void)
+{
+    int fd = open("/tmp/console-pagemode", 0);
+    if (fd < 0) { page_tape = 0; return; }
+    char ch = 0;
+    long n = read(fd, &ch, 1);
+    close(fd);
+    if (n == 1) page_tape = (ch == 'T');
+}
+
 static int native_poll(void)
 {
     int fd = open(NATIVE_PATH, 0);
@@ -383,6 +394,7 @@ static void *display_main(void *arg)
 {
     (void)arg;
     while (running) {
+        pagemode_poll();
         if (native_poll()) { frame_new = -1; was_native = 1; usleep(16000); continue; }
         if (was_native) { was_native = 0; memset(shadow, 0, sizeof shadow); if (frame_last >= 0) frame_new = frame_last; }     /* back to the Move screen */
         int f = frame_new;
