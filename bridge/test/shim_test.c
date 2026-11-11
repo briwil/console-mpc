@@ -41,9 +41,12 @@ static volatile int ngot;
 static volatile int sent_lights;
 static unsigned char lightmsgs[4][3] = { { 0x9F, 68, 127 }, { 0x9F, 69, 120 }, { 0xBF, 85, 127 }, { 0x9F, 16, 120 } };
 
+static void *p_il;
+static volatile float in_seen;
 static int fake_process(uint32_t n, void *arg)
 {
     (void)arg;
+    if (p_il) in_seen = ((float *)c_buf(p_il, n))[5];
     float *l = c_buf(p_ol, n), *r = c_buf(p_or, n);
     static float ph;
     for (uint32_t i = 0; i < n; i++) { l[i] = r[i] = 0.2f * (ph < 0.5f ? 1 : -1); ph += 440.f / 44100.f; if (ph >= 1) ph -= 1; }
@@ -97,7 +100,7 @@ int main(int argc, char **argv)
     cl = c_open("t", 1, &st);
     p_ol = c_port(cl, "out_L", "32 bit float mono audio", 2, 0);
     p_or = c_port(cl, "out_R", "32 bit float mono audio", 2, 0);
-    c_port(cl, "in_L", "32 bit float mono audio", 1, 0);
+    p_il = c_port(cl, "in_L", "32 bit float mono audio", 1, 0);
     c_port(cl, "in_R", "32 bit float mono audio", 1, 0);
     p_cin = c_port(cl, "controls_in", "8 bit raw midi", 1, 0);
     p_lights = c_port(cl, "lights_out", "8 bit raw midi", 2, 0);
@@ -222,6 +225,13 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x90, 0x4A, 0x7F }, 3);
         send((unsigned char[]){ 0x80, 0x4A, 0x00 }, 3);
         CHECK(expect(b, 0xBF, 58, 127), "A: LOOP -> Move Loop");
+    }
+    {   /* the audio inputs: what the capture side hears arrives on in_L */
+        float *ti = dlsym(lib, "mpcshim_test_input");
+        *ti = 0.25f;
+        usleep(100000);
+        CHECK(in_seen > 0.24f && in_seen < 0.26f, "A: the audio inputs reach in_L");
+        *ti = 0.f;
     }
     {   /* the tape page (Console writes T to /tmp/console-pagemode): pads are the step buttons there */
         int b = ngot;

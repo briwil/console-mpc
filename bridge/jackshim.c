@@ -43,6 +43,7 @@ extern int sched_setscheduler(int, int, const struct sched_param_ *);
 extern int snd_pcm_open(void **, const char *, int, int);
 extern int snd_pcm_set_params(void *, int, int, unsigned, unsigned, int, unsigned);
 extern long snd_pcm_writei(void *, const void *, unsigned long);
+extern long snd_pcm_readi(void *, void *, unsigned long);
 extern int snd_pcm_recover(void *, int, int);
 extern int snd_pcm_close(void *);
 extern void *memcpy(void *, const void *, unsigned long);
@@ -102,6 +103,7 @@ static struct port *find(const char *name)
 
 static int midifd = -1, fbfd = -1;
 static void *pcm;
+static void *pcm_in;                                  /* the capture side (the mic / line inputs) of the same I2S card; NULL = no input */
 static uint32_t fbw = 320, fbh = 240, fbstride = 1280, roff = 16, goff = 8, boff = 0;
 
 struct fb_bitfield { uint32_t offset, length, msb_right; };
@@ -138,13 +140,51 @@ static int hw_audio_open(void)
     for (int tries = 0; tries < 25; tries++) {
         if (snd_pcm_open(&pcm, "hw:2,0", 0, 0) == 0) {
             /* S32_LE = 10, RW_INTERLEAVED = 3, stereo, 44100, no resampling, 9 ms buffer */
-            if (snd_pcm_set_params(pcm, 10, 3, 2, RATE, 0, 9000) == 0) return 0;
+            if (snd_pcm_set_params(pcm, 10, 3, 2, RATE, 0, 9000) == 0) {
+                /* the inputs: SND_PCM_STREAM_CAPTURE = 1; if it can't be opened Console simply hears silence there */
+                if (snd_pcm_open(&pcm_in, "hw:2,0", 1, 0) == 0) {
+                    if (snd_pcm_set_params(pcm_in, 10, 3, 2, RATE, 0, 9000) != 0) { snd_pcm_close(pcm_in); pcm_in = 0; }
+                } else pcm_in = 0;
+                return 0;
+            }
             snd_pcm_close(pcm);
             return -1;
         }
         usleep(200000);
     }
     return -1;
+#endif
+}
+
+#ifdef HOST_TEST
+EXPORT float mpcshim_test_input = 0.f;                   /* what the fake inputs hear */
+#endif
+
+/* one period of the inputs into in_L / in_R (silence when there is no capture device or it failed) */
+static void hw_audio_read(float *l, float *r)
+{
+#ifdef HOST_TEST
+    for (int i = 0; i < PERIOD; i++) l[i] = r[i] = mpcshim_test_input;
+#else
+    static int32_t in32[PERIOD * 2];
+    if (!pcm_in) return;
+    long got = 0;
+    int fails = 0;
+    while (got < PERIOD) {
+        long k = snd_pcm_readi(pcm_in, in32 + got * 2, (unsigned long)(PERIOD - got));
+        if (k < 0) {
+            if (snd_pcm_recover(pcm_in, (int)k, 1) < 0 || ++fails > 3) {      /* a persistent error: the inputs stay silent */
+                if (fails > 3) pcm_in = 0;
+                break;
+            }
+            continue;
+        }
+        got += k;
+    }
+    for (int i = 0; i < got; i++) {
+        l[i] = (float)in32[i * 2] * (1.0f / 2147483648.0f);
+        r[i] = (float)in32[i * 2 + 1] * (1.0f / 2147483648.0f);
+    }
 #endif
 }
 
@@ -451,6 +491,7 @@ static void *audio_main(void *arg)
 
         if (il) memset(il->audio, 0, sizeof il->audio);
         if (ir) memset(ir->audio, 0, sizeof ir->audio);
+        if (il && ir) hw_audio_read(il->audio, ir->audio);
         for (int i = 0; i < nports; i++)
             if (ports[i].midi && !ports[i].input) { ports[i].nev = 0; ports[i].nstore = 0; }
         if (cin) {
