@@ -691,6 +691,53 @@ def on_tape_page(T, menu):
     return True
 
 
+# ------------------------------------------------------------------ the mixer
+
+def on_mixer_page(T, menu):
+    if menu is not None and (menu.open or menu.kits.open):
+        return False
+    return T.fx_page == "mixer" and T.engine is not None
+
+
+def draw_mixer(T):
+    """MIXER: 8 strips with the instrument, level fader, level number, pan and a MUTE tag."""
+    from console import mix_pan_text
+    c = canvas
+    c.clear()
+    e = T.engine
+    c.rect(0, 0, W, TOP_H, BAR)
+    c.text_in(4, 0, TOP_H, "MIXER", ACC)
+    c.text_in(W - 4 - c.width("SHIFT: PAN"), 0, TOP_H, "SHIFT: PAN", MID)
+    for i in range(8):
+        x, y, w, h = 4 + i * 39, 22, 35, 172
+        mid = e.slots[i]
+        muted = bool(mid) and i in e.slot_mutes
+        c.rect(x, y, w, h, CELL)
+        c.frame(x, y, w, h, CELL_LINE)
+        c.text(x + 3, y + 4, str(i + 1), ACC if mid else DIM)
+        if not mid:
+            c.text(x + 3, y + 14, "-", DIM)
+            continue
+        c.text(x + 3, y + 14, str(T.instp.title(mid)).upper()[:5], MID)
+        lvl = max(0.0, min(1.0, float(e.inst_levels[i])))
+        fx, fy, fh = x + 5, y + 30, 92
+        top = int(fh * (1 - lvl))
+        c.rect(fx, fy, 10, fh, CELL_LINE)
+        c.rect(fx, fy + top, 10, fh - top, DIM if muted else ACC)
+        c.text(x + 3, y + 128, "%d" % round(lvl * 100), DIM if muted else FG)
+        c.text(x + 3, y + 142, mix_pan_text(e.inst_pans[i]), MID)
+        if muted:
+            c.rect(x + 3, y + 156, 29, 10, (60, 30, 30))
+            c.text(x + 6, y + 157, "MUTE", FG)
+        else:
+            c.rect(x + 3, y + 156, 29, 10, CELL_LINE)
+    c.rect(0, H - BOTTOM_H, W, BOTTOM_H, BAR)
+    if T.message and time.monotonic() < T.message_until:
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, T.message[:44], ACC)
+    else:
+        c.text_in(4, H - BOTTOM_H, BOTTOM_H, "KNOBS: LEVEL   PAD: MUTE   SHIFT+PAD: SOLO", DIM)
+
+
 def on_seq_page(T, menu):
     """True when pages.draw would draw seq_page for a drum lane (not the synth's sequencer, punch FX or automation)."""
     if menu is not None and (menu.open or menu.kits.open):
@@ -718,6 +765,11 @@ def install(pages):
             card = T.pagefx.state() if getattr(T, "pagefx", None) is not None else None
             if card is None and T.engine and on_tape_page(T, menu):
                 (draw_tape if T.focus.track is None else draw_focus)(T)
+                publish()
+                set_mode("T")
+                return
+            if card is None and T.engine and on_mixer_page(T, menu):
+                draw_mixer(T)
                 publish()
                 set_mode("T")
                 return
