@@ -25,6 +25,11 @@ except Exception:
     import traceback
     print("native screens are off:\n" + traceback.format_exc(), flush=True)
 sys.argv[0] = APP_PY
+try:
+    import sf2link
+    sf2link.sync()                    # soundfonts on the SD card (sf2 folder) or in the samples: SF2 SYNTH sees them
+except Exception:
+    pass
 
 
 def song_after_punch(handle):

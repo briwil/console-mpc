@@ -52,6 +52,26 @@ def draw_lfo(T, nat):
         pairs = [(a.replace("SONG ", ""), b) for a, b in ml.sends_values()]
         knob_page(T, nat, ("sends", e.slot), "SLOT %d" % (e.slot + 1), "SENDS", pairs)
         return
+    if ml.pads_on_page():
+        knob_page(T, nat, ("pads", e.slot), "SLOT %d" % (e.slot + 1), "PADS", [(a, b) for a, b in ml.pads_values()])
+        return
+    if ml.arp_on_page():
+        cfg = ml.cfg()
+
+        def rhythm(c):                                  # the 16 steps: rest dark, note half, accent full
+            for k, r in enumerate(cfg["rhythm"][:16]):
+                x = 8 + k * 19
+                c.rect(x, 32, 17, 40, G[1] if (k // 4) % 2 == 0 else G[0])
+                if r == 1:
+                    c.rect(x, 52, 17, 20, G[5])
+                elif r == 2:
+                    c.rect(x, 32, 17, 40, WHITE)
+                num = str(k + 1)
+                c.text_px(x + 8 - c_w(c, 8, num) // 2, 86, num, WHITE if k % 4 == 0 else G[4], 8, 0)
+        msg = _msg(T, nat.time.monotonic())
+        _steps_page(T, nat, ("arp", ml.arp_second()), "ARP 2" if ml.arp_second() else "ARP", "ON" if cfg["on"] else "OFF",
+                    msg, rhythm, [(a, b) for a, b in ml.arp_values()])
+        return
     pos = ml.insert_pos()
     if pos is not None:
         ins = T.insfx(None, pos)
@@ -69,14 +89,14 @@ def draw_lfo(T, nat):
 
 
 def on_lfo_page(T, menu):
-    """LFO 1 / 2, INSERT 1 / 2 and SENDS (not the arp or pads pages, the effect picker or the sample browser)."""
+    """LFO 1 / 2, INSERT 1 / 2, SENDS, ARP and PADS (not the effect picker or the sample browser)."""
     if menu is not None and (menu.open or menu.kits.open):
         return False
     try:
         if T.fx_page or T.seq_page or not T.drum_page or T.sbrowse.active:
             return False
         ml = T.mlfo
-        if not ml.active() or ml.arp_on_page() or ml.pads_on_page():
+        if not ml.active():
             return False
         if ml.insert_pos() is not None and T.fxpick.active:
             return False
@@ -171,7 +191,9 @@ def _steps_page(T, nat, key, left, right, msg, strip_args, pairs):
                 c.text_px(314 - text_width(c.pxfont(16), right, -1), 25, right, G[5], 16, -1)
         if msg:
             c.text_px(6, 6, msg[:50], nat.ACC, 8, 0)
-        if strip_args is not None:
+        if callable(strip_args):
+            strip_args(c)
+        elif strip_args is not None:
             _strip(c, **strip_args)
 
     items = [(str(a), str(b), 1.0) for a, b in pairs]
