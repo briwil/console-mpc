@@ -606,6 +606,17 @@ def install(pages):
             T._mpc_menu = menu                       # (so the wheel handler knows a menu is open and leaves the wheel alone)
         except Exception:
             pass
+        import namescan
+        if namescan.ACTIVE:                          # reading every synth's preset names (tools/scan-names.sh): its own screen
+            try:
+                namescan.tick(T)
+                namescan.draw(sys.modules[__name__])
+                publish()
+                set_mode("O")
+            except Exception:
+                import traceback
+                namescan._log(traceback.format_exc())
+            return
         try:
             card = T.pagefx.state() if getattr(T, "pagefx", None) is not None else None
             if card is None and T.engine and on_tape_page(T, menu):

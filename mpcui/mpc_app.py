@@ -103,6 +103,13 @@ try:
 except Exception:
     import traceback
     print("stress test is off:\n" + traceback.format_exc(), flush=True)
+try:
+    import namescan
+    if not _STRESS:
+        namescan.prepare()            # tools/scan-names.sh asked: read every synth's preset names (its own empty project folder)
+except Exception:
+    import traceback
+    print("preset name scan is off:\n" + traceback.format_exc(), flush=True)
 # run app.py as a module (not __main__: its main() is called below), put the wrapper in where main() looks for handle
 G = runpy.run_path(APP_PY, run_name="console_app")
 if _STRESS:
@@ -127,15 +134,26 @@ try:
 
         def _p_init2(self, *a, **k):
             _p_init(self, *a, **k)
-            try:
-                with open(_names_file) as fh:
-                    for key, nm in json.load(fh).items():
-                        m, b, n = key.split("|")
-                        self.names[(m, int(b), int(n))] = nm
-            except Exception:
-                pass
+            for path in (os.path.join(os.path.dirname(os.path.abspath(__file__)), "preset-names.json"), _names_file):
+                try:                                     # the names that come with Console (read once by namescan.py), then yours
+                    with open(path) as fh:
+                        for key, nm in json.load(fh).items():
+                            m, b, n = key.split("|")
+                            self.names[(m, int(b), int(n))] = nm
+                except Exception:
+                    pass
 
         def _p_label2(self, i):
+            try:                                         # a synth whose presets are a menu: every name is known at once
+                d = self.d()
+                pi = d.preset_info or {}
+                n = i - len(self.mine)
+                if pi.get("menu") and n >= 0 and (d.machine, d.bank(), n) not in self.names:
+                    opts = d.params[d.preset_param()]["options"]
+                    if n < len(opts):
+                        self.names[(d.machine, d.bank(), n)] = str(opts[n]).title()
+            except Exception:
+                pass
             before = len(self.names)
             out = _p_label(self, i)
             if len(self.names) != before:

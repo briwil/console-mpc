@@ -178,14 +178,11 @@ def draw_presets(T, nat):
     c.text_px(16, 136 + int(0.3125 * px) + 1, shown, WHITE, px, -(px // 8))
     if mine:
         c.text_px(284 - c_w(c, 8, "MINE"), 170, "MINE", G[5], 8, 0)
-    c.text_px(8, 170, "PUSH THE WHEEL: THE LIST" if n else "MENU > SAVE PRESET MAKES ONE", G[5], 8, 0)
-    if bank:
-        c.text_px(8, 184, "KNOB 1: THE BANK", G[5], 8, 0)
     if not (presetpop.is_open() and n):
         return
     # the list, over the page
-    c.rect(12, 24, 296, 208, (0, 0, 0))
-    c.frame(12, 24, 296, 208, WHITE)
+    c.rect(12, 24, 296, 190, (0, 0, 0))
+    c.frame(12, 24, 296, 190, WHITE)
     c.text_px(20, 44, "PRESETS", WHITE, 16, -1)
     c.text_px(300 - text_width(c.pxfont(16), count, -1), 44, count, G[5], 16, -1)
     c.rect(12, 50, 296, 1, WHITE)
@@ -204,8 +201,6 @@ def draw_presets(T, nat):
         c.text_px(22, y + 16, nm, col, 16, -2)
         if tag:
             c.text_px(298 - c_w(c, 8, tag), y + 13, tag, col, 8, 0)
-    c.rect(12, 210, 296, 1, WHITE)
-    c.text_px(20, 225, "PUSH: KEEP IT    BACK: AS IT WAS", G[5], 8, 0)
 
 
 def on_presets_page(T, menu):
