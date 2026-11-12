@@ -106,7 +106,8 @@ except Exception:
 try:
     import namescan
     if not _STRESS:
-        namescan.prepare()            # tools/scan-names.sh asked: read every synth's preset names (its own empty project folder)
+        import leakhunt
+        namescan.prepare() or leakhunt.prepare()      # tools/scan-names.sh: every synth's preset names; tools/leak-hunt.sh: which instrument or effect keeps memory (each in its own empty project folder)
 except Exception:
     import traceback
     print("preset name scan is off:\n" + traceback.format_exc(), flush=True)
