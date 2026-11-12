@@ -31,8 +31,13 @@ def line():
     more = sorted(((n - _first[0].get(k, 0), k) for k, n in kinds.items()), reverse=True)[:5]
     grow = ", ".join("%s %+d" % (k, d) for d, k in more if d > 50)
     mb = lambda v: "?" if v is None else "%.1f MB" % (v / 1048576.0)
-    return "   in use %s  held free %s  python %d objects%s" % (mb(used), mb(free), sys.getallocatedblocks(),
-                                                             ("  (most more since the start: %s)" % grow) if grow else "")
+    try:
+        import memtrim
+        trimmed = "  trimmed %d times, %s given back" % (memtrim.count[0], mb(memtrim.released[0]))
+    except Exception:                                        # noqa: BLE001
+        trimmed = ""
+    return "   in use %s  held free %s  python %d objects%s%s" % (mb(used), mb(free), sys.getallocatedblocks(), trimmed,
+                                                               ("  (most more since the start: %s)" % grow) if grow else "")
 
 
 def install(stress_mod):

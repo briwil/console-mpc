@@ -57,6 +57,8 @@ try:
     import audio
     import redo
     redo.install(audio.Engine)           # PLUS on the tape page: REDO (Console only has UNDO)
+    import memtrim
+    memtrim.install(audio)               # freed memory goes back to the system (after a project opens, and every 2 minutes)
     import sequencer as _sequencer
     redo.install_seq(_sequencer.Sequencer)   # ... and Shift + PLUS on a sequencer page
 except Exception:
