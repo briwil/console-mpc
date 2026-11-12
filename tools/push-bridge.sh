@@ -1,5 +1,9 @@
 #!/bin/sh
 # Safe one-command update of the MPC bridge + screens from your Mac:   sh push-bridge.sh
+# The repo is private, so it needs to log in to GitHub. Either way works:
+#   - a token: save a fine-grained access token (briwil/console-mpc, Contents: read-only) in ~/.console-mpc-token
+#     (or set GH_TOKEN) and run:   sh push-bridge.sh
+#   - a file: download mpc-bridge.tgz yourself and run:   sh push-bridge.sh ~/Downloads/mpc-bridge.tgz
 # Why this instead of curl | ssh tar: it (1) downloads fresh (no cached old copy) and checks the file is whole,
 # (2) quits Console on the MPC first so no file is replaced while it's running (that froze it),
 # (3) unpacks beside the old copy, then swaps, (4) flushes to flash (sync) and (5) checks the build on the MPC
@@ -11,8 +15,26 @@ C=/data/UserData/console
 mpc() { ssh -p 2222 -i "$KEY" -o ConnectTimeout=8 "$HOST" "$@"; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 
-echo "1/5  Downloading the latest build"
-curl -fsSL -H 'Cache-Control: no-cache' "https://github.com/briwil/console-mpc/releases/download/bridge-latest/mpc-bridge.tgz?t=$(date +%s)" -o "$T/b.tgz"
+SRC=${1:-}
+TOKEN=${GH_TOKEN:-$(cat "$HOME/.console-mpc-token" 2>/dev/null || true)}
+TOKEN=$(printf '%s' "$TOKEN" | tr -d ' \r\n')
+if [ -n "$SRC" ]; then
+  echo "1/5  Using the file $SRC"
+  [ -f "$SRC" ] || { echo "No such file: $SRC"; exit 1; }
+  cp "$SRC" "$T/b.tgz"
+elif [ -n "$TOKEN" ]; then
+  echo "1/5  Downloading the latest build (logged in with your token)"
+  API=https://api.github.com/repos/briwil/console-mpc/releases
+  URL=$(curl -fsSL -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" "$API/tags/bridge-latest?t=$(date +%s)" \
+        | grep -o 'https://api.github.com/repos/briwil/console-mpc/releases/assets/[0-9]*' | head -n 1) || URL=""
+  [ -n "$URL" ] || { echo "GitHub wouldn't show the release: check the token (briwil/console-mpc, Contents: read-only, not expired)."; exit 1; }
+  curl -fsSL -H "Authorization: Bearer $TOKEN" -H "Accept: application/octet-stream" "$URL" -o "$T/b.tgz" \
+    || { echo "The download failed."; exit 1; }
+else
+  echo "1/5  Downloading the latest build"
+  curl -fsSL -H 'Cache-Control: no-cache' "https://github.com/briwil/console-mpc/releases/download/bridge-latest/mpc-bridge.tgz?t=$(date +%s)" -o "$T/b.tgz" \
+    || { echo "The repo is private now: save an access token in ~/.console-mpc-token (see the top of this script), or pass the downloaded file:  sh push-bridge.sh ~/Downloads/mpc-bridge.tgz"; exit 1; }
+fi
 gzip -t "$T/b.tgz"
 tar xzf "$T/b.tgz" -C "$T" mpc/BUILD
 NEW=$(cat "$T/mpc/BUILD"); echo "     build: $NEW"
