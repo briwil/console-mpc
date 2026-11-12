@@ -198,43 +198,79 @@ EXPORT float mpcshim_test_input = 0.f;                   /* what the fake inputs
 #endif
 
 /* one period of the inputs into in_L / in_R (silence when there is no capture device, it failed, or nothing has arrived yet).
-   Never waits: it takes what the card has ready into a small queue and hands a period out of that. */
+   Never waits: it takes what the card has ready into a small queue and hands a period out of that.
+   Two sources: the codec (hw:2,0: the built-in mic or the jacks on the back, whichever Console's INPUT setting switched on) and
+   USB (hw:3,0: what the computer plays to "MPC Sample Audio"). /tmp/console-input holds "u" while USB is the one wanted. USB is
+   only opened the first time it is asked for. Its clock is the computer's, not ours: the queue drops or waits a little now and
+   then to stay in step. */
 #define IN_RING 2048                                     /* frames (a power of two) */
-static void hw_audio_read(float *l, float *r)
+struct capture { void *pcm; int32_t ring[IN_RING * 2]; int rd, fill, fails; long total; };
+static struct capture cap_main, cap_usb;
+static volatile int in_usb;                              /* 1: the inputs are USB */
+
+#ifndef HOST_TEST
+static void cap_pump(struct capture *c, const char *name)
 {
-#ifdef HOST_TEST
-    for (int i = 0; i < PERIOD; i++) l[i] = r[i] = mpcshim_test_input;
-#else
-    static int32_t ring[IN_RING * 2], tmp[PERIOD * 4];
-    static int rd, fill, fails;
-    static long total, calls;
-    if (!pcm_in) return;
+    static int32_t tmp[PERIOD * 4];
+    if (!c->pcm) return;
     for (int pass = 0; pass < 6; pass++) {
-        long k = snd_pcm_readi(pcm_in, tmp, PERIOD * 2);
+        long k = snd_pcm_readi(c->pcm, tmp, PERIOD * 2);
         if (k == -11 || k == 0) break;                   /* EAGAIN: nothing ready */
         if (k < 0) {
-            if (++fails > 400) { in_status("gave-up", (int)k, "frames", (int)total); pcm_in = 0; return; }
-            snd_pcm_prepare(pcm_in);                     /* an overrun (or a suspend): start again */
-            snd_pcm_start(pcm_in);
+            if (++c->fails > 400) { in_status(name, (int)k, "gave-up-frames", (int)c->total); snd_pcm_close(c->pcm); c->pcm = 0; return; }
+            snd_pcm_prepare(c->pcm);                     /* an overrun (or a suspend): start again */
+            snd_pcm_start(c->pcm);
             break;
         }
         for (long i = 0; i < k; i++) {
-            int w = (rd + fill) & (IN_RING - 1);
-            ring[w * 2] = tmp[i * 2]; ring[w * 2 + 1] = tmp[i * 2 + 1];
-            if (fill < IN_RING) fill++; else rd = (rd + 1) & (IN_RING - 1);
+            int w = (c->rd + c->fill) & (IN_RING - 1);
+            c->ring[w * 2] = tmp[i * 2]; c->ring[w * 2 + 1] = tmp[i * 2 + 1];
+            if (c->fill < IN_RING) c->fill++; else c->rd = (c->rd + 1) & (IN_RING - 1);
         }
-        total += k;
+        c->total += k;
         if (k < PERIOD * 2) break;
     }
-    if (++calls == 1723) in_status("after-5s-frames", (int)total, "errors", fails);      /* about 5 s in: is anything arriving? */
-    if (fill > PERIOD * 6) { int drop = fill - PERIOD * 2; rd = (rd + drop) & (IN_RING - 1); fill -= drop; }   /* fallen behind: catch up */
-    if (fill < PERIOD) return;                           /* (silence this period) */
+    if (c->fill > PERIOD * 6) { int drop = c->fill - PERIOD * 2; c->rd = (c->rd + drop) & (IN_RING - 1); c->fill -= drop; }   /* fallen behind: catch up */
+}
+
+static void cap_take(struct capture *c, float *l, float *r)
+{
+    if (c->fill < PERIOD) return;                        /* (silence this period) */
     for (int i = 0; i < PERIOD; i++) {
-        int k = (rd + i) & (IN_RING - 1);
-        l[i] = (float)ring[k * 2] * (1.0f / 2147483648.0f);
-        r[i] = (float)ring[k * 2 + 1] * (1.0f / 2147483648.0f);
+        int k = (c->rd + i) & (IN_RING - 1);
+        l[i] = (float)c->ring[k * 2] * (1.0f / 2147483648.0f);
+        r[i] = (float)c->ring[k * 2 + 1] * (1.0f / 2147483648.0f);
     }
-    rd = (rd + PERIOD) & (IN_RING - 1); fill -= PERIOD;
+    c->rd = (c->rd + PERIOD) & (IN_RING - 1); c->fill -= PERIOD;
+}
+#endif
+
+static void hw_audio_read(float *l, float *r)
+{
+#ifdef HOST_TEST
+    for (int i = 0; i < PERIOD; i++) l[i] = r[i] = mpcshim_test_input * (in_usb ? 0.5f : 1.0f);
+#else
+    static long calls, usb_try;
+    cap_main.pcm = pcm_in;
+    if (!pcm_in) return;                                 /* the inputs are off (no ENABLE_INPUT) */
+    calls++;
+    if (in_usb && !cap_usb.pcm && calls >= usb_try) {    /* USB wanted and not open: open it (again every 5 s if it can't be) */
+        usb_try = calls + 1723;
+        void *u = 0;
+        int ro = snd_pcm_open(&u, "hw:3,0", 1, 1), rp = -999;
+        if (ro == 0) {
+            rp = snd_pcm_set_params(u, 10, 3, 2, RATE, 0, 9000);
+            if (rp != 0) snd_pcm_close(u);
+            else { snd_pcm_start(u); cap_usb.pcm = u; cap_usb.rd = cap_usb.fill = cap_usb.fails = 0; }
+        }
+        in_status("usb-open", ro, "params", rp);
+    }
+    cap_pump(&cap_main, "codec");
+    pcm_in = cap_main.pcm;
+    cap_pump(&cap_usb, "usb");
+    if (calls == 1723) in_status("after-5s-frames", (int)cap_main.total, "errors", cap_main.fails);      /* about 5 s in: is anything arriving? */
+    if (in_usb) { cap_main.rd = (cap_main.rd + cap_main.fill) & (IN_RING - 1); cap_main.fill = 0; cap_take(&cap_usb, l, r); }
+    else { cap_usb.rd = (cap_usb.rd + cap_usb.fill) & (IN_RING - 1); cap_usb.fill = 0; cap_take(&cap_main, l, r); }
 #endif
 }
 
@@ -446,6 +482,12 @@ static int was_native;
 /* /tmp/console-pagemode: one letter from Console (and a second, y, while the instrument is a synth): T = the tape page (the pads are the step buttons there), P = steps selected, N = a page with no steps (SEQ does nothing), anything else = not */
 static void pagemode_poll(void)
 {
+    {   /* /tmp/console-input: "u" = the inputs are USB (mpcui/inputsrc.py) */
+        int fi = open("/tmp/console-input", 0);
+        char w = 0;
+        if (fi >= 0) { if (read(fi, &w, 1) != 1) w = 0; close(fi); }
+        in_usb = (w == 'u');
+    }
     int fd = open("/tmp/console-pagemode", 0);
     if (fd < 0) { page_tape = 0; page_tapeonly = 0; page_param = 0; page_nostep = 0; page_seq = 0; page_linear = 0; return; }
     char two[2] = { 0, 0 };

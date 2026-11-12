@@ -43,6 +43,8 @@ try:
     freerec.install_menu(_menu2)                                     # SETTINGS > REC TIMING: FREE / GRID
     import nolink
     nolink.install(_menu2)                                           # SETTINGS > SYNC: no Link on the MPC
+    import inputsrc
+    inputsrc.install_menu(_menu2)                                    # SETTINGS > INPUT: REAR / MIC / USB
     import nobigscreen
     nobigscreen.install(_menu2)                                      # no extended screen (web page) and no EXTERNAL SCREEN row
 except Exception:
@@ -175,7 +177,13 @@ try:
 
     def _input_parts2(e, c):
         who, what = _input_parts(e, c)
-        return ("INPUT" if who == "MOVE INPUT" else who), what          # (this isn't a Move)
+        if who == "MOVE INPUT":                                        # (this isn't a Move: what SETTINGS > INPUT is on)
+            try:
+                import inputsrc as _is
+                who = _is.name() + " INPUT"
+            except Exception:
+                who = "INPUT"
+        return who, what
     _pages.input_parts = _input_parts2
     import pagefx as _pagefx
     _label = _pagefx.label
