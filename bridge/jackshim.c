@@ -204,7 +204,7 @@ EXPORT float mpcshim_test_input = 0.f;                   /* what the fake inputs
    only opened the first time it is asked for. Its clock is the computer's, not ours: the queue drops or waits a little now and
    then to stay in step. */
 #define IN_RING 2048                                     /* frames (a power of two) */
-struct capture { void *pcm; int32_t ring[IN_RING * 2]; int rd, fill, fails; long total; };
+struct capture { void *pcm; int32_t ring[IN_RING * 2]; int rd, fill, fails; long total, rest; };   /* fails: in a row; rest: periods to leave it alone */
 static struct capture cap_main, cap_usb;
 static volatile int in_usb;                              /* 1: the inputs are USB */
 
@@ -213,15 +213,19 @@ static void cap_pump(struct capture *c, const char *name)
 {
     static int32_t tmp[PERIOD * 4];
     if (!c->pcm) return;
+    if (c->rest > 0) { c->rest--; return; }
     for (int pass = 0; pass < 6; pass++) {
         long k = snd_pcm_readi(c->pcm, tmp, PERIOD * 2);
         if (k == -11 || k == 0) break;                   /* EAGAIN: nothing ready */
         if (k < 0) {
-            if (++c->fails > 400) { in_status(name, (int)k, "gave-up-frames", (int)c->total); snd_pcm_close(c->pcm); c->pcm = 0; return; }
-            snd_pcm_prepare(c->pcm);                     /* an overrun (or a suspend): start again */
+            /* an overrun (or a suspend): start again. 400 failures in a row: leave it alone for 5 seconds, then try again.
+               (Never closed here and never given up for good: a busy moment used to switch the inputs off until the next start.) */
+            if (++c->fails > 400) { in_status(name, (int)k, "resting-after-frames", (int)c->total); c->fails = 0; c->rest = 1723; return; }
+            snd_pcm_prepare(c->pcm);
             snd_pcm_start(c->pcm);
             break;
         }
+        c->fails = 0;
         for (long i = 0; i < k; i++) {
             int w = (c->rd + c->fill) & (IN_RING - 1);
             c->ring[w * 2] = tmp[i * 2]; c->ring[w * 2 + 1] = tmp[i * 2 + 1];
