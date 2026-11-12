@@ -135,34 +135,77 @@ def on_lfo_page(T, menu):
 
 # ------------------------------------------------------------------ PRESETS
 
+def _fit(c, s, sizes, room):
+    """(px, text): the largest of sizes at which s fits in room px (cut short at the smallest if it never does)."""
+    for px in sizes:
+        if text_width(c.pxfont(px), s, -(px // 8)) <= room:
+            return px, s
+    px = sizes[-1]
+    while len(s) > 1 and text_width(c.pxfont(px), s, -(px // 8)) > room:
+        s = s[:-1]
+    return px, s
+
+
+def _preset_name(pr, i):
+    lab = str(pr.label(i)).upper()
+    mine = lab.startswith("*")
+    lab = lab.lstrip("*+ ")
+    return (lab if not lab.isdigit() else "PRESET " + lab), mine
+
+
 def draw_presets(T, nat):
+    """A box with the preset you're on; with the list open (mpcui/presetpop.py) the list over it."""
+    import presetpop
     pr = T.presets
     pr.sync()
     n = pr.total()
     now = nat.time.monotonic()
     bank = pr.bank_label()
-    top = ("BANK " + str(bank).upper())[:24] if bank else ""
-    right = "%d/%d" % (pr.pos + 1, n) if n else ""
     msg = _msg(T, now)
-    if not n:
-        rows = [("NO PRESETS YET", "", 0.45), ("MENU > SAVE PRESET", "", 0.3)]
-        sp.listview(nat, "presets-none", top, "PRESETS", rows, 0, now, msg)
-        return
-    shown = 7
-    first = max(0, min(pr.pos - shown // 2, n - shown))
-    rows = []
-    for i in range(first, min(n, first + shown)):
-        lab = str(pr.label(i)).upper()
-        tag = ""
-        if lab.startswith("*"):                       # yours: a star in front
-            lab, tag = lab.lstrip("* "), "MINE"
-        rows.append((lab[:24], tag, 0.55))
-    if not msg and pr.orig is not None:
-        msg = "KEPT? PUSH: YES  BACK: UNDO"
-    sp.listview(nat, ("presets", bank), top or right, "PRESETS", rows, pr.pos - first, now, msg, first)
     c = nat.canvas
-    if top and right:
-        c.text_px(314 - text_width(c.pxfont(16), right, -1), 19, right, G[5], 16, -1)
+    c.clear((0, 0, 0))
+    c.px[:] = sp.bands()
+    top = ("BANK " + str(bank).upper())[:24] if bank else "SLOT %d" % (T.engine.slot + 1)
+    c.text_px(6, 19, msg[:24] if msg else top, nat.ACC if msg else WHITE, 16, -1)
+    sp.title_line(c, "PRESETS")
+    name, mine = _preset_name(pr, pr.pos) if n else ("NONE", False)
+    c.text_px(8, 108, "PRESET", G[5], 8, 0)
+    count = "%d/%d" % (pr.pos + 1, n) if n else ""
+    c.text_px(284 - c_w(c, 8, count), 108, count, G[5], 8, 0)
+    c.rect(8, 114, 304, 44, (0, 0, 0))
+    c.frame(8, 114, 304, 44, WHITE)
+    px, shown = _fit(c, name, (24, 16), 288)
+    c.text_px(16, 136 + int(0.3125 * px) + 1, shown, WHITE, px, -(px // 8))
+    if mine:
+        c.text_px(284 - c_w(c, 8, "MINE"), 170, "MINE", G[5], 8, 0)
+    c.text_px(8, 170, "PUSH THE WHEEL: THE LIST" if n else "MENU > SAVE PRESET MAKES ONE", G[5], 8, 0)
+    if bank:
+        c.text_px(8, 184, "KNOB 1: THE BANK", G[5], 8, 0)
+    if not (presetpop.is_open() and n):
+        return
+    # the list, over the page
+    c.rect(12, 24, 296, 208, (0, 0, 0))
+    c.frame(12, 24, 296, 208, WHITE)
+    c.text_px(20, 44, "PRESETS", WHITE, 16, -1)
+    c.text_px(300 - text_width(c.pxfont(16), count, -1), 44, count, G[5], 16, -1)
+    c.rect(12, 50, 296, 1, WHITE)
+    shown_n = 7
+    first = max(0, min(pr.pos - shown_n // 2, n - shown_n))
+    for k, i in enumerate(range(first, min(n, first + shown_n))):
+        y = 54 + k * 22
+        nm, mn = _preset_name(pr, i)
+        tag = "MINE" if mn else ""
+        room = 272 - (c_w(c, 8, tag) + 8 if tag else 0)
+        _px, nm = _fit(c, nm, (16,), room)
+        on = i == pr.pos
+        if on:
+            c.rect(16, y, 288, 20, WHITE)
+        col = (0, 0, 0) if on else G[6]
+        c.text_px(22, y + 16, nm, col, 16, -2)
+        if tag:
+            c.text_px(298 - c_w(c, 8, tag), y + 13, tag, col, 8, 0)
+    c.rect(12, 210, 296, 1, WHITE)
+    c.text_px(20, 225, "PUSH: KEEP IT    BACK: AS IT WAS", G[5], 8, 0)
 
 
 def on_presets_page(T, menu):

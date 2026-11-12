@@ -63,6 +63,7 @@ static volatile int page_tapeonly;          /* the tape recorder page itself (no
 static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
 static volatile int page_nostep;            /* a page with no steps (the sound page): SEQ does nothing there and step mode / step settings don't apply (written by the screen thread) */
 static volatile int page_param;             /* a step is selected on the sequencer page (written by the screen thread): the pads are its settings, as with param_mode */
+static volatile int page_linear;            /* a synth is the instrument (second letter "y" in /tmp/console-pagemode): the note pads are Move pads 1-16 (bank: 17-32) in order, so the scale runs on up the rows instead of skipping the Move's right half */
 static int param_mode;                      /* Shift + SEQ: the pads are Move pads 1-32 in order (a step's settings), bank = 1-16 / 17-32 */
 static int pad_knob[16];                    /* knob mode: which Move knob (0-7) each held pad is touching, -1 none */
 static int knob_stamp[16], knob_clock;      /* ... and the order they were pressed (the last one wins) */
@@ -101,7 +102,7 @@ static void colour_rgb(int v, int *r, int *g, int *b)
 static void refresh_pads(void)
 {
     for (int i = 0; i < 16; i++) {
-        int v = ((param_mode && !page_nostep) || page_param) ? move_pad[i + (right_bank ? 16 : 0)] : ((step_mode && !page_nostep) || page_tape) ? move_step[i] : move_pad[(i / 4) * 8 + (i % 4) + (right_bank ? 4 : 0)];
+        int v = ((param_mode && !page_nostep) || page_param) ? move_pad[i + (right_bank ? 16 : 0)] : ((step_mode && !page_nostep) || page_tape) ? move_step[i] : move_pad[page_linear ? i + (right_bank ? 16 : 0) : (i / 4) * 8 + (i % 4) + (right_bank ? 4 : 0)];
         int r, g, b;
         colour_rgb(v, &r, &g, &b);
         if (v == 0) { r = 0; g = 6; b = 14; }                       /* idle: a faint blue so the pads can be found */
@@ -237,7 +238,7 @@ static void mpc_pad_event(int idx, int vel, int on)
     }
     if (on) {
         int note = ((param_mode && !page_nostep) || page_param) ? 68 + idx + (right_bank ? 16 : 0)
-                 : ((step_mode && !page_nostep) || page_tape) ? 16 + idx : 68 + (idx / 4) * 8 + (idx % 4) + (right_bank ? 4 : 0);
+                 : ((step_mode && !page_nostep) || page_tape) ? 16 + idx : page_linear ? 68 + idx + (right_bank ? 16 : 0) : 68 + (idx / 4) * 8 + (idx % 4) + (right_bank ? 4 : 0);
         pad_target[idx] = note;
         if ((!step_mode || page_nostep) && (!param_mode || page_nostep) && !page_param && !page_tape) last_drum = note;
         send3(0x9F, note, vel > 0 ? vel : 100);
@@ -255,7 +256,7 @@ static void mpc_pad_event(int idx, int vel, int on)
 static void mapping_tick(void)
 {
     tick_n++;
-    { static int seen; int now = page_tape * 8 + page_tapeonly * 16 + page_param * 2 + page_nostep; if (seen != now) { seen = now; if (page_tapeonly && knob_mode) { release_knob_pads(); knob_mode = 0; } refresh_pads(); refresh_buttons(); } }     /* the pads change meaning on the tape page: new lights */
+    { static int seen; int now = page_tape * 8 + page_tapeonly * 16 + page_param * 2 + page_nostep + page_linear * 32; if (seen != now) { seen = now; if (page_tapeonly && knob_mode) { release_knob_pads(); knob_mode = 0; } refresh_pads(); refresh_buttons(); } }     /* the pads change meaning on the tape page: new lights */
 #ifdef NO_RETRIG
     return;
 #endif

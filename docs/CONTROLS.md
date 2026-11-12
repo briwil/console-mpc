@@ -74,3 +74,7 @@ Where things are saved: projects, presets and settings go to the SD card, in `Co
 Stress test (Console's own): `echo 60 > /data/UserData/console/stress` over SSH (60 = minutes); the report is `console/stress-report.txt`. Shift + STOP ends it early.
 
 Audio inputs are off unless turned on: `sh tools/input-check.sh on` from the Mac (`off` to turn them off, no argument: a report of the sound card).
+
+Synth pads: the 16 pads play 16 notes of the scale in order (pad 5 is the 5th note); PAD BANK gives the next 16.
+
+PRESETS page (synths): the box shows the preset you're on. The wheel turns the pages as everywhere else; push the wheel for the list, turn to hear presets, push to keep one, Back for the sound you had. Knob 1: the bank.

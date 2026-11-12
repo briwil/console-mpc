@@ -443,15 +443,17 @@ static uint8_t nbuf[8 + 320 * 240 * 3];
 
 static int was_native;
 
-/* /tmp/console-pagemode: one letter from Console: T = the tape page (the pads are the step buttons there), P = steps selected, N = a page with no steps (SEQ does nothing), anything else = not */
+/* /tmp/console-pagemode: one letter from Console (and a second, y, while the instrument is a synth): T = the tape page (the pads are the step buttons there), P = steps selected, N = a page with no steps (SEQ does nothing), anything else = not */
 static void pagemode_poll(void)
 {
     int fd = open("/tmp/console-pagemode", 0);
-    if (fd < 0) { page_tape = 0; page_tapeonly = 0; page_param = 0; page_nostep = 0; page_seq = 0; return; }
-    char ch = 0;
-    long n = read(fd, &ch, 1);
+    if (fd < 0) { page_tape = 0; page_tapeonly = 0; page_param = 0; page_nostep = 0; page_seq = 0; page_linear = 0; return; }
+    char two[2] = { 0, 0 };
+    long n = read(fd, two, 2);
+    char ch = two[0];
     close(fd);
-    if (n == 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N'); page_seq = (ch == 'S' || ch == 'P'); }
+    if (n >= 1) page_linear = (n == 2 && two[1] == 'y');             /* second letter y: a synth (the note pads run in order) */
+    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N'); page_seq = (ch == 'S' || ch == 'P'); }
 }
 
 /* ---- the metronome: /tmp/console-metro = "on volume bpm*100 beats-per-bar t0_ns" (Console writes it while recording; t0 = a bar's start on CLOCK_MONOTONIC) ---- */

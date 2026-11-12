@@ -255,11 +255,13 @@ def publish():
 
 MODE_PATH = os.environ.get("CONSOLE_PAGEMODE", "/tmp/console-pagemode")
 _mode = None
+_synth = False            # the instrument shown is a synth (set every frame by the draw wrapper)
 
 
 def set_mode(ch):
     """Tells the bridge which page is up: "A" = the tape recorder page (its own buttons), "T" = the tape-style pages (instruments, song, mixer: the pads are the step buttons), "O" = anything else."""
     global _mode
+    ch = ch + ("y" if _synth else "")        # y: the instrument is a synth (the bridge lays the note pads out in order)
     if ch == _mode:
         return
     _mode = ch
@@ -594,6 +596,9 @@ def install(pages):
             import metronome
             import stepentry
             stepentry.deselect(T)
+            global _synth
+            e_ = T.engine
+            _synth = bool(e_ and e_.slot is not None and e_.slots[e_.slot] and e_.is_synth(e_.slots[e_.slot]))
             metronome.tick(T)                        # (while recording with the metronome on: tells the bridge when the beats are)
         except Exception:
             pass

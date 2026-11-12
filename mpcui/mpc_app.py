@@ -165,5 +165,12 @@ try:
 except Exception:
     import traceback
     print("step entry is off:\n" + traceback.format_exc(), flush=True)
-main.__globals__["handle"] = song_after_punch(G["handle"])
+_handle = song_after_punch(G["handle"])
+try:
+    import presetpop
+    _handle = presetpop.wrap(_handle)                    # PRESETS: a box, and the list pops up when you push the wheel
+except Exception:
+    import traceback
+    print("presets list is off:\n" + traceback.format_exc(), flush=True)
+main.__globals__["handle"] = _handle
 main()

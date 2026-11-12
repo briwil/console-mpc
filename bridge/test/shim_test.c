@@ -260,6 +260,17 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x99, 48, 71 }, 3);                   /* pad 9 -> note 76 */
         send((unsigned char[]){ 0x89, 48, 0 }, 3);
         CHECK(expect(b, 0x9F, 69, 70) && expect(b + 2, 0x9F, 76, 71), "A: steps selected (P): pads are the step settings in order");
+        /* Oy / Ny: a synth: the note pads are in order (pad 5 = the 5th note of the scale, not the Move's second row) */
+        pf = fopen("/tmp/console-pagemode", "wb"); fputs("Ny", pf); fclose(pf);
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x99, 40, 70 }, 3);                   /* pad 5 -> Move pad 5 (index 4) = note 72 */
+        send((unsigned char[]){ 0x89, 40, 0 }, 3);
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('N', pf); fclose(pf);
+        usleep(200000);
+        send((unsigned char[]){ 0x99, 40, 71 }, 3);                   /* a drum machine: pad 5 = the Move's second row (note 76) */
+        send((unsigned char[]){ 0x89, 40, 0 }, 3);
+        CHECK(expect(b, 0x9F, 72, 70) && expect(b + 2, 0x9F, 76, 71), "A: a synth (y): the note pads run in order; a drum machine keeps the 4x4");
         /* N: a page with no steps (the sound page): SEQ does nothing there, and nothing is left over on the next page */
         pf = fopen("/tmp/console-pagemode", "wb"); fputc('N', pf); fclose(pf);
         usleep(200000);
