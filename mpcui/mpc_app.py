@@ -47,6 +47,9 @@ try:
     inputsrc.install_menu(_menu2)                                    # SETTINGS > INPUT: REAR / MIC / USB
     import nobigscreen
     nobigscreen.install(_menu2)                                      # no extended screen (web page) and no EXTERNAL SCREEN row
+    import insertfx as _insfx_mod
+    import insertsafe
+    insertsafe.install(_insfx_mod)                                   # closing an insert effect waits for the sound core (no heap damage under load)
 except Exception:
     import traceback
     print("free recording is off:\n" + traceback.format_exc(), flush=True)
