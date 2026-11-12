@@ -18,7 +18,7 @@ if [ "${1:-}" = get ]; then
 fi
 mpc "rm -f $C/preset-names-scan.txt $C/preset-names-scan.json; touch $C/scan-names; sync"
 # Console running: ask it to save and quit, then bring the startup menu up (as push-bridge.sh does). No power-off needed.
-mpc "if pgrep -f mpc_app.py >/dev/null 2>&1; then touch $C/STOP; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do pgrep -f mpc-console.sh >/dev/null 2>&1 || break; sleep 1; done; fi; rm -f $C/boot-attempt /run/console-boot.done; sync; systemd-run --unit=console-boot-job-\$\$ --collect --no-block /bin/sh $C/mpc/boot.sh >/dev/null 2>&1" \
+mpc "if pgrep -f "[m]pc_app.py" >/dev/null 2>&1; then touch $C/STOP; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do pgrep -f "[m]pc-console.sh" >/dev/null 2>&1 || break; sleep 1; done; fi; rm -f $C/boot-attempt /run/console-boot.done; sync; systemd-run --unit=console-boot-job-\$\$ --collect --no-block /bin/sh $C/mpc/boot.sh >/dev/null 2>&1" \
   || echo "Could not bring the startup menu up: power the MPC off and on instead."
 echo "Asked. The startup menu comes up on the MPC in a few seconds: press PAD 1. It reads the names (leave the controls"
 echo "alone), then Console starts again as normal. After that run:  sh ~/scan-names.sh get"
