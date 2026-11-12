@@ -170,6 +170,13 @@ try:
         _P.__init__, _P.label = _p_init2, _p_label2
     except Exception as ex:
         print("preset name memory is off:", ex, flush=True)
+    import pages as _pages
+    _input_parts = _pages.input_parts
+
+    def _input_parts2(e, c):
+        who, what = _input_parts(e, c)
+        return ("INPUT" if who == "MOVE INPUT" else who), what          # (this isn't a Move)
+    _pages.input_parts = _input_parts2
     import pagefx as _pagefx
     _label = _pagefx.label
 
