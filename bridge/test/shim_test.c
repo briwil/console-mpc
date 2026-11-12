@@ -354,7 +354,7 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x80, 0x51, 0x00 }, 3);
     send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);
     CHECK(expect(g0 + 2, 0xBF, 49, 127) && expect(g0 + 3, 0xBF, 51, 127) && expect(g0 + 4, 0xBF, 51, 0), "A: Shift + STOP -> Back");
-    /* K1 is also sent as its absolute position (CC 118) */
+    /* K1 is also sent as its absolute position (CC 112) */
     {
         FILE *pf = fopen("/tmp/console-pagemode", "wb"); fputc('S', pf); fclose(pf);
         usleep(200000);
@@ -363,8 +363,8 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0xB0, 0x10, 0 }, 3);
         usleep(200000);
         int abs0 = 0;
-        for (int i = b; i < ngot; i++) if (got[i][0] == 0xBF && got[i][1] == 118 && got[i][2] == 0) abs0++;
-        CHECK(abs0 == 1, "A: K1 also sends its absolute position (CC 118) on a sequencer page");
+        for (int i = b; i < ngot; i++) if (got[i][0] == 0xBF && got[i][1] == 112 && got[i][2] == 0) abs0++;
+        CHECK(abs0 == 1, "A: K1 also sends its absolute position (CC 112) on a sequencer page");
         pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
         usleep(200000);
     }

@@ -11,7 +11,7 @@ REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO = 104, 105, 106, 107, 108
 PROJECT, SONGPAGE, GRIDNEXT = 109, 110, 111                     # Shift + pad 16 / 12 / 14 on the tape-style pages (as printed on the pads)
 ERASE = 119                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
 K1 = 71                                                          # Move knob 1 (relative clicks)
-K1_ABS = 118                                                     # K1's absolute position from the bridge (0-127)
+K1_ABS = 112                                                     # K1's absolute position from the bridge (0-127). (Not 118: that is CHOP = SPLICE)
 MAX_LEN = 64
 
 
