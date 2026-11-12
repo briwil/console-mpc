@@ -31,20 +31,36 @@ ACTIVE = False
 S = {}
 
 
-class _Mallinfo2(ctypes.Structure):
-    _fields_ = [(n, ctypes.c_size_t) for n in ("arena", "ordblks", "smblks", "hblks", "hblkhd", "usmblks", "fsmblks", "uordblks", "fordblks", "keepcost")]
+def malloc_totals():
+    """(in use, held free) in bytes over every thread's share of the C library's memory (malloc_info: mallinfo only
+    knows the main thread's, and the synths and effects run on the sound thread). None, None if it can't say."""
+    import re
+    path = "/tmp/console-malloc-info.xml"
+    try:
+        libc = ctypes.CDLL(None)
+        libc.fopen.restype = ctypes.c_void_p
+        libc.fopen.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        libc.malloc_info.argtypes = [ctypes.c_int, ctypes.c_void_p]
+        libc.fclose.argtypes = [ctypes.c_void_p]
+        fp = libc.fopen(path.encode(), b"w")
+        if not fp:
+            return None, None
+        libc.malloc_info(0, fp)
+        libc.fclose(fp)
+        text = open(path).read()
+        tail = text[text.rindex("</heap>"):] if "</heap>" in text else text       # the totals come after the last heap
+        free = sum(int(x) for x in re.findall(r'<total type="(?:fast|rest)" count="\d+" size="(\d+)"', tail))
+        mm = sum(int(x) for x in re.findall(r'<total type="mmap" count="\d+" size="(\d+)"', tail))
+        cur = re.search(r'<system type="current" size="(\d+)"', tail)
+        if not cur:
+            return None, None
+        return int(cur.group(1)) - free + mm, free
+    except Exception:
+        return None, None
 
 
 def _in_use():
-    """Bytes malloc has handed out and not had back (None: this C library can't say)."""
-    try:
-        libc = ctypes.CDLL(None)
-        f = libc.mallinfo2
-        f.restype = _Mallinfo2
-        m = f()
-        return m.uordblks + m.hblkhd
-    except Exception:
-        return None
+    return malloc_totals()[0]
 
 
 def _rss():

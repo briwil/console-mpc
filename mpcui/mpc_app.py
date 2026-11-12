@@ -100,6 +100,9 @@ _STRESS = None
 try:
     import stress as _stress
     _STRESS = _stress.prepare()
+    if _STRESS:
+        import stressmem
+        stressmem.install(_stress)        # the report says where the memory is (in use / held free / Python), every 2 minutes
 except Exception:
     import traceback
     print("stress test is off:\n" + traceback.format_exc(), flush=True)
