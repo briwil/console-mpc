@@ -99,6 +99,14 @@ def install_menu(menu_mod):
     """An INPUT row in SETTINGS (before UPDATE): the wheel, the arrows or a push go through REAR / MIC / USB."""
     load()
     apply()
+    try:                                                     # ... and again once the sound has started (set before the
+        import threading                                     # card is opened, REAR recorded silence; set while it ran, MIC worked)
+        for wait in (8.0, 20.0):
+            t = threading.Timer(wait, apply)
+            t.daemon = True
+            t.start()
+    except Exception:
+        pass
     if ROW in menu_mod.SETTINGS:
         return
     menu_mod.SETTINGS.insert(menu_mod.SETTINGS.index("UPDATE") if "UPDATE" in menu_mod.SETTINGS else len(menu_mod.SETTINGS), ROW)
