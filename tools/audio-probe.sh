@@ -10,6 +10,6 @@ W=${1:-now}
 HERE=$(cd "$(dirname "$0")" && pwd)
 [ -f "$HERE/audio-probe.py" ] || { echo "audio-probe.py should be next to this script."; exit 1; }
 OUT="$HOME/Desktop/audio-probe-$W.txt"
-ssh -p 2222 -i "$KEY" -o ConnectTimeout=8 root@192.168.155.1 "$C/python/bin/python3 -" < "$HERE/audio-probe.py" > "$OUT" 2>&1 \
+ssh -p 2222 -i "$KEY" -o ConnectTimeout=8 root@192.168.155.1 "$C/python/bin/python3 -u -" < "$HERE/audio-probe.py" > "$OUT" 2>&1 \
   || { echo "Something went wrong: see $OUT"; exit 1; }
 echo "Saved $OUT ($(wc -l < "$OUT" | tr -d ' ') lines)."
