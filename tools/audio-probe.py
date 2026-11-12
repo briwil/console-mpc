@@ -19,7 +19,9 @@ show("pcm", "/proc/asound/pcm")
 for d in sorted(glob.glob("/proc/asound/card*/pcm*/sub*")):
     for f in ("hw_params", "status"):
         show(f, os.path.join(d, f), 12)
-for d in sorted(glob.glob("/proc/asound/card*")):
+for d in sorted(glob.glob("/proc/asound/card[0-9]*")):
+    if not os.path.isdir(d):
+        continue
     for f in sorted(os.listdir(d)):
         p = os.path.join(d, f)
         if os.path.isfile(p) and f not in ("id",):
@@ -103,19 +105,39 @@ for c in range(8):
 print("=== USB audio settings")
 for d in glob.glob("/sys/kernel/config/usb_gadget/*/functions/*"):
     print("  " + d)
-    if "uac" in d.lower() or "audio" in d.lower():
-        for f in sorted(os.listdir(d)):
-            try:
-                print("    %s = %s" % (f, open(os.path.join(d, f)).read().strip()))
-            except Exception:
-                pass
+    try:
+        if "uac" in d.lower() or "audio" in d.lower():
+            for f in sorted(os.listdir(d)):
+                try:
+                    print("    %s = %s" % (f, open(os.path.join(d, f)).read().strip()))
+                except Exception:
+                    pass
+    except Exception as ex:
+        print("    (%s)" % ex)
 for d in glob.glob("/sys/kernel/config/usb_gadget/*"):
     for f in ("UDC", "idVendor", "idProduct"):
         try:
             print("  %s %s = %s" % (d, f, open(os.path.join(d, f)).read().strip()))
         except Exception:
             pass
+try:
+    if not os.path.exists("/sys/kernel/debug/gpio"):
+        os.system("mount -t debugfs none /sys/kernel/debug 2>/dev/null")     # (only makes the kernel's own status files readable)
+except Exception:
+    pass
 show("pins", "/sys/kernel/debug/gpio", 400)
+for d in sorted(glob.glob("/sys/kernel/debug/asoc/*")) + sorted(glob.glob("/sys/kernel/debug/asoc/*/*")):
+    if os.path.isfile(d):
+        show("asoc", d, 60)
+for d in sorted(glob.glob("/sys/kernel/debug/regmap/*")):
+    for f in ("name", "registers"):
+        if os.path.isfile(os.path.join(d, f)):
+            show("regmap " + f, os.path.join(d, f), 80)
+for d in sorted(glob.glob("/sys/class/gpio/gpio[0-9]*")):
+    try:
+        print("  %s direction %s value %s" % (d, open(d + "/direction").read().strip(), open(d + "/value").read().strip()))
+    except Exception:
+        pass
 show("pin functions", "/sys/kernel/debug/pinctrl/pinctrl-handles", 200)
 print("=== who has the sound devices open")
 for pid in os.listdir("/proc"):
