@@ -160,10 +160,18 @@ static void text(int x, int y, const char *s, int sc, uint32_t col)
 static uint8_t host_in[16]; static int host_in_n;
 #endif
 
+static int wr_ok, wr_short, wr_fail;        /* what the writes to the panel's port returned (for the log when the panel is silent) */
 static void midi_write(const uint8_t *b, int n)
 {
 #ifndef HOST_TEST
-    if (midifd >= 0) write(midifd, b, (unsigned long)n);
+    if (midifd >= 0) {
+        int off = 0, spins = 0;                         /* the port is non-blocking: a write can be refused or cut short: go on until it is all in */
+        while (off < n && spins < 200) {
+            long r = write(midifd, b + off, (unsigned long)(n - off));
+            if (r > 0) off += (int)r; else { spins++; usleep(2000); }
+        }
+        if (off == n && spins == 0) wr_ok++; else if (off == n) wr_short++; else wr_fail++;
+    }
 #else
     (void)b; (void)n;
 #endif
@@ -249,6 +257,36 @@ static void draw(int secs_left)
     text(24, 190, m, 2, 0x008899AA);
 }
 
+/* When the panel stays silent: put what we know into the log (what the writes returned, the port's own status, where we run). */
+static void dump_file(const char *tag, const char *path)
+{
+#ifndef HOST_TEST
+    char buf[600];
+    int fd = open(path, 0);
+    say(tag);
+    if (fd < 0) { say(" (cannot open)\n"); return; }
+    long n = read(fd, buf, sizeof buf - 1);
+    close(fd);
+    if (n < 0) n = 0;
+    buf[n] = 0;
+    say("\n"); say(buf); say("\n");
+#else
+    (void)tag; (void)path;
+#endif
+}
+
+static void silent_report(void)
+{
+#ifndef HOST_TEST
+    char m[100];
+    snprintf(m, sizeof m, "silent panel: writes ok %d, short %d, failed %d\n", wr_ok, wr_short, wr_fail);
+    say(m);
+    dump_file("port status:", "/proc/asound/card0/midi0");
+    dump_file("cgroup:", "/proc/self/cgroup");
+    dump_file("limits:", "/proc/self/limits");
+#endif
+}
+
 int main(int argc, char **argv)
 {
     int secs = argc > 1 ? atoi(argv[1]) : 6;
@@ -276,7 +314,7 @@ int main(int argc, char **argv)
         uint8_t buf[64];
         int k = midi_read(buf, sizeof buf), picked = 0;
         if (k > 0) heard = 1;
-        if (silent > 0 && !heard && t >= silent * 50) { choice = 12; break; }
+        if (silent > 0 && !heard && t >= silent * 50) { silent_report(); choice = 12; break; }
         if (!heard && t > 0 && t % 50 == 0) {       /* silent so far: the panel may still be starting up: say hello again, every second */
             panel_hello();
             pad_led(0, 0, 110, 20); pad_led(1, 70, 70, 70);
