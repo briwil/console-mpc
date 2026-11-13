@@ -168,10 +168,10 @@ static int hw_audio_open(void)
             /* S32_LE = 10, RW_INTERLEAVED = 3, stereo, 44100, no resampling, 9 ms buffer */
             if (snd_pcm_set_params(pcm, 10, 3, 2, RATE, 0, 9000) == 0) {
                 /* the inputs: SND_PCM_STREAM_CAPTURE = 1; if it can't be opened Console simply hears silence there */
-                /* OFF unless the file /data/UserData/console/ENABLE_INPUT exists: the first try broke the audio output */
+                /* ON, unless the file /data/UserData/console/DISABLE_INPUT exists (a way back if the inputs ever upset the audio output) */
                 /* Opened NON-BLOCKING (mode 1) and only ever read without waiting (hw_audio_read): whatever the inputs do,
                    the output's timing is never held up by them. What happened is written to console/input-status.txt. */
-                int want_in = access("/data/UserData/console/ENABLE_INPUT", 0) == 0;
+                int want_in = access("/data/UserData/console/DISABLE_INPUT", 0) != 0;
                 pcm_in = 0;
                 if (want_in) {
                     int ro = snd_pcm_open(&pcm_in, "hw:2,0", 1, 1), rp = -999;
@@ -256,7 +256,7 @@ static void hw_audio_read(float *l, float *r)
 #else
     static long calls, usb_try;
     cap_main.pcm = pcm_in;
-    if (!pcm_in) return;                                 /* the inputs are off (no ENABLE_INPUT) */
+    if (!pcm_in) return;                                 /* the inputs are off (DISABLE_INPUT) */
     calls++;
     if (in_usb && !cap_usb.pcm && calls >= usb_try) {    /* USB wanted and not open: open it (again every 5 s if it can't be) */
         usb_try = calls + 1723;
