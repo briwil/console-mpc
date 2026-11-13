@@ -26,7 +26,8 @@ find "$T" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || tr
 find "$T" -name '._*' -delete 2>/dev/null || true
 if [ -z "$VER" ]; then
   SHA=$(git -C "$CM" rev-parse --short HEAD 2>/dev/null || echo "?")
-  VER="$(cat "$T/console/mpc/BUILD" 2>/dev/null || date -u +%F) | move $SHA"
+  CSHA=$(git -C "$HERE" rev-parse --short HEAD 2>/dev/null || echo "?")
+  VER="$(cat "$T/console/mpc/BUILD" 2>/dev/null || date -u +%F) | move $SHA | card $CSHA"        # (changes with every card build: the Sample installs it)
 fi
 COPYFILE_DISABLE=1 tar czf "$CARD/Console/payload/console.tgz" -C "$T" console
 cp "$PY" "$CARD/Console/payload/python.tgz"
