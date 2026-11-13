@@ -118,6 +118,7 @@ static int readfile(const char *path, char *buf, int n)
 
 /* Every instance loads its own copy of the plugin file, so two of them (an insert and the GUITAR instrument) never share the
  * plugin's global state (the same file loaded twice is one library to the loader). The copy is removed at once. */
+static int preset_name(inst_t *s, int i, char *out);
 static void *open_private(const char *path)
 {
     static int count;
@@ -188,6 +189,15 @@ static void *create(const char *dir, const char *cfg)
     e->dispatcher(e, eSetBlock, 0, BLOCK, NULL, 0);
     e->dispatcher(e, eMains, 0, 1, NULL, 0);
     s->npre = e->numPrograms;
+    if (s->npre > 0) e->dispatcher(e, eSetProgram, 0, 0, NULL, 0);
+    {
+        char m[400], nm[40];
+        int n = snprintf(m, sizeof m, "vst2fx: %d presets, first:", s->npre);
+        for (int i = 0; i < s->npre && i < 6 && n < 300; i++) { preset_name(s, i, nm); n += snprintf(m + n, sizeof m - (size_t)n, " [%s]", nm); }
+        m[n++] = '\n';
+        write(2, m, (unsigned long)n);
+    }
+     /* the first preset is loaded (a plugin that starts with an empty chain is silent) */
     for (int k = 0; k < s->nk; k++)
         if (s->kidx[k] < 0 || s->kidx[k] >= e->numParams) s->kidx[k] = -1;
     return s;
