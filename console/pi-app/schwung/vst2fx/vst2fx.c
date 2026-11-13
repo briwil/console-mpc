@@ -330,14 +330,25 @@ static void render_block(void *h, int16_t *out, int frames)
 {
     if (!the_host || !the_host->mapped_memory || frames > BLOCK) return;
     memcpy(out, the_host->mapped_memory + the_host->audio_in_offset, (size_t)frames * 4);
-    static int blocks;                                   /* the plugin only wakes up on a preset change made while it runs: */
-    inst_t *gi = h;                                      /* go to the second preset a moment after the start, then back to the first */
-    if (++blocks == 20 && gi->pcount > 1) gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0);
-    if (blocks == 60 && gi->npre > 0) gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog, NULL, 0);
+    inst_t *gi = h;                                      /* the plugin only wakes up on a preset change made while it runs. At the start, and again */
+    static int blocks, quiet, back, cool;                      /* whenever it stays silent while the guitar plays, go to the next preset and back */
+    if (++blocks == 20 && gi->pcount > 1) { gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0); back = 40; }
+    if (back > 0 && --back == 0 && gi->npre > 0) gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog, NULL, 0);
     static int calls, pin, pout;                         /* a check line every ~3 s in the log: what goes in and out of the plugin */
-    for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > pin) pin = a; }
+    int last_in = 0;
+    for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > last_in) last_in = a; }
+    if (last_in > pin) pin = last_in;
     process(h, out, frames);
-    for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > pout) pout = a; }
+    int op = 0, ip = 0;
+    for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > op) op = a; }
+    if (op > pout) pout = op;
+    ip = last_in;
+    if (op == 0 && ip > 300) quiet++; else if (op > 0) quiet = 0;
+    if (cool > 0) cool--;
+    if (quiet >= 150 && back == 0 && cool == 0 && gi->pcount > 1) {      /* ~0.4 s of playing and nothing out: kick it again */
+        gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0);
+        back = 40; quiet = 0; cool = 1000;                 /* (at most once in ~3 s) */
+    }
     if (++calls >= 1000) {
         char m[120];
         int n = snprintf(m, sizeof m, "guitar plugin: in %d, out %d (of 32767)\n", pin, pout);
