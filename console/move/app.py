@@ -637,6 +637,7 @@ def main():
             print("screen draw failed:\n" + traceback.format_exc(), flush=True)
         finally:
             dd = time.monotonic() - started
+            e.screen_lead = int((0.7 * dd + 0.05) * 44100)     # (what the playhead under the steps is moved on by: the draw, and the way to the screen)
             perf["dmax"], perf["dsum"], perf["dn"] = max(perf["dmax"], dd), perf["dsum"] + dd, perf["dn"] + 1
             draw_busy.clear()
 

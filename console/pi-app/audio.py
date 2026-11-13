@@ -2969,7 +2969,10 @@ class Engine:
 
     def _heard_frame(self):
         """Where the sequencer is as you hear it (its own clock: frames since PLAY, plus read_ahead)."""
-        return self.seq_clock + self.read_ahead
+        f = self.seq_clock + self.read_ahead
+        if threading.current_thread().name == "screen-draw":      # the picture takes a while to reach the screen: it shows where the music will be by then
+            f += getattr(self, "screen_lead", 0)
+        return f
 
     def _delay_sequencer(self, mid, block):
         """block, read_ahead frames late: a sequencer's sound lined up with where it belongs on tape."""
