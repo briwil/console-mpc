@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Console on the Akai MPC Sample: manual</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&amp;family=Barlow:ital,wght@0,400;0,500;0,600;1,500&amp;family=JetBrains+Mono:wght@500&amp;display=swap">
+<style>
+:root{
+  --bg:#0d0c11; --surface:#15141b; --surface2:#1c1b24; --line:#2a2833;
+  --fg:#ece8e2; --muted:#9a95a6; --orange:#f26b2d; --lilac:#b48ae6; --on-accent:#16110d;
+  --font-display:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
+  --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f3f1f6; --surface:#ffffff; --surface2:#ebe8f1; --line:#d8d4e2;
+    --fg:#17151d; --muted:#5f5a6e; --orange:#c9490f; --lilac:#6b3fc0; --on-accent:#ffffff; color-scheme:light;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:17px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--orange)}
+h1,h2,h3{font-family:var(--font-display);text-transform:uppercase;margin:0;line-height:.98;text-wrap:balance}
+p{margin:0}
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);
+  margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.top .in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:18px;min-height:56px;flex-wrap:wrap}
+.mark{font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:.06em;text-decoration:none;color:var(--orange)}
+.top .find{margin-left:auto;display:flex;gap:10px;align-items:center}
+.top input{font:inherit;font-size:16px;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 12px;min-width:200px}
+.top input:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.top a.pdf{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;border:2px solid var(--orange);color:var(--orange);border-radius:3px;padding:5px 14px}
+.layout{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px;padding-top:36px}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr);gap:0}}
+nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-family:var(--font-display);font-weight:600;font-size:18px;letter-spacing:.06em;text-transform:uppercase}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 0}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--fg)}
+@media (max-width:900px){nav.toc{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:2px 18px;margin-bottom:24px}}
+main{min-width:0;padding-bottom:80px}
+h1{font-weight:800;font-size:clamp(44px,8vw,88px);letter-spacing:.01em}
+h1 span{color:var(--orange)}
+.lede{font-size:20px;max-width:56ch;margin-top:16px;color:var(--muted)}
+.lede b{color:var(--fg);font-weight:600}
+section{padding-top:56px;margin-top:20px;border-top:1px solid var(--line)}
+section h2{font-weight:800;font-size:clamp(34px,5vw,56px);letter-spacing:.01em}
+h3{font-weight:700;font-size:26px;letter-spacing:.03em;margin-top:34px;color:var(--lilac)}
+.intro{max-width:64ch;color:var(--muted);margin-top:14px}
+.intro b,.rows b{color:var(--fg);font-weight:600}
+.rows{margin:20px 0 0;border:1px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
+.rows .r{display:grid;grid-template-columns:minmax(150px,230px) minmax(0,1fr);gap:6px 24px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.rows .r:last-child{border-bottom:0}
+.rows dt{font-family:var(--font-mono);font-size:14px;color:var(--orange);letter-spacing:.02em}
+.rows dd{margin:0;color:var(--muted)}
+@media (max-width:640px){.rows .r{grid-template-columns:minmax(0,1fr)}}
+.note{margin-top:20px;border-left:3px solid var(--lilac);background:var(--surface);padding:12px 18px;border-radius:0 8px 8px 0;color:var(--muted);max-width:70ch}
+.note b{color:var(--fg)}
+.shots{display:flex;flex-wrap:wrap;gap:18px;margin-top:24px}
+figure.shot{margin:0;width:min(100%,340px)}
+figure.shot img{width:100%;height:auto;image-rendering:pixelated;border:1px solid var(--line);border-radius:4px;background:#000}
+figure.shot figcaption{font-family:var(--font-mono);font-size:13px;color:var(--muted);margin-top:8px}
+kbd{font-family:var(--font-mono);font-size:.82em;background:var(--surface2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 7px;color:var(--fg);white-space:nowrap}
+code{font-family:var(--font-mono);font-size:.88em;color:var(--fg)}
+.hide{display:none!important}
+.none{margin-top:30px;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:15px;max-width:1180px;margin:0 auto}
+@media print{
+  :root,:root:not([data-theme="dark"]){--bg:#fff;--surface:#fff;--surface2:#f1eff5;--line:#cfcbd8;--fg:#17151d;--muted:#4c475a;--orange:#b43d08;--lilac:#5a30ac;color-scheme:light}
+  html{scroll-behavior:auto}
+  body{font-size:11pt;padding:0}
+  .top,nav.toc,.none{display:none!important}
+  .layout{display:block;padding-top:0}
+  section{break-before:auto;padding-top:26px;margin-top:10px}
+  h2,h3{break-after:avoid}
+  .note,figure.shot,.r{break-inside:avoid}
+  .rows{border-color:#cfcbd8}
+  .shots{gap:14px}
+  figure.shot{width:62mm}
+  a{color:inherit;text-decoration:none}
+}
+</style></head>
+<body>
+<div class="top"><div class="in">
+  <a class="mark" href="#top">CONSOLE</a>
+  <div class="find"><input id="q" type="search" placeholder="Search the manual" aria-label="Search the manual" autocomplete="off"><a class="pdf" href="Console-on-MPC-Sample-Manual.pdf">PDF</a></div>
+</div></div>
+
+<div class="layout" id="top">
+<nav class="toc" aria-label="Contents">
+  <a href="#start">Start and stop</a>
+  <a href="#controls">The controls</a>
+  <a href="#tape">The tape</a>
+  <a href="#instruments">Instruments</a>
+  <a href="#sound">A sound page</a>
+  <a href="#drums">Drum sequencer</a>
+  <a href="#steps">Step settings</a>
+  <a href="#synth">Synth sequencer</a>
+  <a href="#song">Song mode</a>
+  <a href="#automation">LFOs, automation, punch FX</a>
+  <a href="#pads">Pads and arp</a>
+  <a href="#fx">FX and mixer</a>
+  <a href="#menus">Menus, input, export</a>
+  <a href="#notyet">Not on the Sample</a>
+</nav>
+
+<main>
+<h1>Console<span>.</span></h1>
+<p class="lede">How to drive <b>Console on the Akai MPC Sample</b>: an 8-track tape with OP-1-style editing, up to 8 instruments (drum machines and synths) and a step sequencer. Controls as they are in the first layout, November 2026.</p>
+<p class="none hide" id="none">Nothing found. Try another word.</p>
+
+<section id="start">
+<h2>Start and stop</h2>
+<dl class="rows">
+  <div class="r"><dt>Start</dt><dd>Switch the Sample on with the SD card in. A startup menu appears: <kbd>PAD 1</kbd> = Console, <kbd>PAD 2</kbd> = the normal MPC app. No answer in 15 seconds starts the normal MPC app.</dd></div>
+  <div class="r"><dt>Quit</dt><dd><kbd>Shift</kbd> + <kbd>STOP</kbd>. Saves your song, quits and gives the Sample back to the normal MPC software.</dd></div>
+  <div class="r"><dt>Your songs</dt><dd>Projects, presets and settings are kept on the SD card, in <code>Console/data</code>. Copy that folder to keep them safe. With no card, Console uses the Sample's internal drive.</dd></div>
+  <div class="r"><dt>Skip Console once</dt><dd>Put an empty file called <code>NOCONSOLE</code> on the SD card, next to the <code>Console</code> folder. The normal MPC app starts.</dd></div>
+  <div class="r"><dt>Update</dt><dd>Download the new zip. Replace the <code>autorun</code> and <code>Console</code> folders on the card, but keep <code>Console/data</code>, then switch on. The first start copies the new version across.</dd></div>
+  <div class="r"><dt>Remove</dt><dd>Put an empty file called <code>UNINSTALL</code> in the <code>Console</code> folder and switch on once. Console comes off the Sample and your songs stay on the card. Delete that file to install again. Or just delete the <code>autorun</code> folder.</dd></div>
+  <div class="r"><dt>If something goes wrong</dt><dd><code>Console/install-status.txt</code> on the card says what happened. If Console doesn't get through starting, the normal MPC app starts at the next power-on.</dd></div>
+</dl>
+<p class="note"><b>Firmware.</b> Console starts from the Sample's own SD card autorun feature. Don't update the Sample's firmware without checking that this still works with the new version.</p>
+</section>
+
+<section id="controls">
+<h2>The controls</h2>
+<p class="intro">Console was written for another instrument, and the Sample's controls stand in for its buttons. This table is the whole mapping. Each later chapter says what changes on its page. Most buttons have a second job with <kbd>Shift</kbd> held.</p>
+<dl class="rows">
+  <div class="r"><dt>PLAY</dt><dd>Play / stop.</dd></div>
+  <div class="r"><dt>SEQ REC</dt><dd>Record.</dd></div>
+  <div class="r"><dt>STOP</dt><dd>While playing: stops playback. Otherwise: Back. <kbd>Shift</kbd> + <kbd>STOP</kbd> is always Back (from the top level it saves and quits).</dd></div>
+  <div class="r"><dt>LOOP</dt><dd>The tape's loop on / off.</dd></div>
+  <div class="r"><dt>B1</dt><dd>Instruments. Press again to go round an instrument's pages: sound, sequencer, automation, punch FX, then SONG, then back.</dd></div>
+  <div class="r"><dt>B2</dt><dd>Mixer. Press again for reverb, delay and the song inserts. Back leaves.</dd></div>
+  <div class="r"><dt>B3</dt><dd>The tape recorder. Press again: the selected track zoomed.</dd></div>
+  <div class="r"><dt>Pads 1-16</dt><dd>The 16 drum pads, or a synth's notes.</dd></div>
+  <div class="r"><dt>PAD BANK (latching)</dt><dd>The pads become the right-hand 4 × 4: the picked drum played chromatically, a semitone a pad. On a synth it gives the next 16 notes.</dd></div>
+  <div class="r"><dt>SEQ (latching)</dt><dd>The pads become the 16 step buttons. On the tape page they always are: steps 1-8 are tracks 1-8, and <kbd>Shift</kbd> + step arms a track.</dd></div>
+  <div class="r"><dt>Shift + SEQ</dt><dd>The pads become a step's settings (see Step settings). PAD BANK flips between settings 1-16 and 17-32. SEQ again goes back to the steps.</dd></div>
+  <div class="r"><dt>K1, K2, K3</dt><dd>Knobs 1-3, always.</dd></div>
+  <div class="r"><dt>FADER</dt><dd>Knob 4 (among other things: the lane's SHIFT).</dd></div>
+  <div class="r"><dt>KNOB FX (latching)</dt><dd>Knob mode: pads 1-8 are knobs 1-8. Hold a pad and turn the encoder. Pads 9-16 are silent. With no pad held, the encoder is the jog wheel again.</dd></div>
+  <div class="r"><dt>Encoder turn / push</dt><dd>The jog wheel: turn to pick, push to choose. On the tape: moves the playhead a grid step; push goes back to the start.</dd></div>
+  <div class="r"><dt>MAIN VOLUME</dt><dd>Volume. It's absolute: the first time you touch it, Console is synced to the knob.</dd></div>
+  <div class="r"><dt>Sample Select</dt><dd>Menu: the project menu (songs, tempo, settings). On a sound page: the instrument menu. <kbd>Shift</kbd> + it: export.</dd></div>
+  <div class="r"><dt>PLUS / MINUS</dt><dd>The right / left arrows: the previous / next page of settings, steps 17-32 and on.</dd></div>
+  <div class="r"><dt>Shift + PLUS / MINUS</dt><dd>Octave on a sound page; pattern +/-. On the sequencer pages: Shift + MINUS = Undo, Shift + PLUS = Redo.</dd></div>
+  <div class="r"><dt>CHOP</dt><dd>Splice. <kbd>Shift</kbd> + CHOP: splice on every track.</dd></div>
+  <div class="r"><dt>ERASE, MUTE, TAP TEMPO, 16 LEVELS</dt><dd>Delete, Mute, Copy, Capture (the tape page uses some of them differently: see The tape).</dd></div>
+  <div class="r"><dt>PAD FX</dt><dd>A synth's pads page (key, scale, octave, velocity, curve). Press again to go back.</dd></div>
+  <div class="r"><dt>NOTE REPEAT</dt><dd>A synth's arpeggiator page. Press again to go back. <kbd>Shift</kbd> + NOTE REPEAT (labelled TRIPLET) turns triplets on / off.</dd></div>
+  <div class="r"><dt>SAMPLE REC</dt><dd>Arms or disarms the selected track.</dd></div>
+  <div class="r"><dt>16 LEVELS</dt><dd>Off the tape page: Undo (the sequencer's too).</dd></div>
+  <div class="r"><dt>SHIFT</dt><dd>Shift.</dd></div>
+</dl>
+<h3>Reading the rest of this manual</h3>
+<p class="intro">Where a page says <b>knob 5</b>, turn K1-K3 for knobs 1-3 and the FADER for knob 4. For any knob 1-8: switch KNOB FX on, hold pad 1-8 and turn the encoder. Where it says <b>step button</b>, switch SEQ on and use the pads. Shift + pad 12, 14 or 16 are printed on the pads: TIME CORRECT = the next grid, SONG = the song page, PROJECT = the menu.</p>
+<p class="note"><b>Still being written.</b> Some of the pages below describe behaviour carried over from Console's first version. If something here doesn't do what it says on your Sample, that's a bug in this manual, not in you.</p>
+</section>
+
+<section id="tape">
+<h2>The tape</h2>
+<p class="intro">Eight tracks. Record on a track, then edit it the way you would on a tape machine. B3 opens the tape.</p>
+<div class="shots">{{img:tape|The tape page: four tracks at a time}}{{img:zoom|One track zoomed}}</div>
+<dl class="rows">
+  <div class="r"><dt>Pads 1-8</dt><dd>On the tape page the pads are always the step buttons. They select a track. Selecting doesn't arm it.</dd></div>
+  <div class="r"><dt>Shift + pad / SAMPLE REC</dt><dd>Arm or disarm that track (SAMPLE REC: the selected track). Record only records armed tracks, so arm every track you want, for instance a drum and a synth together.</dd></div>
+  <div class="r"><dt>Shift + wheel</dt><dd>Scroll through the 8 tracks, four on screen at a time.</dd></div>
+  <div class="r"><dt>K1 / K2 / FADER</dt><dd>The selected track: K1 = volume, K2 = pan, FADER = volume (<kbd>Shift</kbd> + FADER: pan). K3 does nothing here.</dd></div>
+  <div class="r"><dt>SEQ REC</dt><dd>Start / stop recording on the selected track and any armed tracks.</dd></div>
+  <div class="r"><dt>PLAY</dt><dd>Play / stop.</dd></div>
+  <div class="r"><dt>Wheel</dt><dd>Turn: the playhead moves a grid step. Push: back to the start. <kbd>Shift</kbd> + push: the next grid (1/4, 1/8...).</dd></div>
+  <div class="r"><dt>MINUS / PLUS</dt><dd>Undo / Redo. <kbd>Shift</kbd> + them: zoom out / in.</dd></div>
+  <div class="r"><dt>CHOP</dt><dd>Split / join the box under the playhead. A splice shows as a thin divider between two boxes. <kbd>Shift</kbd>: every track.</dd></div>
+  <div class="r"><dt>ERASE</dt><dd>Cut: hold, turn the wheel to take several pieces, let go. It leaves an empty space. <kbd>Shift</kbd> + ERASE: Copy.</dd></div>
+  <div class="r"><dt>NOTE REPEAT</dt><dd>Drop (paste) what was copied or cut, at the playhead. <kbd>Shift</kbd>: drop and push the rest of the track later.</dd></div>
+  <div class="r"><dt>LOOP</dt><dd>Loop on / off. <kbd>Shift</kbd> + LOOP: the first press marks a loop point, the second sets the other (the earlier is IN, the later OUT). Both at the same spot: the points are cleared.</dd></div>
+  <div class="r"><dt>Shift + TAP TEMPO</dt><dd>Metronome on / off. It clicks while recording. Its volume: SETTINGS &gt; METRONOME.</dd></div>
+  <div class="r"><dt>Shift + pad 12 / 14 / 16</dt><dd>As printed on the pads: SONG, the next grid (TIME CORRECT), PROJECT (the menu).</dd></div>
+</dl>
+<p class="note">KNOB FX, SEQ, PAD BANK, PAD FX, TAP TEMPO and 16 LEVELS do nothing on the tape page.</p>
+<h3>The zoomed track</h3>
+<p class="intro">Press B3 again to zoom the selected track: its sound as a waveform, with a splice as an I-beam. Use the knob rule from The controls (K1-K3, FADER, or KNOB FX for the rest). Back (or B3) returns to the tape.</p>
+<dl class="rows">
+  <div class="r"><dt>Knob 1</dt><dd>Mono / stereo (about 5 clicks to switch).</dd></div>
+  <div class="r"><dt>Knob 2</dt><dd>The input: an instrument's drum, its kit, all kits. On a stereo track, the left side. About 5 clicks per choice.</dd></div>
+  <div class="r"><dt>Knob 3</dt><dd>A stereo track's right input.</dd></div>
+  <div class="r"><dt>Knobs 4-6</dt><dd>The box under the playhead: gain, fade in, fade out. Shift + touching knob 4 normalizes.</dd></div>
+</dl>
+</section>
+
+<section id="instruments">
+<h2>Instruments</h2>
+<p class="intro">B1 opens the INSTRUMENTS page: 8 slots, each a drum machine or a synth. A new project starts with every slot empty. Recording an instrument onto the tape uses the zoomed track's input (knob 2).</p>
+<dl class="rows">
+  <div class="r"><dt>Wheel</dt><dd>Pick a slot. Push opens it. An empty slot: choose what goes in it.</dd></div>
+  <div class="r"><dt>Choosing an instrument</dt><dd>A picture of each instrument scrolls past as you turn the wheel (those without a picture show their name). Push to choose; it goes straight to its page.</dd></div>
+  <div class="r"><dt>Shift + push</dt><dd>On a loaded slot: change it or remove it.</dd></div>
+  <div class="r"><dt>Pads 1-8 (SEQ on)</dt><dd>Mute / unmute a slot.</dd></div>
+  <div class="r"><dt>B1 in an instrument</dt><dd>Goes round its own pages: sound, sequencer, automation, punch FX, then SONG. Back, from any of them: the instruments page.</dd></div>
+  <div class="r"><dt>EDIT (last in the list)</dt><dd>Every drum machine, then every synth, each with a tick box. Push to untick one and it no longer appears when you choose an instrument; tick it to bring it back. A song that already uses an unticked instrument keeps it.</dd></div>
+</dl>
+<h3>Sampler</h3>
+<p class="intro">A drum machine of 16 drums. Each drum can load up to five samples. Push the wheel on a drum (on its sound page): SAMPLE 1, SAMPLE 2 and RANDOM; push a sample to browse, or ERASE + push to take it out. The knobs are LEVEL, PITCH, START, DECAY, PAN, REVERB, DELAY (shared by all its samples) and BLEND. BLEND all the way left plays only sample 1, the middle plays both at full volume, all the way right only sample 2. BLEND can be an LFO's target or a step lock, so it can morph between the two. RANDOM turns on samples 3, 4 and 5: each hit plays one of the drum's samples at random (BLEND is off while it's on).</p>
+<h3>MrSample</h3>
+<p class="intro">One sample played chromatically on the pads, with an amp envelope, filter and LFO. Push the wheel on its sound page to open the sample browser; each sample plays as you land on it. Push a sample to choose it, Back to leave. It is saved with the song.</p>
+<h3>Presets</h3>
+<p class="intro">A preset is a sound saved for that one instrument (a Dexed patch, a drum kit, a Braids sound) along with its INSERT 1 and 2 effects. Press Sample Select on an instrument's sound page for the instrument menu.</p>
+<dl class="rows">
+  <div class="r"><dt>SAVE PRESET</dt><dd>Name it on the naming screen. Saved for this instrument only.</dd></div>
+  <div class="r"><dt>LOAD PRESET</dt><dd>A list of that instrument's presets. Turn the wheel to pick, push to load. Its inserts come back too.</dd></div>
+  <div class="r"><dt>COPY / PASTE PATTERN</dt><dd>Copy the pattern and paste it onto another pattern, or onto another instrument of the same kind.</dd></div>
+  <div class="r"><dt>CLEAR PATTERN / CLEAR LOCKS</dt><dd>Empty the pattern, or only the step settings. Both ask ARE YOU SURE? first.</dd></div>
+</dl>
+<h3>The naming screen</h3>
+<p class="intro">Used for songs, presets and renaming. The letter you're on is shown in a white box. Turn the wheel to change it; push to move to the next letter (<kbd>Shift</kbd> + push: the previous). ERASE erases a letter. PLAY saves the name, Back cancels.</p>
+</section>
+
+<section id="sound">
+<h2>A sound page</h2>
+<p class="intro">Press B1 on an instrument and you're on its sound page. The screen shows what the knobs do; the knob you're turning shows big.</p>
+<div class="shots">{{img:sound|A synth's sound page: Quilt}}</div>
+<dl class="rows">
+  <div class="r"><dt>Knobs 1-8</dt><dd>The settings on this page (K1-K3, FADER, then KNOB FX for the rest). While one turns, it shows big.</dd></div>
+  <div class="r"><dt>PLUS / MINUS</dt><dd>The next / previous page of settings. On a synth the wheel turns the pages too, one page a click.</dd></div>
+  <div class="r"><dt>Shift + PLUS / MINUS</dt><dd>The pads' octave (a synth's pads, and the chromatic drum pads). The screen shows OCT +1 and so on.</dd></div>
+  <div class="r"><dt>Shift + touch a knob</dt><dd>That setting goes back to its starting value.</dd></div>
+  <div class="r"><dt>Settings that pick a mode</dt><dd>DIST, CHOKE, a wave, on / off: it takes 5 clicks to move to the next choice, so you don't skip past. Shift + turn: one choice a click. Lists take 3 clicks a choice. Numbers (volume, velocity, tune...) take 3 clicks a step.</dd></div>
+  <div class="r"><dt>Pads</dt><dd>Play the drums, or the synth.</dd></div>
+  <div class="r"><dt>Sample Select</dt><dd>The INSTRUMENT MENU: presets, copy / paste / clear pattern, clear locks.</dd></div>
+  <div class="r"><dt>Reverb and delay</dt><dd>Each drum's REVERB and DELAY knobs set how much of that drum goes to the effect. The effects' own settings are on B2.</dd></div>
+</dl>
+<h3>The PRESETS page (synths)</h3>
+<p class="intro">A synth's first sound page. The box shows the preset you're on. Push the wheel for the list, turn to hear presets as you land on them, push to keep one, Back for the sound you had. Knob 1 picks the bank (on OB-Xd, Dexed and others with more than one). Your own presets are marked *, the synth's own come next, then Console's (+) for synths that come with none.</p>
+<h3>LFOs</h3>
+<p class="intro">Every instrument has two LFOs per pattern. On a sound page press PLUS past the last page: LFO 1, again: LFO 2, then INSERT 1 and 2.</p>
+<dl class="rows">
+  <div class="r"><dt>Knob 1 DEST</dt><dd>Which setting it moves: the instrument's, then its two inserts' number settings (shown I1 / I2 and the name).</dd></div>
+  <div class="r"><dt>Knob 2 WAVE</dt><dd>Sine, triangle, saw up / down, square, random.</dd></div>
+  <div class="r"><dt>Knob 3 SPEED</dt><dd>8 bars down to 1/32 of a beat, in time, with triplet speeds. Last: RND, a new speed every cycle.</dd></div>
+  <div class="r"><dt>Knob 4 DEPTH</dt><dd>How far it swings, -100 to +100 %.</dd></div>
+  <div class="r"><dt>Knob 5 PHASE</dt><dd>Where in the cycle it starts.</dd></div>
+  <div class="r"><dt>Knob 6 MODE</dt><dd>FREE (runs with the song) or TRIG (restarts at the pattern's first step).</dd></div>
+  <div class="r"><dt>Steps</dt><dd>The LFO's 16 steps (SEQ on). Tap: that step rests. Hold a step and turn knob 2 (its own WAVE) or knob 4 (its own DEPTH).</dd></div>
+</dl>
+</section>
+
+<section id="drums">
+<h2>Drum sequencer</h2>
+<p class="intro">Every drum has its own sequencer: its own length, up to 64 steps, and its own speed. Switch SEQ on and the pads are the 16 steps; the screen shows what the knobs do.</p>
+<div class="shots">{{img:seq|A drum's 16 steps and the lane's length, rate, Euclid and shift}}</div>
+<dl class="rows">
+  <div class="r"><dt>Pads (SEQ off)</dt><dd>Pick the drum (its pad lights brighter) and hear it.</dd></div>
+  <div class="r"><dt>Pads (SEQ on)</dt><dd>Tap: the step on / off. While playing, the playhead moves along them. Steps inside the pattern light dim, steps with something on them bright, and steps past the end are off.</dd></div>
+  <div class="r"><dt>PLUS / MINUS</dt><dd>Steps 17-32, 33-48, 49-64 (for lanes longer than 16).</dd></div>
+  <div class="r"><dt>K1 LENGTH</dt><dd>The lane's number of steps (1-64).</dd></div>
+  <div class="r"><dt>K2 RATE</dt><dd>The lane's speed. Ten rates, slowest to fastest. It only changes the speed: the lane keeps its steps.</dd></div>
+  <div class="r"><dt>K3 EUCLID</dt><dd>Spread a number of hits evenly over the lane (OFF to switch it off).</dd></div>
+  <div class="r"><dt>FADER SHIFT</dt><dd>Turn the lane's pattern around by steps. (This is knob 4.)</dd></div>
+  <div class="r"><dt>Shift + PLUS / MINUS</dt><dd>Redo / Undo the last pattern edit.</dd></div>
+  <div class="r"><dt>Wheel</dt><dd>Push on an empty step puts it down. Push on a step that is on adds it to the selected steps (push it again: it leaves them). Back: none selected. ERASE takes the selected steps off (none selected: the step under the box). Leaving the sequencer page deselects.</dd></div>
+  <div class="r"><dt>Hold a step + right-half pad</dt><dd>The step turns on with that pad's pitch (chromatic drums).</dd></div>
+</dl>
+<h3>Triplets</h3>
+<p class="intro"><kbd>Shift</kbd> + NOTE REPEAT (labelled TRIPLET), or MENU &gt; SETTINGS &gt; TRIPLETS, turns every 4th step off: steps 4, 8, 12 and 16 go dark and show as a dash, and the other steps play 3 in the time of 4. So a 1/16 lane plays 1/8 triplets. It works on every instrument at once. Steps already on the dark pads are kept, silent, and come back when it's off. The lane's RATE choices stay straight ones.</p>
+<h3>Recording into a pattern</h3>
+<p class="intro">With a sequencer, sound or automation page up, press SEQ REC while it plays and the pads you play go in. Turning a sound-page knob puts its value on every step as it plays, and it plays back as the steps go by (a filter sweep is heard as a sweep). Press SEQ REC again to stop. It doesn't touch the tape, and it turns itself off at Stop. SETTINGS &gt; REC TIMING: <b>FREE</b> keeps your timing: a hit lands on the nearest step and the step's NUDGE is set to how early or late you played (drums: 10% of a step at a time, synth notes: 1%; half a step at most). <b>GRID</b> snaps to the steps.</p>
+</section>
+
+<section id="steps">
+<h2>Step settings</h2>
+<p class="intro">Velocity, chance, multiply, pulse, hold, jump, random, ramps, nudge, then the drum's own sound settings. They are set per step.</p>
+<div class="shots">{{img:step|Hold a step to change its own settings}}</div>
+<dl class="rows">
+  <div class="r"><dt>1. Pick the steps</dt><dd>SEQ on. Hold <kbd>Shift</kbd> and tap the steps you want. They blink.</dd></div>
+  <div class="r"><dt>2. Shift + SEQ</dt><dd>The pads are now the settings. Tap one: it's picked. Turn K1 to set it (K2 = its chance). Tap the same pad again: it's off.</dd></div>
+  <div class="r"><dt>3. SEQ</dt><dd>Back to the steps. Tap any step to finish.</dd></div>
+  <div class="r"><dt>Locking a sound setting</dt><dd>With steps picked and no setting pad chosen, the knobs are the instrument's sound page: turn one and that setting is locked on the selected steps. PLUS / MINUS: its other pages. Shift + touch a knob: its lock off. A * on screen means locked; a - means a setting that can't be locked.</dd></div>
+</dl>
+<h3>The 32 settings, pad by pad</h3>
+<dl class="rows">
+  <div class="r"><dt>1 VELOCITY</dt><dd>How hard (1-127; all the way down: RND, random).</dd></div>
+  <div class="r"><dt>2 CHANCE</dt><dd>How often it plays: 100% down to 0%, or 1:2, 2:3... (the 1st of every 2 times round, and so on).</dd></div>
+  <div class="r"><dt>3 MULTIPLY</dt><dd>Hits inside the step: ×1 to ×8, or RND.</dd></div>
+  <div class="r"><dt>4 PULSE</dt><dd>Play the step again 1-9 times (or RND) before moving on.</dd></div>
+  <div class="r"><dt>5 HOLD</dt><dd>Wait 1-9 steps (or RND) after it, silent.</dd></div>
+  <div class="r"><dt>6 JUMP</dt><dd>Then go to step 1, 5, 9 or 13, skip one (+1), back one (-1), either (+/-), or RND. Once each time round the lane.</dd></div>
+  <div class="r"><dt>7 RANDOM</dt><dd>A random pitch each time: 2-6 notes over 1 or 3 octaves.</dd></div>
+  <div class="r"><dt>8 RAMP UP / 9 RAMP DOWN</dt><dd>The pitch goes up (or down) each time round: 2-6 notes over 1 or 3 octaves. One of RANDOM / RAMP UP / RAMP DOWN at a time.</dd></div>
+  <div class="r"><dt>Pads 10-32</dt><dd>The drum's own sound settings (TUNE, DECAY...): a parameter lock for these steps.</dd></div>
+  <div class="r"><dt>Chance for a component</dt><dd>With MULTIPLY, PULSE, HOLD, JUMP, RANDOM, RAMP or NUDGE set on a step, K2 sets how likely that component is each time round. When it doesn't happen the step just plays plain.</dd></div>
+</dl>
+<p class="note">Pitch moves use the drum's TUNE (or PITCH) setting, so how far a semitone goes depends on the drum machine.</p>
+</section>
+
+<section id="synth">
+<h2>Synth sequencer</h2>
+<p class="intro">A synth's sequencer works on chords. The 16 pads (SEQ on) are the steps; PLUS / MINUS for more. Knob 3 chooses how the pattern is built.</p>
+<dl class="rows">
+  <div class="r"><dt>UNIFIED</dt><dd>One sequence of chords. Every step holds a chord, and the whole pattern shares one LENGTH and one RATE. Easiest: it works like a normal step sequencer, and a chord is several notes on one step.</dd></div>
+  <div class="r"><dt>PER NOTE</dt><dd>Every pitch gets its own row. Tap a note to pick it: the 16 steps now show only that note. Each note has its own LENGTH, RATE, and its own pulse / hold / jump / chance. Every note starts at 16 steps.</dd></div>
+  <div class="r"><dt>Knobs (no step held)</dt><dd>1 length, 2 rate, 3 type, 4 the lit note's own length, 5 key, 6 scale.</dd></div>
+  <div class="r"><dt>Steps</dt><dd>Tap: the notes on / off. Hold a step: the pads light its notes; tap pads to add or remove notes. Hold a step and tap a later step: that is where the notes end (also across pages).</dd></div>
+  <div class="r"><dt>Shift + steps</dt><dd>Select steps, as for drums. VELOCITY, CHANCE, MULTIPLY, NUDGE (a step early or late, -50 to +50 %), PULSE, HOLD, JUMP (PER NOTE only), RANDOM, RAMP UP, RAMP DOWN, then the synth's own settings as locks.</dd></div>
+  <div class="r"><dt>Record</dt><dd>The notes you play go in, lasting as long as you hold the pad. Stop lets every sounding note go.</dd></div>
+</dl>
+<h3>Why use PER NOTE</h3>
+<dl class="rows">
+  <div class="r"><dt>Polyrhythm</dt><dd>Give a low C a length of 3 and a high G a length of 4: they drift against each other and only line up every 12 steps.</dd></div>
+  <div class="r"><dt>Drone under a melody</dt><dd>One note with a long length and a slow rate while a melody note runs 1/16 on top.</dd></div>
+  <div class="r"><dt>Arpeggio that evolves</dt><dd>One note per row, each with a different length (5, 7, 8, 11): the pattern takes a long time to repeat.</dd></div>
+  <div class="r"><dt>Per-note feel</dt><dd>Chance 50% on a high note only, a jump or hold on one pitch only.</dd></div>
+</dl>
+<p class="note">Use UNIFIED when you want chords, a hook that is the same length all the way through, or the quickest way to write a loop.</p>
+</section>
+
+<section id="song">
+<h2>Song mode</h2>
+<p class="intro">A list of rows, OP-XY style: each row picks a pattern for every instrument and says how many times it plays. With song mode on, PLAY starts at row 1 and goes through the rows, then round again. Press B1 until you reach SONG, or Shift + pad 12.</p>
+<div class="shots">{{img:song|Song mode: row 1 of 1}}</div>
+<dl class="rows">
+  <div class="r"><dt>Pads (steps)</dt><dd>The rows. Press one past the end: a new row (a copy of the last). ERASE + step takes that row out.</dd></div>
+  <div class="r"><dt>Knobs 1-7</dt><dd>The row's pattern for instruments 1-7 (all the way down: -, leave it as it is).</dd></div>
+  <div class="r"><dt>Shift + knobs 1-7</dt><dd>The row's punch FX pattern for instruments 1-7.</dd></div>
+  <div class="r"><dt>Knob 8</dt><dd>How many times the row plays (1-16).</dd></div>
+  <div class="r"><dt>Shift + PLUS / MINUS</dt><dd>Song mode on / off. (The tape shows SONG in its top line while it's on.) Off: the picked pattern plays, as usual.</dd></div>
+</dl>
+</section>
+
+<section id="automation">
+<h2>LFOs, automation, punch FX</h2>
+<h3>Automation</h3>
+<p class="intro">B1 after the sequencer: what is locked on this pattern's steps, one setting at a time. Recorded knob moves show here (name + REC), and so do step locks and step settings. A recorded setting has its own length (knob 2) and loops at that length whatever the notes do. Between steps with different values it glides.</p>
+<dl class="rows">
+  <div class="r"><dt>Knob 1</dt><dd>Go through the settings that are set on some step: step settings first, then the sound's. Each has its own colour on the pads.</dd></div>
+  <div class="r"><dt>Steps</dt><dd>Lit: that setting is on the step. Tap a lit step: it comes off. Tap an unlit step that plays a note: it gets the setting, with the value of the lit step before it. Hold a step: its value shows, and knob 1 changes it.</dd></div>
+  <div class="r"><dt>ERASE + step</dt><dd>Take that setting off the step. <kbd>Shift</kbd> + ERASE: off every step (it asks first).</dd></div>
+  <div class="r"><dt>Undo</dt><dd>Puts back what you took off or changed.</dd></div>
+</dl>
+<h3>Punch FX</h3>
+<p class="intro">B1 after automation: a sequencer of OP-XY style punch-in effects on the instrument you're on, one lane per effect, each with its own length and rate. Each instrument has 16 punch patterns, apart from its note patterns, and song mode picks them per row. Pads 1-16 are the effects:</p>
+<dl class="rows">
+  <div class="r"><dt>Pads 1-5</dt><dd>REPEAT 1/4, 1/8, 1/16, 1/32, 1/8T: the slice from when it starts, round and round.</dd></div>
+  <div class="r"><dt>Pad 6 REVERSE</dt><dd>The beat just gone, backwards.</dd></div>
+  <div class="r"><dt>Pad 7 TAPE STOP</dt><dd>Slows to a halt over a beat.</dd></div>
+  <div class="r"><dt>Pad 8 HALF SPEED</dt><dd>An octave down, slowed.</dd></div>
+  <div class="r"><dt>Pads 9-11</dt><dd>LOW PASS (sweeps down), HIGH PASS (sweeps up), RESO PEAK (a ringing wah).</dd></div>
+  <div class="r"><dt>Pad 12 BITCRUSH</dt><dd>Grit and lo-fi.</dd></div>
+  <div class="r"><dt>Pad 13 GATE 1/16</dt><dd>Chopped in sixteenths.</dd></div>
+  <div class="r"><dt>Pad 14 PAN SWING</dt><dd>The whole instrument sways left and right, once a beat.</dd></div>
+  <div class="r"><dt>Pad 15 ECHO THROW</dt><dd>Everything into the delay while it's on; the echoes ring on after.</dd></div>
+  <div class="r"><dt>Pad 16 KILL</dt><dd>Silence.</dd></div>
+  <div class="r"><dt>Tap / hold a pad</dt><dd>Tap: its lane (the steps show its steps). Hold pads: they play while held (several: stacked). Recording while it plays puts them on their lanes' steps.</dd></div>
+  <div class="r"><dt>Knobs 1, 2, 8</dt><dd>The lane's LENGTH and RATE; knob 8 is TIME SCALE (×1 to ×32), every lane that many times slower for long sweeps.</dd></div>
+  <div class="r"><dt>Shift + pad 1-16</dt><dd>Punch pattern 1-16.</dd></div>
+</dl>
+<p class="note">They stack: one from each group plays at once (TIME: pads 1-8; FILTER: pads 9-11; BITCRUSH, GATE, PAN SWING, ECHO THROW and KILL each on their own).</p>
+</section>
+
+<section id="pads">
+<h2>Pads and arp</h2>
+<h3>PAD FX: key, scale and feel</h3>
+<p class="intro">Press PAD FX on a synth for its PADS page. Press it again to go back. Knob 1 KEY, knob 2 SCALE (12 scales, or CHROMATIC), knob 3 OCTAVE. The pads then play only notes in that key and scale, and the root notes light white. Knob 4 VELOCITY: TOUCH (the pads play and record how hard you hit them) or a fixed velocity. Knob 5 CURVE: SOFT (easier to play loud), NORMAL or HARD. The synth sequencer's key and scale are the same ones. The 16 pads play 16 notes of the scale in order (pad 5 is the 5th note); PAD BANK gives the next 16.</p>
+<p class="intro">A drum machine has a PADS page too, with no key or scale: knob 1 OCTAVE (the chromatic pads), knob 2 VELOCITY and knob 3 CURVE.</p>
+<h3>NOTE REPEAT: the arpeggiator</h3>
+<p class="intro">Press NOTE REPEAT on a synth for the ARP page (PLUS: ARP 2). Press it again to go back. The arp turns the notes you hold, and the chords in the sequencer, into a run of single notes. What you record is the notes you played, not the arp's.</p>
+<dl class="rows">
+  <div class="r"><dt>Knob 1 ON</dt><dd>Arp on / off.</dd></div>
+  <div class="r"><dt>Knob 2 MODE</dt><dd>UP, DOWN, UP-DOWN, DOWN-UP, RANDOM, AS PLAYED, CHORD (every step plays all the notes).</dd></div>
+  <div class="r"><dt>Knob 3 OCT</dt><dd>1-4 octaves.</dd></div>
+  <div class="r"><dt>Knob 4 RATE</dt><dd>The ten rates, slowest to fastest. A sequenced chord arpeggiates for as long as it lasts, so give it a longer length, or a faster rate, to hear more than one note.</dd></div>
+  <div class="r"><dt>Knob 5 GATE</dt><dd>How long each note lasts, 10-200 % of a step.</dd></div>
+  <div class="r"><dt>Knob 6 HOLD</dt><dd>The notes keep going after you let go; new notes replace them.</dd></div>
+  <div class="r"><dt>Knob 7 STYLE</dt><dd>GALLOP, OFFBEAT, TRESILLO, SYNCOPATED, STUTTER laid over your rhythm (OFF: just your rhythm).</dd></div>
+  <div class="r"><dt>ARP 2</dt><dd>Knob 1 GLIDE (portamento between the notes; the synth has to answer it), knob 2 BEND (each note starts bent up or down and slides to its pitch).</dd></div>
+  <div class="r"><dt>Steps</dt><dd>The 16-step rhythm: tap a step to go note (white), accent (red, louder), rest (off).</dd></div>
+</dl>
+</section>
+
+<section id="fx">
+<h2>FX and mixer</h2>
+<p class="intro">The reverb and delay sends and the insert effects are on each instrument before the tape, so they are recorded with the sound. The tape room has no effects. Each instrument has a reverb and delay send and two insert effects; two more global inserts can be added.</p>
+<div class="shots">{{img:ducker|An insert effect: Ducker}}{{img:mixer|The mixer}}{{img:inserts|Choosing an insert effect}}</div>
+<dl class="rows">
+  <div class="r"><dt>B2</dt><dd>The MIXER. Press again: reverb, delay, song insert 1, song insert 2. The wheel also turns to the next / previous page. Back: off.</dd></div>
+  <div class="r"><dt>MIXER</dt><dd>Knobs 1-8 are the instruments in slots 1-8. Turn a knob: that instrument's volume. Hold Shift and turn: its pan. Pads (SEQ on): mute that instrument; Shift + pad: solo it (again: everyone back). Volume and pan are saved with the song.</dd></div>
+  <div class="r"><dt>Reverb</dt><dd>SIZE, TONE, LEVEL, WIDTH (100%: full stereo; 0%: both sides the same, mono).</dd></div>
+  <div class="r"><dt>Delay</dt><dd>TIME, FEEDBACK, LEVEL.</dd></div>
+  <div class="r"><dt>SENDS page</dt><dd>On every instrument's sound pages, right after INSERT 2. Knob 1: its REVERB send, knob 2: its DELAY send, knobs 3 and 4: how much of SONG INSERT 1 and 2 it hears.</dd></div>
+  <div class="r"><dt>INSERT 1 / 2</dt><dd>The last two sound pages of an instrument (after LFO 2). Each instrument has two insert effects in a row, picked from 36 (filter, EQ, tape, reverbs, granular...). Push the wheel to open the picture picker: turn to browse, push to choose, Back to cancel. Knobs 1-8 are the effect's first eight settings. A <b>Ducker</b> ducks its instrument whenever drum 1 of another instrument is hit.</dd></div>
+  <div class="r"><dt>SONG INSERT 1 / 2</dt><dd>One effect for the whole song. Every loaded instrument gets its own copy of it (after its own INSERT 1 and 2), all following the settings on this page, and it is recorded with each instrument. A compressor or limiter here works on each instrument on its own, not on the mix as a whole. Heavy effects on many instruments add up.</dd></div>
+  <div class="r"><dt>Choosing an effect</dt><dd>On an INSERT or SONG INSERT page, push the wheel to browse. The last entry, EDIT, lists every effect with a tick box: push to untick one and it leaves the list. An effect already in use stays.</dd></div>
+</dl>
+</section>
+
+<section id="menus">
+<h2>Menus, input, export</h2>
+<dl class="rows">
+  <div class="r"><dt>Menu (Sample Select)</dt><dd>The project menu: songs (new, open, save as), tempo, time signature, export format, settings. Wheel: pick, push: choose, Back: close.</dd></div>
+  <div class="r"><dt>Shift in the project menu</dt><dd>NEW PROJECT becomes DELETE PROJECT and SAVE PROJECT becomes RENAME PROJECT. Pick the project, then confirm ARE YOU SURE?.</dd></div>
+  <div class="r"><dt>Settings</dt><dd>Push the wheel on a setting to edit it (the value shows in a white box), turn to change, push again to let go. They include METRONOME, REC TIMING, TRIPLETS and INPUT.</dd></div>
+  <div class="r"><dt>Shift + Sample Select</dt><dd>Export: a stereo mix and one file per track (wav, aiff, flac or m4a, as chosen in the project menu). They go to the SD card, in <code>Console/data/exports</code>, in a folder named for the song and the time. Take the card out and open that folder on your computer.</dd></div>
+  <div class="r"><dt>INPUT</dt><dd>MENU &gt; SETTINGS &gt; INPUT: REAR (the jacks on the back), MIC (the built-in microphone) or USB (what a computer plays to "MPC Sample Audio"). A track's input (zoomed track, knob 2) then offers that input's LEFT and RIGHT. Pick one for a mono track, both for stereo. You hear it while you arm the track. The REC GAIN knob on the back sets the level of REAR and MIC.</dd></div>
+</dl>
+</section>
+
+<section id="notyet">
+<h2>Not on the Sample</h2>
+<p class="intro">These parts of Console's first version are not in this one: Ableton Link, the external screen (phone or tablet), and downloading exports and projects from a web page. Take them off the SD card instead. Some instruments still show their name instead of a picture.</p>
+</section>
+</main>
+</div>
+<footer>Console is free software (GPL-3.0); the instruments and effects it includes are under their own licences, which are in <code>Console/licenses</code> on the card. Not affiliated with or endorsed by Akai Professional or inMusic. Akai Professional and MPC are trademarks of inMusic Brands, Inc.</footer>
+
+<script>
+(function(){
+  var q=document.getElementById("q"),none=document.getElementById("none");
+  var rows=[].slice.call(document.querySelectorAll(".rows .r")),secs=[].slice.call(document.querySelectorAll("main section"));
+  q.addEventListener("input",function(){
+    var t=q.value.trim().toLowerCase(),any=false;
+    rows.forEach(function(r){var hit=!t||r.textContent.toLowerCase().indexOf(t)>-1;r.classList.toggle("hide",!hit);});
+    secs.forEach(function(s){
+      var shown=!t||[].some.call(s.querySelectorAll(".r,.intro,.note"),function(n){return n.textContent.toLowerCase().indexOf(t)>-1&&!n.classList.contains("hide")});
+      s.classList.toggle("hide",!shown);if(shown)any=true;
+      [].forEach.call(s.querySelectorAll(".rows"),function(d){var v=[].some.call(d.children,function(c){return !c.classList.contains("hide")});d.classList.toggle("hide",!v&&!!t)});
+    });
+    none.classList.toggle("hide",any||!t);
+  });
+})();
+</script>
+</body></html>
