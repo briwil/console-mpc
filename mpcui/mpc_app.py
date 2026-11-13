@@ -54,13 +54,15 @@ except Exception:
     import traceback
     print("free recording is off:\n" + traceback.format_exc(), flush=True)
 try:
-    for _d in ("core", "schwung"):
-        _p = os.path.join(C, "pi-app", _d)
-        if _p not in sys.path:
-            sys.path.append(_p)
-    import guitarinput
-    import instruments as _instr_mod
-    guitarinput.install(_instr_mod)                                  # GUITAR: the input is REAR while it is loaded
+    import threading as _th, time as _tm, guitarinput
+
+    def _guitar_wait():                                              # GUITAR: the input is REAR while it is loaded (hooked in once
+        for _ in range(240):                                         # the app has imported the instruments, not before)
+            if "instruments" in sys.modules and hasattr(sys.modules["instruments"], "Slot"):
+                guitarinput.install(sys.modules["instruments"])
+                return
+            _tm.sleep(0.5)
+    _th.Thread(target=_guitar_wait, daemon=True).start()
 except Exception:
     import traceback
     print("guitar input switch is off:\n" + traceback.format_exc(), flush=True)
