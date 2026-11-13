@@ -22,6 +22,9 @@ on:
       version:
         description: "Publish this version as a release (e.g. 1.0.0): also creates the tag v<version>"
         required: false
+      remove:
+        description: "A version to delete once this one is published (e.g. 1.0.0)"
+        required: false
 
 permissions:
   contents: write
@@ -73,4 +76,5 @@ jobs:
           gh release create "$TAG" out/Console-MPC.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
             --title "Console for the MPC Sample $TAG" --notes-file notes.md
           # the rolling releases are pre-releases, so "latest" is always a version
+          if [ -n "${{ inputs.remove }}" ]; then gh release delete "v${{ inputs.remove }}" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true; fi
           for t in bridge-latest runtime-latest card-latest; do gh release edit "$t" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false || true; done
