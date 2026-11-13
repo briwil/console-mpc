@@ -23,6 +23,7 @@ extern int ioctl(int, unsigned long, ...);
 extern long lseek(int, long, int);
 extern int usleep(unsigned);
 extern int atoi(const char *);
+extern int memcmp(const void *, const void *, unsigned long);
 extern void *memset(void *, int, unsigned long);
 extern int snprintf(char *, unsigned long, const char *, ...);
 __asm__(".text\n.globl _start\n.type _start,%function\n_start:\n"
@@ -198,14 +199,37 @@ static void pad_led(int pad, int r, int g, int b)
 }
 
 static void midi_close(void);
+/* The panel's MIDI port is not always card 0: at some boots the DIN "External MIDI" is, and the panel is card 1 (the cards are numbered in the
+   order they appear). Find it by its name, "Control Surface", in /proc/asound/cardN/midi0. -1: not there (yet). */
+static int panel_card(void)
+{
+    char path[] = "/proc/asound/card0/midi0";
+    for (int c = 0; c < 8; c++) {
+        path[17] = (char)('0' + c);
+        int fd = open(path, 0);
+        if (fd < 0) continue;
+        char b[32];
+        long n = read(fd, b, sizeof b);
+        close(fd);
+        if (n >= 15 && memcmp(b, "Control Surface", 15) == 0) return c;
+    }
+    return -1;
+}
+
 static void midi_open(void)
 {
 #ifndef HOST_TEST
-    for (int tries = 0; tries < 40 && midifd < 0; tries++) {     /* the stock app may still be letting go of it */
-        midifd = open("/dev/snd/midiC0D0", O_RDWR_ | O_NONBLOCK_);
+    char dev[] = "/dev/snd/midiC0D0";
+    for (int tries = 0; tries < 60 && midifd < 0; tries++) {     /* the card may not be there yet, or the stock app may still be letting go of it */
+        int c = panel_card();
+        if (c >= 0) {
+            dev[14] = (char)('0' + c);
+            midifd = open(dev, O_RDWR_ | O_NONBLOCK_);
+        }
         if (midifd < 0) usleep(100000);
     }
-    if (midifd < 0) { say("midi: could not open /dev/snd/midiC0D0\n"); return; }
+    if (midifd < 0) { say("midi: could not open the panel's port (Control Surface)\n"); return; }
+    { char m[] = "midi: panel is card 0\n"; m[18] = dev[14]; say(m); }
     {                                   /* plain MIDI bytes, not the stock app's timestamped records */
         uint64_t p[6];
         memset(p, 0, sizeof p);
@@ -281,7 +305,12 @@ static void silent_report(void)
     char m[100];
     snprintf(m, sizeof m, "silent panel: writes ok %d, short %d, failed %d\n", wr_ok, wr_short, wr_fail);
     say(m);
-    dump_file("port status:", "/proc/asound/card0/midi0");
+    {
+        char path[] = "/proc/asound/card0/midi0";
+        int c = panel_card();
+        path[17] = (char)('0' + (c >= 0 ? c : 0));
+        dump_file(c >= 0 ? "panel port status:" : "no Control Surface found; card 0 status:", path);
+    }
     dump_file("cgroup:", "/proc/self/cgroup");
     dump_file("limits:", "/proc/self/limits");
 #endif

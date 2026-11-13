@@ -48,10 +48,10 @@ if [ -z "${CONSOLE_TOOK_OVER:-}" ]; then
   n=0; tx=0
   while [ $n -lt 40 ]; do
     tx=$(grep "^ *3:" /proc/tty/driver/* 2>/dev/null | sed 's/.*tx:\([0-9]*\).*/\1/' | head -n1)
-    [ -e /dev/snd/midiC0D0 ] && [ "${tx:-0}" -gt 100 ] 2>/dev/null && break
+    grep -qs "Control Surface" /proc/asound/card*/midi0 && [ "${tx:-0}" -gt 100 ] 2>/dev/null && break
     sleep 1; n=$((n + 1))
   done
-  echo "panel ready after ${n}s (tx ${tx:-?}, midi device: $([ -e /dev/snd/midiC0D0 ] && echo yes || echo no))"
+  echo "panel ready after ${n}s (tx ${tx:-?}, panel port: $(grep -ls "Control Surface" /proc/asound/card*/midi0 | head -n1 | sed "s#.*/\(card[0-9]*\)/.*#\1#"))"
   UP_MIN=0
   [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (optional extra wait, in seconds of uptime:  echo 40 > $C/UP_MIN)
   up=$(cut -d. -f1 /proc/uptime)

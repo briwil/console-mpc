@@ -31,7 +31,7 @@ ALSA card 2 (`hw:2,0`, AK4558 over I2S): stereo, 44100 Hz, S32_LE, interleaved; 
 `libasound` is on the device (no headers).
 
 ## Control surface
-Card 0 (`/dev/snd/midiC0D0`) is the control surface, a serial port (`ttyS3`, 0xFE670000) exposed as a
+The control surface is `/dev/snd/midiC<N>D0`, usually card 0 but **not always**: the cards are numbered in the order they appear, and at some boots the DIN "External MIDI" is card 0 and the panel is card 1 (find it by the name "Control Surface" in `/proc/asound/card*/midi0`). It is, a serial port (`ttyS3`, 0xFE670000) exposed as a
 MIDI device by `snd-serial-generic`. Card 1 is the MIDI DIN (`ttyS0`); `ttyS2` is the kernel console.
 The stock app opens the port once for reading (with ALSA timestamp framing, which **the kernel keeps after the app stops**: a new reader gets 32-byte frames unless it switches framing off with SNDRV_RAWMIDI_IOCTL_PARAMS, mode 0, as bridge/jackshim.c does) and once for writing; only one
 writer can have it, so stop the app first. The surface needs no start-up handshake: it sends events as soon

@@ -299,13 +299,35 @@ static void hw_audio_write(const int32_t *fr, int n)
 
 static void dbg(char dir, const uint8_t *b, int n);
 
+/* The panel's MIDI port is not always card 0: at some boots the DIN "External MIDI" is, and the panel is card 1 (the cards are numbered in the
+   order they appear). Find it by its name, "Control Surface", in /proc/asound/cardN/midi0. -1: not there (yet). */
+static int panel_card(void)
+{
+    char path[] = "/proc/asound/card0/midi0";
+    for (int c = 0; c < 8; c++) {
+        path[17] = (char)('0' + c);
+        int fd = open(path, 0);
+        if (fd < 0) continue;
+        char b[32];
+        long n = read(fd, b, sizeof b);
+        close(fd);
+        if (n >= 15 && memcmp(b, "Control Surface", 15) == 0) return c;
+    }
+    return -1;
+}
+
 static int hw_midi_open(void)
 {
 #ifdef HOST_TEST
     return 0;
 #else
     for (int tries = 0; tries < 25; tries++) {
-        midifd = open("/dev/snd/midiC0D0", O_RDWR_ | O_NONBLOCK_);
+        {
+            char dev[] = "/dev/snd/midiC0D0";
+            int pc = panel_card();
+            if (pc >= 0) dev[14] = (char)('0' + pc);
+            midifd = pc >= 0 ? open(dev, O_RDWR_ | O_NONBLOCK_) : -1;
+        }
         if (midifd >= 0) {
             /* The stock app asks for timestamped records (32-byte frames) and the kernel remembers that after it
                stops. We want plain MIDI bytes: SNDRV_RAWMIDI_IOCTL_PARAMS, stream = input, mode = 0 (no framing). */
