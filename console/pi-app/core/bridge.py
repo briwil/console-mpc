@@ -278,7 +278,11 @@ class CoreBridge:
         # who's heard: the slots that sound now, and on the instrument pages the one you're playing
         sounding = set(e.sounding_slots())
         for k, (mid, slot) in self.slots.items():
-            g = audio.DRUMS_MONITOR if (k in sounding or (e.inst_view and k == e.slot)) else 0.0
+            if getattr(slot.m, "live_input", False):     # GUITAR plays the live input: heard when you are on it, or on the tape page when its track is armed
+                heard = (k == e.slot and k not in e.slot_mutes) if e.inst_view else (k in sounding)
+            else:
+                heard = k in sounding or (e.inst_view and k == e.slot)
+            g = audio.DRUMS_MONITOR if heard else 0.0
             if self._monitor.get(k) != g:
                 self._monitor[k] = g
                 self.core.slot_monitor(k, g)

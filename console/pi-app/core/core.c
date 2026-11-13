@@ -75,6 +75,7 @@ typedef struct {
     int on;                                   /* rendered at all (Python turns off what isn't needed) */
     int64_t awake;                            /* frames left before it sleeps: renders only while > 0 */
     int held;                                 /* notes held down (a module stays awake while any are) */
+    int always;                               /* never sleeps (the GUITAR module: it plays the live input) */
     int silent;                               /* its buffer is all zeros (asleep) */
     int slot;                                 /* the instrument slot it belongs to, or -1 (mixed on its own) */
     float buf[MAX_BLOCK * MAX_VOICES];        /* this cycle's sound, interleaved */
@@ -572,6 +573,7 @@ static int process(jack_nframes_t n, void *arg) {
         }
         if (src->awake > 0 || src->held > 0) src->silent = 0;
         if (src->awake > 0) src->awake -= n;
+        if (src->always) { src->awake = 1LL << 60; src->silent = 0; }
     }
 
     /* mix: the slots (making their recording inputs too), sources on their own, the tape */
@@ -728,7 +730,7 @@ static int new_source(int kind, int voices) {
         memset(src->rev, 0, sizeof src->rev);
         memset(src->dly, 0, sizeof src->dly);
         src->voices = voices; src->gain = 1.0f; src->on = 0;
-        src->awake = 0; src->held = 0; src->silent = 1; src->slot = -1;
+        src->awake = 0; src->held = 0; src->always = 0; src->silent = 1; src->slot = -1;
         memset(src->buf, 0, sizeof src->buf);
         src->kind = kind;
         return s;
@@ -754,7 +756,7 @@ int core_add_module(void *sh_render, void *sh_midi, void *inst) {
 /* turn a source off before removing it, and wait a cycle (core_cycles) before freeing what it uses */
 void core_set_input_fn(void *fn) { in_fn = (void (*)(const float *, const float *, int))fn; }
 /* a source that never sleeps (the GUITAR module: it plays the live input, not notes) */
-void core_source_wake(int s) { if (s >= 0 && s < MAX_SOURCES) { sources[s].awake = 1LL << 60; sources[s].silent = 0; } }
+void core_source_wake(int s) { if (s >= 0 && s < MAX_SOURCES) { sources[s].always = 1; sources[s].awake = 1LL << 60; sources[s].silent = 0; } }
 void core_source_on(int s, int on) { if (s >= 0 && s < MAX_SOURCES) sources[s].on = on; }
 void core_remove(int s) { if (s >= 0 && s < MAX_SOURCES) { sources[s].on = 0; sources[s].kind = 0; } }
 void core_set_pan(int s, int v, float l, float r) {
