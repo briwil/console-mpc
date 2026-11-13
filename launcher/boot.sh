@@ -11,7 +11,9 @@ TRY=$C/boot-attempt
 touch "$MARK"
 exec >> "$C/boot.log" 2>&1
 echo "--- boot.sh $(date)"
-[ -e /media/sample/NOCONSOLE ] && exit 0
+. "$M/sdroot.sh" 2>/dev/null
+SDR=$(sd_root 2>/dev/null)
+[ -n "$SDR" ] && [ -e "$SDR/NOCONSOLE" ] && exit 0
 [ -e "$C/NOBOOT" ] && exit 0
 [ -x "$C/python/bin/python3" ] || exit 0
 if [ -e "$TRY" ]; then rm -f "$TRY"; exit 0; fi      # last time it never got through: let the stock app start

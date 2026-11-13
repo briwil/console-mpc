@@ -9,15 +9,17 @@ export CONSOLE_LIBJACK="$C/mpc/libjack_mpc.so"
 export CONSOLE_PLATFORM=move
 export PYTHONUNBUFFERED=1
 # where the sampler and the sample browser look for sounds: the SD card, then the internal drive (leave out any that isn't there)
+. "$C/mpc/sdroot.sh" 2>/dev/null
+SDR=$(sd_root 2>/dev/null)             # the SD card, whatever its label (/media/sample, /media/SAMPLE ...)
 SMP=""
-for d in /media/sample /data/UserData/UserLibrary/Samples /data/UserData/console/samples; do [ -d "$d" ] && SMP="$SMP${SMP:+:}$d"; done
+for d in "$SDR" /data/UserData/UserLibrary/Samples /data/UserData/console/samples; do [ -n "$d" ] && [ -d "$d" ] && SMP="$SMP${SMP:+:}$d"; done
 export CONSOLE_SAMPLES="$SMP"
 mkdir -p "$C/data"
-# Projects, presets and settings (CONSOLE_DATA) live on the SD card: /media/sample/Console/data, made if it isn't there. The first time,
+# Projects, presets and settings (CONSOLE_DATA) live on the SD card: <card>/Console/data, made if it isn't there. The first time,
 # what is on the internal drive is copied across (the internal copy stays where it is). No card, or it can't be written: the internal drive.
 DATA="$C/data"
-if grep -q " /media/sample " /proc/mounts 2>/dev/null; then
-  SD=/media/sample/Console
+if [ -n "$SDR" ] && [ -d "$SDR" ]; then
+  SD="$SDR/Console"
   if [ ! -d "$SD/data" ]; then
     mkdir -p "$SD" && rm -rf "$SD/data.new" && cp -r "$C/data" "$SD/data.new" && mv "$SD/data.new" "$SD/data" && sync
     [ -f "$C/knob-sensitivity" ] && cp "$C/knob-sensitivity" "$SD/knob-sensitivity" 2>/dev/null

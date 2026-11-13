@@ -6,7 +6,8 @@
 # (SHA-256 of autorun.json + autorun.sh + the firmware's fixed string). The originals are saved in
 # /data/UserData/console/autorun-backup/.   AUTORUN_DIR=... overrides the folder (for testing).
 set -eu
-A=${AUTORUN_DIR:-/media/sample/autorun}
+. "$(dirname "$0")/sdroot.sh"
+A=${AUTORUN_DIR:-$(sd_root)/autorun}
 B=${BACKUP_DIR:-/data/UserData/console/autorun-backup}
 SECRET=f7bed1c9-7e90-4731-9194-c996666b4331
 

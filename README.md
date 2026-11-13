@@ -8,7 +8,7 @@ button lights and every control. The plan is to make the MPC "pretend to be a Mo
 `bridge/` is a small stand-in for libjack that runs Console's real sound core on the MPC (audio out, MPC controls
 as Move controls, Move lights and screen on the MPC). Passes host tests; first on-device test pending.
 Python/numpy for the MPC, and a native 320x240 interface (the screen hook is `draw_move_display`), come next.
-Nothing here is a release.
+Nothing here is a release yet: see [docs/INSTALL.md](docs/INSTALL.md) for the SD card install (a zip you unzip onto the card).
 
 - What we know about the device: [docs/MPC-SAMPLE-NOTES.md](docs/MPC-SAMPLE-NOTES.md)
 - Hardware test program: [test/](test/)

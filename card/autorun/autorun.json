@@ -1,0 +1,14 @@
+{
+  "value0": {
+    "scripts": [
+      {
+        "path": "autorun.sh",
+        "askQuestion": false,
+        "message": "Start Console?",
+        "yesButtonText": "Start",
+        "noButtonText": "Cancel"
+      }
+    ],
+    "files": []
+  }
+}
