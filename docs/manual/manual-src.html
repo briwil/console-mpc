@@ -103,12 +103,12 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
   <a href="#pads">Pads and arp</a>
   <a href="#fx">FX and mixer</a>
   <a href="#menus">Menus, input, export</a>
-  <a href="#notyet">Not on the Sample</a>
+  <a href="#notyet">Sharing your work</a>
 </nav>
 
 <main>
 <h1>Console<span>.</span></h1>
-<p class="lede">How to drive <b>Console on the Akai MPC Sample</b>: an 8-track tape with OP-1-style editing, up to 8 instruments (drum machines and synths) and a step sequencer. Controls as they are in the first layout, November 2026.</p>
+<p class="lede">How to drive <b>Console on the Akai MPC Sample</b>: an 8-track tape with OP-1-style editing, up to 8 instruments (drum machines and synths) and a step sequencer. Controls as of November 2026.</p>
 <p class="none hide" id="none">Nothing found. Try another word.</p>
 
 <section id="start">
@@ -117,7 +117,6 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
   <div class="r"><dt>Start</dt><dd>Switch the Sample on with the SD card in. A startup menu appears: <kbd>PAD 1</kbd> = Console, <kbd>PAD 2</kbd> = the normal MPC app. No answer in 15 seconds starts the normal MPC app.</dd></div>
   <div class="r"><dt>Quit</dt><dd><kbd>Shift</kbd> + <kbd>STOP</kbd>. Saves your song, quits and gives the Sample back to the normal MPC software.</dd></div>
   <div class="r"><dt>Your songs</dt><dd>Projects, presets and settings are kept on the SD card, in <code>Console/data</code>. Copy that folder to keep them safe. With no card, Console uses the Sample's internal drive.</dd></div>
-  <div class="r"><dt>Skip Console once</dt><dd>Put an empty file called <code>NOCONSOLE</code> on the SD card, next to the <code>Console</code> folder. The normal MPC app starts.</dd></div>
   <div class="r"><dt>Update</dt><dd>Download the new zip. Replace the <code>autorun</code> and <code>Console</code> folders on the card, but keep <code>Console/data</code>, then switch on. The first start copies the new version across.</dd></div>
   <div class="r"><dt>Remove</dt><dd>Put an empty file called <code>UNINSTALL</code> in the <code>Console</code> folder and switch on once. Console comes off the Sample and your songs stay on the card. Delete that file to install again. Or just delete the <code>autorun</code> folder.</dd></div>
   <div class="r"><dt>If something goes wrong</dt><dd><code>Console/install-status.txt</code> on the card says what happened. If Console doesn't get through starting, the normal MPC app starts at the next power-on.</dd></div>
@@ -127,7 +126,7 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
 
 <section id="controls">
 <h2>The controls</h2>
-<p class="intro">Console was written for another instrument, and the Sample's controls stand in for its buttons. This table is the whole mapping. Each later chapter says what changes on its page. Most buttons have a second job with <kbd>Shift</kbd> held.</p>
+<p class="intro">Here is how the Sample's buttons, pads, knobs and encoder map onto Console. Each later chapter says what changes on its page. Most buttons have a second job with <kbd>Shift</kbd> held.</p>
 <dl class="rows">
   <div class="r"><dt>PLAY</dt><dd>Play / stop.</dd></div>
   <div class="r"><dt>SEQ REC</dt><dd>Record.</dd></div>
@@ -158,7 +157,6 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
 </dl>
 <h3>Reading the rest of this manual</h3>
 <p class="intro">Where a page says <b>knob 5</b>, turn K1-K3 for knobs 1-3 and the FADER for knob 4. For any knob 1-8: switch KNOB FX on, hold pad 1-8 and turn the encoder. Where it says <b>step button</b>, switch SEQ on and use the pads. Shift + pad 12, 14 or 16 are printed on the pads: TIME CORRECT = the next grid, SONG = the song page, PROJECT = the menu.</p>
-<p class="note"><b>Still being written.</b> Some of the pages below describe behaviour carried over from Console's first version. If something here doesn't do what it says on your Sample, that's a bug in this manual, not in you.</p>
 </section>
 
 <section id="tape">
@@ -408,8 +406,8 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
 </section>
 
 <section id="notyet">
-<h2>Not on the Sample</h2>
-<p class="intro">These parts of Console's first version are not in this one: Ableton Link, the external screen (phone or tablet), and downloading exports and projects from a web page. Take them off the SD card instead. Some instruments still show their name instead of a picture.</p>
+<h2>Sharing your work</h2>
+<p class="intro">Everything you make is a plain file on the SD card, so there's nothing to set up. Songs are in <code>Console/data/projects</code> and exports in <code>Console/data/exports</code>. Take the card out, put it in your computer and copy what you want. Copy the whole <code>Console/data</code> folder to back everything up.</p>
 </section>
 </main>
 </div>
