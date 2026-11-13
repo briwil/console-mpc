@@ -515,13 +515,13 @@ static void pagemode_poll(void)
         in_usb = (w == 'u');
     }
     int fd = open("/tmp/console-pagemode", 0);
-    if (fd < 0) { page_tape = 0; page_tapeonly = 0; page_param = 0; page_nostep = 0; page_seq = 0; page_linear = 0; return; }
+    if (fd < 0) { page_tape = 0; page_tapeonly = 0; page_param = 0; page_nostep = 0; page_sound = 0; page_seq = 0; page_linear = 0; return; }
     char two[2] = { 0, 0 };
     long n = read(fd, two, 2);
     char ch = two[0];
     close(fd);
     if (n >= 1) page_linear = (n == 2 && two[1] == 'y');             /* second letter y: a synth (the note pads run in order) */
-    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N'); page_seq = (ch == 'S' || ch == 'P'); }
+    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N' || ch == 'Q'); page_sound = (ch == 'Q'); page_seq = (ch == 'S' || ch == 'P'); }
 }
 
 /* ---- the metronome: /tmp/console-metro = "on volume bpm*100 beats-per-bar t0_ns" (Console writes it while recording; t0 = a bar's start on CLOCK_MONOTONIC) ---- */

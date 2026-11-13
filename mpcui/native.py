@@ -507,7 +507,7 @@ def on_settings(menu):
 def draw_settings(T, menu):
     import menu as menu_mod
     c = canvas
-    names = {"TIMESIG": "TIME SIG", "FORMAT": "EXPORT", "UPDATE": "UPDATE", "SCREEN": "SCREEN", "METRONOME": "METRO", "RECTIMING": "REC TIME", "INPUTSRC": "INPUT"}
+    names = {"TIMESIG": "TIME SIG", "FORMAT": "EXPORT", "UPDATE": "UPDATE", "SCREEN": "SCREEN", "METRONOME": "METRO", "COUNTIN": "COUNT IN", "RECTIMING": "REC TIME", "INPUTSRC": "INPUT"}
     begin()
     c.text(6, 7, "SETTINGS", WHITE, 2, -2)
     rows = menu_mod.SETTINGS
@@ -684,7 +684,7 @@ def install(pages):
             if card is None and T.engine and on_sound_page(T, menu):
                 draw_sound(T)
                 publish()
-                set_mode("N")
+                set_mode("N" if fxpages._guitar(T) else "Q")      # Q: SEQ goes to the sequencer (not on GUITAR: it has none)
                 return
             if card is None and T.engine and on_synth_seq_page(T, menu):
                 draw_synth_seq(T)

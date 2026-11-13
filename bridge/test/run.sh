@@ -13,3 +13,4 @@ gcc -O1 -g "$HERE/shim_test.c" -o "$OUT/shim_test" -ldl
 gcc -O1 -g -DRETRIG_TEST "$HERE/shim_test.c" -o "$OUT/retrig_test" -ldl
 "$OUT/shim_test" "$OUT/libjack_mpc_host.so" "$OUT/libconsolecore_host.so"
 "$OUT/retrig_test" "$OUT/libjack_mpc_retrig.so" "$OUT/libconsolecore_host.so"
+python3 "$HERE/countin_test.py"

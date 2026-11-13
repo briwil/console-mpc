@@ -61,6 +61,7 @@ static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
 static volatile int page_tapeonly;          /* the tape recorder page itself (not the instrument list, song or mixer): its own button layout */
 static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
+static volatile int page_sound;             /* the instrument's sound / parameter page that has a sequencer: SEQ goes to it (as B1 does) */
 static volatile int page_nostep;            /* a page with no steps (the sound page): SEQ does nothing there and step mode / step settings don't apply (written by the screen thread) */
 static volatile int page_param;             /* a step is selected on the sequencer page (written by the screen thread): the pads are its settings, as with param_mode */
 static volatile int page_linear;            /* a synth is the instrument (second letter "y" in /tmp/console-pagemode): the note pads are Move pads 1-16 (bank: 17-32) in order, so the scale runs on up the rows instead of skipping the Move's right half */
@@ -306,6 +307,7 @@ static void mpc_button_event(int note, int down)
         case 0x49: if (down) send3(0xBF, 106, 127); return;           /* SAMPLE REC = arm / disarm the selected track */
         }
     }
+    if (note == MPC_SEQ && page_sound && !shift_held) { send3(0xBF, 43, down ? 127 : 0); return; }   /* the sound page: SEQ = its sequencer (B1) */
     if (note == MPC_SEQ && page_nostep) return;                       /* a page with no steps: SEQ does nothing (and nothing carries over to the next page) */
     if (note == MPC_SEQ && page_param && !shift_held) {                  /* steps selected: SEQ = done with them (a tap on any step, as Console has it) */
         if (down) { send3(0x9F, 16, 100); send3(0x8F, 16, 0); }

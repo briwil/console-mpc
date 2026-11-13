@@ -37,7 +37,7 @@ static int failures;
 #define CHECK(cond, msg) do { if (!(cond)) { printf("FAIL: %s\n", msg); failures++; } else printf("ok:   %s\n", msg); } while (0)
 
 static void *cl, *p_ol, *p_or, *p_cin, *p_lights, *p_disp;
-static unsigned char got[256][3];
+static unsigned char got[1024][3];
 static volatile int ngot;
 static volatile int sent_lights;
 static unsigned char lightmsgs[4][3] = { { 0x9F, 68, 127 }, { 0x9F, 69, 120 }, { 0xBF, 85, 127 }, { 0x9F, 16, 120 } };
@@ -55,7 +55,7 @@ static int fake_process(uint32_t n, void *arg)
     uint32_t k = m_count(cin);
     for (uint32_t i = 0; i < k; i++) {
         jack_midi_event_t ev;
-        if (m_get(&ev, cin, i) == 0 && ev.size == 3 && ngot < 256) {
+        if (m_get(&ev, cin, i) == 0 && ev.size == 3 && ngot < 1024) {
             memcpy(got[ngot], ev.buffer, 3);
             ngot++;
         }
@@ -315,6 +315,12 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x99, 37, 71 }, 3);
         send((unsigned char[]){ 0x89, 37, 0 }, 3);
         CHECK(expect(b, 0x9F, 68, 70) && expect(b + 2, 0x9F, 68, 71), "A: no-steps page: SEQ does nothing, the pads stay drum pads (also on the next page)");
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('Q', pf); fclose(pf);      /* Q: the sound page of an instrument with a sequencer: SEQ = B1 (its sequencer) */
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
+        CHECK(expect(b, 0xBF, 43, 127) && expect(b + 1, 0xBF, 43, 0), "A: sound page with a sequencer: SEQ = B1, the sequencer");
         remove("/tmp/console-pagemode");
     }
     int s0 = ngot;

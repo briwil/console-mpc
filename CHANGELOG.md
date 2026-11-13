@@ -4,6 +4,9 @@ Each version is a release on the [Releases](https://github.com/briwil/console-mp
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
 ## Next
+- COUNT IN (SETTINGS): 1, 2 or 4 bars of clicks before a recording starts.
+- SEQ on an instrument's sound page goes to its sequencer.
+- METRONOME row: push = on / off, wheel = volume; GUITAR clicks while it plays.
 - GUITAR switches the input to REAR while it is loaded and puts it back when it is gone.
 - The sound core and module host are now built here (aarch64) so GUITAR can take the audio input.
 
