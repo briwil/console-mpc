@@ -7,20 +7,23 @@ import time
 
 PATH = os.environ.get("CONSOLE_METRO", "/tmp/console-metro")
 SAVE = os.path.join(os.environ.get("CONSOLE_HOME", "/data/UserData/console"), "metronome.json")
-STATE = {"on": False, "vol": 60, "sent": 0.0, "was": False}
+STATE = {"on": False, "vol": 60, "sent": 0.0, "was": False, "count": 0}
+COUNTS = [0, 1, 2, 4]                       # COUNT IN: OFF, or this many bars of clicks before a recording starts
+CI = {"active": False, "end": 0.0, "start_ns": 0, "e": None, "last": -1, "patched": False}
 
 
 def load():
     try:
         d = json.load(open(SAVE))
         STATE["on"], STATE["vol"] = bool(d.get("on")), max(0, min(100, int(d.get("vol", 60))))
+        STATE["count"] = int(d.get("count", 0)) if int(d.get("count", 0)) in COUNTS else 0
     except (OSError, ValueError):
         pass
 
 
 def save():
     try:
-        json.dump({"on": STATE["on"], "vol": STATE["vol"]}, open(SAVE + ".tmp", "w"))
+        json.dump({"on": STATE["on"], "vol": STATE["vol"], "count": STATE["count"]}, open(SAVE + ".tmp", "w"))
         os.replace(SAVE + ".tmp", SAVE)
     except OSError:
         pass
@@ -41,14 +44,62 @@ def toggle(T):
     T.say("METRONOME %s  (CLICKS WHILE RECORDING, OR PLAYING ON A SEQUENCER PAGE, VOLUME %d%%)" % ("ON" if STATE["on"] else "OFF", STATE["vol"]), 3)
 
 
+def step_count(way):
+    i = COUNTS.index(STATE["count"]) if STATE["count"] in COUNTS else 0
+    STATE["count"] = COUNTS[(i + way) % len(COUNTS)]
+    save()
+
+
 def set_volume(delta):
     STATE["vol"] = max(0, min(100, STATE["vol"] + delta))
     save()
 
 
+def _patch(Engine):
+    """COUNT IN: pressing record while the tape is stopped clicks the chosen number of bars first, then the recording starts."""
+    CI["patched"] = True
+    orig = Engine.set_recording
+
+    def set_recording(self, on):
+        if not on:
+            CI["active"] = False                         # (record again, or stop, during the count: it is cancelled)
+            return orig(self, on)
+        if STATE["count"] and not self.recording and not self.playing and not CI["active"]:
+            bars = STATE["count"]
+            CI.update(active=True, e=self, last=-1, start_ns=time.monotonic_ns(),
+                      end=time.monotonic() + bars * max(1, int(round(self.bar_beats()))) * 60.0 / self.bpm)
+            return
+        return orig(self, on)
+    Engine.set_recording = set_recording
+    CI["orig"] = orig
+
+
+def _count_tick(T):
+    e, now = CI["e"], time.monotonic()
+    if now >= CI["end"]:
+        CI["active"] = False
+        _write("0 0 12000 4 0")
+        CI["orig"](e, True)
+        return
+    bar = max(1, int(round(e.bar_beats())))
+    beat = int((now - (CI["end"] - STATE["count"] * bar * 60.0 / e.bpm)) * e.bpm / 60.0)
+    left = STATE["count"] * bar - beat
+    if left != CI["last"]:
+        CI["last"] = left
+        T.say("COUNT IN  %d" % left, 2)
+    if now - STATE["sent"] >= 0.2:
+        STATE["sent"], STATE["was"] = now, True
+        _write("1 %d %d %d %d" % (max(STATE["vol"], 40), round(e.bpm * 100), bar, CI["start_ns"]))
+
+
 def tick(T):
     """Every screen frame: keep the bridge told while recording."""
     e = T.engine
+    if e is not None and not CI["patched"]:
+        _patch(type(e))
+    if CI["active"]:
+        _count_tick(T)
+        return
     seq = bool(getattr(T, "seq_page", False) and not getattr(T, "fx_page", False))      # a sequencer page: it clicks while the sequence plays too
     guitar = False                                    # GUITAR has no sequencer page: it clicks while it plays
     try:
@@ -79,6 +130,8 @@ def install_menu(menu_mod):
         return
     menu_mod.SETTINGS.insert(menu_mod.SETTINGS.index("UPDATE") if "UPDATE" in menu_mod.SETTINGS else len(menu_mod.SETTINGS), "METRONOME")
     menu_mod.LABELS["METRONOME"] = "METRONOME"
+    menu_mod.SETTINGS.insert(menu_mod.SETTINGS.index("METRONOME") + 1, "COUNTIN")
+    menu_mod.LABELS["COUNTIN"] = "COUNT IN"
     M = menu_mod.Menu
     o_change, o_text, o_key = M.change, M.setting_text, M.settings_key
 
@@ -87,17 +140,26 @@ def install_menu(menu_mod):
             set_volume((1 if fine else 5) * (1 if delta > 0 else -1))
             self.msg = ""
             return
+        if menu_mod.SETTINGS[self.row] == "COUNTIN":
+            step_count(1 if delta > 0 else -1)
+            self.msg = ""
+            return
         o_change(self, delta, fine)
 
     def setting_text(self, what):
         if what == "METRONOME":
             return "%s   VOLUME %d%%   (PUSH: ON / OFF, WHEEL: VOLUME)" % ("ON" if STATE["on"] else "OFF", STATE["vol"])
+        if what == "COUNTIN":
+            return "OFF" if not STATE["count"] else "%d BAR%s   (CLICKS BEFORE RECORDING STARTS)" % (STATE["count"], "" if STATE["count"] == 1 else "S")
         return o_text(self, what)
 
     def settings_key(self, name):
         if name in menu_mod.CONFIRM and menu_mod.SETTINGS[self.row] == "METRONOME":
             STATE["on"] = not STATE["on"]               # push = on / off (the wheel is the volume)
             save()
+            return
+        if name in menu_mod.CONFIRM and menu_mod.SETTINGS[self.row] == "COUNTIN":
+            step_count(1)
             return
         o_key(self, name)
 
