@@ -34,6 +34,7 @@ sha256sum "$PY" | cut -c1-16 > "$CARD/Console/payload/PYTHON_VERSION"
 ( cd "$CARD/Console/payload" && sha256sum console.tgz python.tgz > SHA256SUMS )
 printf '%s\n' "$VER" > "$CARD/Console/VERSION"
 cp "$HERE/card/Console/install.sh" "$HERE/card/Console/README.txt" "$CARD/Console/"
+[ -f "$HERE/launcher/install-screens.raw" ] && cp "$HERE/launcher/install-screens.raw" "$CARD/Console/"   # the progress pictures (tools/make-install-screens.py)
 mkdir -p "$CARD/Console/licenses"                      # the licences travel with the files (GPL v3 + the third-party notices)
 cp "$HERE/LICENSE" "$CARD/Console/licenses/LICENSE-console-mpc.txt"
 [ -f "$CM/LICENSE" ] && cp "$CM/LICENSE" "$CARD/Console/licenses/LICENSE-console.txt"
