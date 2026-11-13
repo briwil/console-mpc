@@ -282,7 +282,7 @@ def input_parts(e, c):
     except Exception:
         who = mid
     if k >= audio.DRUM_KIT and e.is_synth(mid):
-        return "%d  %s" % (slot + 1, who), ("SOUND LEFT", "SOUND RIGHT", "SOUND (MONO)")[k - audio.DRUM_KIT]
+        return "%d  %s" % (slot + 1, who), ("SOUND L", "SOUND R", "SOUND MONO")[k - audio.DRUM_KIT]
     what = "KIT LEFT" if k == audio.DRUM_KIT else "KIT RIGHT" if k == audio.DRUM_KIT + 1 else \
         "KIT (ALL DRUMS)" if k == audio.DRUM_KIT + 2 else "DRUM %d ONLY" % (k + 1)
     return "%d  %s" % (slot + 1, who), what

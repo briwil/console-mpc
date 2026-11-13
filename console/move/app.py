@@ -1082,6 +1082,16 @@ def handle(name, T, m, e):
         if not way:
             return
         name = "RIGHT" if way > 0 else "LEFT"
+    for _q in (T.msyn, ms):
+        # the big wheel does what knob 1 does while steps are selected and a setting pad is held / picked
+        if (_q.active() and _q.selected and getattr(_q, "sel", None) is not None and not (m.open or m.kits.open)
+                and T.fx_page is None and isinstance(name, tuple) and name[0] == "KNOB" and name[1] == 11):
+            _q.knob(1, name[2], False)
+            return
+        # Back finishes setting the selected steps, as tapping a step does
+        if (_q.active() and _q.selected and not (m.open or m.kits.open) and T.fx_page is None and name == "BACK"):
+            _q.selected, _q.sel = [], None
+            return
     if T.msyn.active() and not (m.open or m.kits.open) and T.fx_page is None:
         if isinstance(name, tuple) and name[0] == "KNOB" and name[1] <= 8:
             T.msyn.knob(name[1], name[2], name[3])
@@ -1138,7 +1148,8 @@ def handle(name, T, m, e):
         elif T.fx_page:
             T.fx_page = None
         elif T.song_page:
-            pass                                     # (song mode is a top page too)
+            T.song_page = False                      # Back from the song page: the instruments page, as from every other page
+            handle("DRUMS", T, m, e)                 # (the same as left button 1 from the tape)
         elif T.focus.track is not None:
             T.key("FOCUS")
         return
