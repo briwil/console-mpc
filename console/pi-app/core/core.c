@@ -591,6 +591,15 @@ static int process(jack_nframes_t n, void *arg) {
             }
     }
     input_peaks((int)n);
+    if (in_fn) {                                      /* GUITAR check: every ~3 s, how loud the input and the mix are (goes to app.log) */
+        static float pin, pmix; static int cyc;
+        for (jack_nframes_t i = 0; i < n; i++) {
+            float a = fabsf(il[i]), b = fabsf(mix[0][i]);
+            if (a > pin) pin = a;
+            if (b > pmix) pmix = b;
+        }
+        if (++cyc >= 1000) { fprintf(stderr, "guitar check: input peak %.4f, slot mix peak %.4f\n", pin, pmix); fflush(stderr); cyc = 0; pin = pmix = 0.0f; }
+    }
     for (int s = 0; s < MAX_SOURCES; s++) {
         Source *src = &sources[s];
         if (!src->kind || !src->on || src->gain <= 0.0f || src->silent || src->slot >= 0) continue;
