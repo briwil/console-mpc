@@ -7,7 +7,7 @@ name: Build MPC bridge
 on:
   push:
     branches: [main]
-    paths: ["bridge/**", "launcher/**", "mpcui/**", "console/pi-app/schwung/vst2fx/**"]
+    paths: ["bridge/**", "launcher/**", "mpcui/**", "console/pi-app/schwung/vst2fx/**", "console/pi-app/core/core.c", "console/pi-app/schwung/host.c", "console/pi-app/schwung/*.h"]
   workflow_dispatch:
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
         run: |
           # (the package server is sometimes unreachable: give up after 4 minutes and use the binaries committed in bridge/prebuilt)
           timeout 240 bash -c '
-            sudo apt-get -o Acquire::Retries=2 update && sudo apt-get -o Acquire::Retries=2 install -y clang lld llvm || exit 1
+            sudo apt-get -o Acquire::Retries=2 update && sudo apt-get -o Acquire::Retries=2 install -y clang lld llvm gcc-aarch64-linux-gnu || exit 1
             for t in nm strip; do sudo ln -sf "$(ls /usr/bin/llvm-$t-* | head -n 1)" /usr/local/bin/llvm-$t; done
             command -v ld.lld >/dev/null || sudo ln -sf "$(ls /usr/bin/ld.lld-* | head -n 1)" /usr/local/bin/ld.lld
           '
@@ -34,6 +34,15 @@ jobs:
           else
             echo "no compiler: using the binaries committed in bridge/prebuilt"
             cp bridge/prebuilt/libjack_mpc.so bridge/prebuilt/bridge_demo bridge/prebuilt/bootmenu bridge/prebuilt/panelsniff.so bridge/prebuilt/vst2fx.so bridge/
+          fi
+      - name: Sound core and module host (aarch64; the Sample runs glibc 2.39)
+        run: |
+          if command -v aarch64-linux-gnu-gcc >/dev/null; then
+            aarch64-linux-gnu-gcc -O2 -mtune=cortex-a55 -shared -fPIC -o bridge/libconsolecore.so console/pi-app/core/core.c -ldl -lm
+            aarch64-linux-gnu-gcc -O2 -shared -fPIC -o bridge/libschwunghost.so console/pi-app/schwung/host.c -ldl -lpthread
+            ls -l bridge/libconsolecore.so bridge/libschwunghost.so
+          else
+            echo "no aarch64 compiler: the card keeps the sound core and module host from the libs release (no GUITAR input)"
           fi
       - name: Host test of the VST2 effect host (a fake plugin)
         run: sh bridge/test/vst2fx.sh
@@ -50,6 +59,7 @@ jobs:
         run: |
           mkdir -p pack/mpc
           cp bridge/libjack_mpc.so bridge/bridge_demo bridge/bootmenu bridge/panelsniff.so bridge/vst2fx.so launcher/*.sh launcher/bootanim.bin mpcui/*.py pack/mpc/
+          cp bridge/libconsolecore.so bridge/libschwunghost.so pack/mpc/ 2>/dev/null || true
           mkdir -p pack/mpc/fonts && cp mpcui/fonts/* pack/mpc/fonts/
           cp mpcui/*.json pack/mpc/ 2>/dev/null || true
           chmod +x pack/mpc/*

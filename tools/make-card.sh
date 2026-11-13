@@ -22,6 +22,8 @@ tar xzf "$LIBS" -C "$T/console/pi-app"
 rm -rf "$T/console/move/manual" "$T/console/move/anim"
 tar xzf "$BRIDGE" -C "$T/console"                       # -> console/mpc/ (bridge, launcher scripts, native screens)
 [ -f "$T/console/mpc/boot.sh" ] || { echo "the bridge archive has no mpc/boot.sh"; exit 1; }
+[ -f "$T/console/mpc/libconsolecore.so" ] && cp "$T/console/mpc/libconsolecore.so" "$T/console/pi-app/core/libconsolecore.so"        # (our sound core and module host: they hand the audio input to the GUITAR instrument)
+[ -f "$T/console/mpc/libschwunghost.so" ] && cp "$T/console/mpc/libschwunghost.so" "$T/console/pi-app/schwung/libschwunghost.so"
 [ -f "$T/console/mpc/vst2fx.so" ] && { cp "$T/console/mpc/vst2fx.so" "$T/console/pi-app/schwung/modules/stompbox/vst2fx.so"; cp "$T/console/mpc/vst2fx.so" "$T/console/pi-app/schwung/modules/guitar/dsp.so"; }     # (the VST2 plugin host: STOMPBOX in the insert list, and the GUITAR instrument)
 find "$T" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 find "$T" -name '._*' -delete 2>/dev/null || true
