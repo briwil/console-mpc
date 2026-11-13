@@ -1,7 +1,7 @@
 #!/bin/sh
-# Packs Console (from a checkout of briwil/console-move) + its built libraries + the MPC bridge into one tarball
+# Packs Console (from the console folder of this repo) + its built libraries + the MPC bridge into one tarball
 # that unpacks to console/ (to be copied to /data/UserData/ on the MPC).
-# usage: tools/package-app.sh <console-move checkout> <move-libs.tgz> <out.tgz>
+# usage: tools/package-app.sh <console folder> <move-libs.tgz> <out.tgz>
 set -e
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 CM=$1; LIBS=$2; OUT=$3

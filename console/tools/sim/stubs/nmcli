@@ -1,0 +1,11 @@
+#!/bin/bash
+# nmcli stand-in for testing the Wi-Fi menu: a few made-up networks; a password starting with "short" fails
+[ -n "$NMCLI_LOG" ] && echo "$@" >> "$NMCLI_LOG"
+case "$*" in
+ *"ACTIVE,SSID"*) echo "yes:Home Net"; echo "no:Cafe";;
+ *"NAME,TYPE"*) echo "Home Net:802-11-wireless"; echo "Old One:802-11-wireless"; echo "Wired:802-3-ethernet";;
+ *"wifi list"*) sleep 0.3; echo "*:Home Net:78:WPA2"; echo " :Cafe\:Guest:55:"; echo " :Neighbour:40:WPA2"; echo " :Neighbour:62:WPA2"; echo " ::30:WPA2";;
+ *"connect Neighbour password short"*) echo "Error: Secrets were required, but not provided." >&2; exit 4;;
+ *"connect"*) sleep 0.3;;
+ *"con delete"*) ;;
+esac

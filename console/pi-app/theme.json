@@ -1,0 +1,81 @@
+{
+ "system": {
+  "name": "Everything else (menus, tape, sequencer, FX)",
+  "families": {
+   "main_text": "sans",
+   "labels_and_numbers": "mono"
+  }
+ },
+ "drum_page": {
+  "name": "Drum page",
+  "colours": {
+   "background": "#000000",
+   "key_selected": "#F1C12F",
+   "key": "#353535",
+   "rules": "#686868",
+   "grid": "#1C1434",
+   "panel": "#000000",
+   "setting_bars_and_boxes": "#8359E1",
+   "turning": "#CDE05A",
+   "recording_dots": "#EC2426"
+  },
+  "fonts": {
+   "voice_name": {
+    "family": "outfit",
+    "weight": 900,
+    "size": 40,
+    "tracking": -0.02,
+    "colour": "#F1C12F"
+   },
+   "tempo": {
+    "family": "outfit",
+    "weight": 300,
+    "size": 14,
+    "tracking": 0,
+    "colour": "#00AEEF"
+   },
+   "setting_name": {
+    "family": "outfit",
+    "weight": 900,
+    "size": 18,
+    "tracking": 0,
+    "colour": "#8359E1"
+   },
+   "box_text": {
+    "family": "outfit",
+    "weight": 500,
+    "size": 22,
+    "tracking": 0,
+    "colour": "#8359E1"
+   },
+   "pages": {
+    "family": "outfit",
+    "weight": 900,
+    "size": 30,
+    "tracking": -0.02,
+    "colour": "#595A5A",
+    "colour_showing": "#EC2426"
+   },
+   "knob_9_hint": {
+    "family": "outfit",
+    "weight": 600,
+    "size": 14,
+    "tracking": 0,
+    "colour": "#F1C12F"
+   }
+  },
+  "shapes": {
+   "bar_lines": 21,
+   "bar_line_spacing": 5,
+   "bar_line_width": 2,
+   "bar_tallest": 84,
+   "bar_shortest": 4,
+   "bar_falloff": 4.2,
+   "box_size": 88,
+   "box_border": 9,
+   "box_corner": 12,
+   "panel_corner": 9,
+   "key_corner": 5
+  }
+ }
+}

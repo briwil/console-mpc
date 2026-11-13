@@ -1,8 +1,8 @@
 name: Build card zip
 
 # Builds Console-MPC.zip (the "autorun" and "Console" folders to unzip onto the MPC Sample's SD card) from:
-#   Console's code        briwil/console-move (public)
-#   the synths/effects    the "libs-latest" release of briwil/console-move
+#   Console's code        the console/ folder of this repo
+#   the synths/effects    the "libs-latest" release of this repo (made by the "Import libs" workflow)
 #   the bridge + screens  the "bridge-latest" release of this repo (built by "Build MPC bridge")
 #   Python + numpy        the "runtime-latest" release of this repo
 # and publishes it as the "card-latest" release. Runs after every successful bridge build, when card/ changes, on a
@@ -41,10 +41,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: briwil/console-move
-          path: move-src
       - name: Test the installer
         run: |
           sh card/test/run.sh
@@ -54,11 +50,11 @@ jobs:
           mkdir -p parts
           gh release download bridge-latest  --repo "$GITHUB_REPOSITORY" -p mpc-bridge.tgz  -D parts
           gh release download runtime-latest --repo "$GITHUB_REPOSITORY" -p mpc-python.tgz  -D parts
-          curl -fsSL -o parts/move-libs.tgz https://github.com/briwil/console-move/releases/download/libs-latest/move-libs.tgz
+          gh release download libs-latest --repo "$GITHUB_REPOSITORY" -p move-libs.tgz -D parts
           ls -l parts
       - name: Build the zip
         run: |
-          sh tools/make-card.sh move-src parts/move-libs.tgz parts/mpc-bridge.tgz parts/mpc-python.tgz out
+          sh tools/make-card.sh console parts/move-libs.tgz parts/mpc-bridge.tgz parts/mpc-python.tgz out
           unzip -t out/Console-MPC.zip | tail -n 1
       - name: Publish card-latest
         run: |

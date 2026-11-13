@@ -1,0 +1,337 @@
+{
+ "sans": {
+  "name": "Roboto Condensed",
+  "files": {
+   "400": "RobotoCondensed-Regular.ttf",
+   "500": "RobotoCondensed-Medium.ttf",
+   "600": "RobotoCondensed-SemiBold.ttf",
+   "700": "RobotoCondensed-Bold.ttf"
+  }
+ },
+ "mono": {
+  "name": "Roboto Condensed",
+  "files": {
+   "400": "RobotoCondensed-Regular.ttf",
+   "500": "RobotoCondensed-Medium.ttf",
+   "600": "RobotoCondensed-SemiBold.ttf",
+   "700": "RobotoCondensed-Bold.ttf"
+  }
+ },
+ "plexsans": {
+  "name": "IBM Plex Sans",
+  "files": {
+   "400": "IBMPlexSans-Regular.ttf",
+   "500": "IBMPlexSans-Medium.ttf",
+   "600": "IBMPlexSans-SemiBold.ttf",
+   "700": "IBMPlexSans-Bold.ttf"
+  }
+ },
+ "grotesk": {
+  "name": "Space Grotesk",
+  "files": {
+   "400": "SpaceGrotesk-Regular.ttf",
+   "500": "SpaceGrotesk-Medium.ttf",
+   "600": "SpaceGrotesk-SemiBold.ttf",
+   "700": "SpaceGrotesk-Bold.ttf"
+  }
+ },
+ "archivo": {
+  "name": "Archivo",
+  "files": {
+   "300": "Archivo-300.ttf",
+   "400": "Archivo-400.ttf",
+   "500": "Archivo-500.ttf",
+   "700": "Archivo-700.ttf",
+   "900": "Archivo-900.ttf"
+  }
+ },
+ "jetbrains": {
+  "name": "JetBrains Mono",
+  "files": {
+   "400": "JetBrainsMono-Regular.ttf",
+   "500": "JetBrainsMono-Medium.ttf",
+   "600": "JetBrainsMono-SemiBold.ttf",
+   "700": "JetBrainsMono-Bold.ttf"
+  }
+ },
+ "barlow": {
+  "name": "Barlow Condensed",
+  "files": {
+   "400": "BarlowCondensed-Regular.ttf",
+   "500": "BarlowCondensed-Medium.ttf",
+   "600": "BarlowCondensed-SemiBold.ttf",
+   "700": "BarlowCondensed-Bold.ttf"
+  }
+ },
+ "spacemono": {
+  "name": "Space Mono",
+  "files": {
+   "400": "SpaceMono-Regular.ttf",
+   "700": "SpaceMono-Bold.ttf"
+  }
+ },
+ "silkscreen": {
+  "name": "Silkscreen",
+  "files": {
+   "400": "Silkscreen-Regular.ttf",
+   "700": "Silkscreen-Bold.ttf"
+  }
+ },
+ "vt323": {
+  "name": "VT323",
+  "files": {
+   "400": "VT323-Regular.ttf"
+  }
+ },
+ "dotgothic": {
+  "name": "DotGothic16",
+  "files": {
+   "400": "DotGothic16-Regular.ttf"
+  }
+ },
+ "inter": {
+  "name": "Inter Tight",
+  "files": {
+   "400": "InterTight-Regular.ttf",
+   "500": "InterTight-Medium.ttf",
+   "600": "InterTight-SemiBold.ttf",
+   "700": "InterTight-Bold.ttf"
+  }
+ },
+ "plexmono": {
+  "name": "IBM Plex Mono",
+  "files": {
+   "400": "IBMPlexMono-Regular.ttf",
+   "500": "IBMPlexMono-Medium.ttf",
+   "600": "IBMPlexMono-SemiBold.ttf",
+   "700": "IBMPlexMono-Bold.ttf"
+  }
+ },
+ "roboto": {
+  "name": "Roboto Condensed",
+  "files": {
+   "400": "RobotoCondensed-Regular.ttf",
+   "500": "RobotoCondensed-Medium.ttf",
+   "600": "RobotoCondensed-SemiBold.ttf",
+   "700": "RobotoCondensed-Bold.ttf"
+  }
+ },
+ "outfit": {
+  "name": "Outfit",
+  "files": {
+   "200": "Outfit-ExtraLight.ttf",
+   "300": "Outfit-Light.ttf",
+   "400": "Outfit-Regular.ttf",
+   "500": "Outfit-Medium.ttf",
+   "600": "Outfit-SemiBold.ttf",
+   "900": "Outfit-Black.ttf"
+  }
+ },
+ "doto": {
+  "name": "Doto",
+  "files": {
+   "300": "Doto-300.ttf",
+   "400": "Doto-400.ttf",
+   "500": "Doto-500.ttf",
+   "700": "Doto-700.ttf",
+   "900": "Doto-900.ttf"
+  }
+ },
+ "geist": {
+  "name": "Geist",
+  "files": {
+   "300": "Geist-300.ttf",
+   "400": "Geist-400.ttf",
+   "500": "Geist-500.ttf",
+   "700": "Geist-700.ttf",
+   "900": "Geist-900.ttf"
+  }
+ },
+ "geistmono": {
+  "name": "Geist Mono",
+  "files": {
+   "300": "GeistMono-300.ttf",
+   "400": "GeistMono-400.ttf",
+   "500": "GeistMono-500.ttf",
+   "700": "GeistMono-700.ttf",
+   "900": "GeistMono-900.ttf"
+  }
+ },
+ "michroma": {
+  "name": "Michroma",
+  "files": {
+   "400": "Michroma-Regular.ttf"
+  }
+ },
+ "chakra": {
+  "name": "Chakra Petch",
+  "files": {
+   "300": "ChakraPetch-Light.ttf",
+   "400": "ChakraPetch-Regular.ttf",
+   "500": "ChakraPetch-Medium.ttf",
+   "600": "ChakraPetch-SemiBold.ttf",
+   "700": "ChakraPetch-Bold.ttf"
+  }
+ },
+ "rajdhani": {
+  "name": "Rajdhani",
+  "files": {
+   "300": "Rajdhani-Light.ttf",
+   "400": "Rajdhani-Regular.ttf",
+   "500": "Rajdhani-Medium.ttf",
+   "600": "Rajdhani-SemiBold.ttf",
+   "700": "Rajdhani-Bold.ttf"
+  }
+ },
+ "oxanium": {
+  "name": "Oxanium",
+  "files": {
+   "300": "Oxanium-300.ttf",
+   "400": "Oxanium-400.ttf",
+   "500": "Oxanium-500.ttf",
+   "700": "Oxanium-700.ttf"
+  }
+ },
+ "sharetech": {
+  "name": "Share Tech Mono",
+  "files": {
+   "400": "ShareTechMono-Regular.ttf"
+  }
+ },
+ "dmmono": {
+  "name": "DM Mono",
+  "files": {
+   "300": "DMMono-Light.ttf",
+   "400": "DMMono-Regular.ttf",
+   "500": "DMMono-Medium.ttf"
+  }
+ },
+ "dmsans": {
+  "name": "DM Sans",
+  "files": {
+   "300": "DMSans-300.ttf",
+   "400": "DMSans-400.ttf",
+   "500": "DMSans-500.ttf",
+   "700": "DMSans-700.ttf",
+   "900": "DMSans-900.ttf"
+  }
+ },
+ "sora": {
+  "name": "Sora",
+  "files": {
+   "300": "Sora-300.ttf",
+   "400": "Sora-400.ttf",
+   "500": "Sora-500.ttf",
+   "700": "Sora-700.ttf"
+  }
+ },
+ "unbounded": {
+  "name": "Unbounded",
+  "files": {
+   "300": "Unbounded-300.ttf",
+   "400": "Unbounded-400.ttf",
+   "500": "Unbounded-500.ttf",
+   "700": "Unbounded-700.ttf",
+   "900": "Unbounded-900.ttf"
+  }
+ },
+ "bigshoulders": {
+  "name": "Big Shoulders Display",
+  "files": {
+   "300": "BigShouldersDisplay-300.ttf",
+   "400": "BigShouldersDisplay-400.ttf",
+   "500": "BigShouldersDisplay-500.ttf",
+   "700": "BigShouldersDisplay-700.ttf",
+   "900": "BigShouldersDisplay-900.ttf"
+  }
+ },
+ "orbitron": {
+  "name": "Orbitron",
+  "files": {
+   "400": "Orbitron-400.ttf",
+   "500": "Orbitron-500.ttf",
+   "700": "Orbitron-700.ttf",
+   "900": "Orbitron-900.ttf"
+  }
+ },
+ "redhatmono": {
+  "name": "Red Hat Mono",
+  "files": {
+   "300": "RedHatMono-300.ttf",
+   "400": "RedHatMono-400.ttf",
+   "500": "RedHatMono-500.ttf",
+   "700": "RedHatMono-700.ttf"
+  }
+ },
+ "redhat": {
+  "name": "Red Hat Display",
+  "files": {
+   "300": "RedHatDisplay-300.ttf",
+   "400": "RedHatDisplay-400.ttf",
+   "500": "RedHatDisplay-500.ttf",
+   "700": "RedHatDisplay-700.ttf",
+   "900": "RedHatDisplay-900.ttf"
+  }
+ },
+ "bebas": {
+  "name": "Bebas Neue",
+  "files": {
+   "400": "BebasNeue-Regular.ttf"
+  }
+ },
+ "azeret": {
+  "name": "Azeret Mono",
+  "files": {
+   "300": "AzeretMono-300.ttf",
+   "400": "AzeretMono-400.ttf",
+   "500": "AzeretMono-500.ttf",
+   "700": "AzeretMono-700.ttf",
+   "900": "AzeretMono-900.ttf"
+  }
+ },
+ "tiny5": {
+  "name": "Tiny5",
+  "files": {
+   "300": "Tiny5-300.ttf",
+   "400": "Tiny5-400.ttf",
+   "500": "Tiny5-500.ttf",
+   "700": "Tiny5-700.ttf",
+   "900": "Tiny5-900.ttf"
+  }
+ },
+ "jersey10": {
+  "name": "Jersey 10",
+  "files": {
+   "400": "Jersey10-Regular.ttf"
+  }
+ },
+ "syne": {
+  "name": "Syne",
+  "files": {
+   "400": "Syne-400.ttf",
+   "500": "Syne-500.ttf",
+   "700": "Syne-700.ttf"
+  }
+ },
+ "manrope": {
+  "name": "Manrope",
+  "files": {
+   "300": "Manrope-300.ttf",
+   "400": "Manrope-400.ttf",
+   "500": "Manrope-500.ttf",
+   "700": "Manrope-700.ttf"
+  }
+ },
+ "majormono": {
+  "name": "Major Mono Display",
+  "files": {
+   "400": "MajorMonoDisplay-Regular.ttf"
+  }
+ },
+ "sixtyfour": {
+  "name": "Sixtyfour",
+  "files": {
+   "400": "Sixtyfour-400.ttf"
+  }
+ }
+}

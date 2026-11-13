@@ -1,9 +1,9 @@
 #!/bin/sh
 # Host test for the bridge: builds it with fake hardware, plus Console's real core, and runs shim_test.
-# usage: bridge/test/run.sh [path-to-console-move-checkout]   (default ../console-move)
+# usage: bridge/test/run.sh [path-to-console-folder]   (default: the console folder of this repo)
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
-CM=${1:-$HERE/../../../console-move}
+CM=${1:-$HERE/../../console}
 OUT=${TMPDIR:-/tmp}/console-mpc-hosttest
 mkdir -p "$OUT"
 gcc -O1 -g -fPIC -shared -DHOST_TEST -DKNOB_STEP=1 -DNO_RETRIG -fvisibility=hidden -Wno-unused-variable "$HERE/../jackshim.c" -o "$OUT/libjack_mpc_host.so" -lpthread

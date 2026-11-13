@@ -1,17 +1,16 @@
 #!/bin/sh
 # Updates Console on the MPC from your Mac, in one command (the MPC itself has no internet):
-#   sh update-mpc.sh                 Console's code (from briwil/console-move) + the bridge (from briwil/console-mpc)
-#   sh update-mpc.sh --libs          also the synths / drum machines (the "libs-latest" release of console-move)
+#   sh update-mpc.sh                 Console's code + the bridge (both from briwil/console-mpc)
+#   sh update-mpc.sh --libs          also the synths / drum machines (the "libs-latest" release of console-mpc)
 #   sh update-mpc.sh --python        also Python + numpy (the "runtime-latest" release of console-mpc)
 #   sh update-mpc.sh --all           everything
-# It needs: the MPC's root SSH running (USB cable, the SD card's autorun) and a GitHub access key that can READ
-# briwil/console-move (a fine-grained token with "Contents: read-only"): put it in the file ~/.console-github-token
-# or in the environment variable GITHUB_TOKEN. Quit Console on the MPC first (Shift + STOP).
+# It needs: the MPC's root SSH running (USB cable, the SD card's autorun). The repo is public, so no key is needed
+# (a GitHub key in ~/.console-github-token or GITHUB_TOKEN is used if you have one). Quit Console on the MPC first (Shift + STOP).
 # Songs and settings (/data/UserData/console/data) are never touched.
 set -eu
 KEY=${MPC_CLIENT_KEY:-$HOME/.ssh/mpc_sample_client_ed25519}
 HOST=root@192.168.155.1
-CM=briwil/console-move
+CM=briwil/console-mpc
 CP=briwil/console-mpc
 TOKEN=${GITHUB_TOKEN:-$(cat "$HOME/.console-github-token" 2>/dev/null || true)}
 DEST=/data/UserData
@@ -25,7 +24,6 @@ done
 say() { printf '%s\n' "$*"; }
 mpc() { ssh -p 2222 -i "$KEY" "$HOST" "$@"; }
 
-[ -n "$TOKEN" ] || { say "No GitHub key found. Put it in ~/.console-github-token (see the top of this script)."; exit 1; }
 [ "$DRY" = 1 ] && say "(dry run: showing what would happen)"
 
 say "1/5  Is the MPC reachable, and is Console closed?"
@@ -39,13 +37,13 @@ fi
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/src" "$T/pack/console/tools/sim"
-AUTH="Authorization: Bearer $TOKEN"
+if [ -n "$TOKEN" ]; then AUTH="Authorization: Bearer $TOKEN"; else AUTH="X-No-Key: 1"; fi
 
 say "2/5  Console's code from $CM"
 curl -fsSL -H "$AUTH" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$CM/tarball/main" -o "$T/src.tgz"
 tar xzf "$T/src.tgz" -C "$T/src" --strip-components=1
-cp -R "$T/src/pi-app" "$T/src/move" "$T/pack/console/"
-cp -R "$T/src/tools/sim/stubs" "$T/pack/console/tools/sim/"
+cp -R "$T/src/console/pi-app" "$T/src/console/move" "$T/pack/console/"
+cp -R "$T/src/console/tools/sim/stubs" "$T/pack/console/tools/sim/"
 rm -rf "$T/pack/console/move/manual" "$T/pack/console/move/anim"
 
 say "3/5  The MPC bridge from $CP"

@@ -60,7 +60,7 @@ FONT_CANDIDATES = [(os.environ.get("CONSOLE_FONT", ""), 16),
                    (os.path.join(_HERE, "fonts", "Jersey15-Regular.ttf"), 18),
                    (os.path.join(_HERE, "fonts", "Jersey15-Regular.ttf"), 18),
                    (os.path.join(_HERE, "fonts", "Carlito-Bold.ttf"), 13),
-                   ("/home/claude/briwil/console-move/move/fonts/BarlowCondensed-SemiBold.ttf", 12)]
+                   (os.path.join(_HERE, "..", "console", "move", "fonts", "BarlowCondensed-SemiBold.ttf"), 12)]
 _chosen = []
 SIZES = {2: 2, 3: 4, 4: 6, 5: 5, 6: 3}                      # scale -> multiple of the font's half-pixel-size: Silkscreen (base 16): 16 / 32 / 48 / 40 / 24 px
 

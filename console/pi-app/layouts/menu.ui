@@ -1,0 +1,35 @@
+// Console project menu, 1280 x 400
+// The app moves "menu_bar" behind the chosen item and makes that item bigger and green.
+ui.fill("bg", 0, 0, 1280, 400, "#0C0D10", 0);
+ui.text("title", 640, 22, 18, "#F2F3F5", "mono", 600, "center", "CONSOLE");
+ui.text("song", 640, 52, 15, "#7D838C", "sans", 500, "center", "Song 1");
+ui.fill("menu_bar", -180, 219, 920, 36, "#17191E", 0);
+ui.text("menu_more", 722, 104, 24, "#5A606B", "sans", 500, "right", "");
+ui.text("menu_new", 722, 144, 24, "#5A606B", "sans", 500, "right", "NEW Project");
+ui.text("menu_save", 722, 184, 24, "#5A606B", "sans", 500, "right", "SAVE Project");
+ui.text("menu_load", 722, 223, 28, "#3CCB7F", "sans", 500, "right", "LOAD Project");
+ui.text("menu_settings", 722, 264, 24, "#5A606B", "sans", 500, "right", "SETTINGS");
+ui.text("menu_more2", 722, 294, 24, "#5A606B", "sans", 500, "right", "");
+ui.text("menu_more3", 722, 324, 24, "#5A606B", "sans", 500, "right", "");
+ui.text("menu_r1", 700, 84, 24, "#5A606B", "sans", 500, "left", "");
+ui.text("menu_r2", 700, 114, 24, "#5A606B", "sans", 500, "left", "");
+ui.text("menu_r3", 700, 144, 24, "#5A606B", "sans", 500, "left", "");
+ui.text("menu_r4", 700, 174, 24, "#5A606B", "sans", 500, "left", "");
+ui.text("set_label1", 620, 92, 22, "#5A606B", "sans", 500, "right", "");
+ui.text("set_value1", 660, 92, 22, "#F2F3F5", "sans", 500, "left", "");
+ui.text("set_label2", 620, 126, 22, "#5A606B", "sans", 500, "right", "");
+ui.text("set_value2", 660, 126, 22, "#F2F3F5", "sans", 500, "left", "");
+ui.text("set_label3", 620, 160, 22, "#5A606B", "sans", 500, "right", "");
+ui.text("set_value3", 660, 160, 22, "#F2F3F5", "sans", 500, "left", "");
+ui.text("set_label4", 620, 194, 22, "#5A606B", "sans", 500, "right", "");
+ui.text("set_value4", 660, 194, 22, "#F2F3F5", "sans", 500, "left", "");
+ui.text("set_label5", 620, 228, 22, "#5A606B", "sans", 500, "right", "");
+ui.text("set_value5", 660, 228, 22, "#F2F3F5", "sans", 500, "left", "");
+ui.text("set_label6", 620, 262, 22, "#5A606B", "sans", 500, "right", "");
+ui.text("set_value6", 660, 262, 22, "#F2F3F5", "sans", 500, "left", "");
+ui.text("set_label7", 620, 296, 22, "#5A606B", "sans", 500, "right", "");
+ui.text("set_value7", 660, 296, 22, "#F2F3F5", "sans", 500, "left", "");
+ui.text("prompt", 640, 120, 18, "#7D838C", "mono", 500, "center", "");
+ui.text("name_text", 640, 170, 40, "#F2F3F5", "sans", 500, "center", "");
+ui.text("menu_msg", 640, 332, 16, "#FFB547", "mono", 500, "center", "");
+ui.text("menu_hint", 640, 360, 14, "#7D838C", "mono", 500, "center", "");

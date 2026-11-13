@@ -1,7 +1,7 @@
 #!/bin/sh
 # Builds the SD card zip: the folders "autorun" and "Console" to unzip onto the root of the card.
-# usage: tools/make-card.sh <console-move checkout> <libs.tgz> <bridge.tgz> <python.tgz> <out folder> [version]
-#   libs.tgz    the synths / drum machines   ("libs-latest" release of briwil/console-move)
+# usage: tools/make-card.sh <console folder of this repo> <libs.tgz> <bridge.tgz> <python.tgz> <out folder> [version]
+#   libs.tgz    the synths / drum machines   ("libs-latest" release of briwil/console-mpc)
 #   bridge.tgz  the MPC bridge + launcher     ("bridge-latest" release of briwil/console-mpc: mpc-bridge.tgz)
 #   python.tgz  Python + numpy for the MPC    ("runtime-latest" release of briwil/console-mpc: mpc-python.tgz)
 # Writes <out>/card/{autorun,Console}, and <out>/Console-MPC.zip.  The version defaults to "<bridge BUILD> | move <sha>".
@@ -25,9 +25,9 @@ tar xzf "$BRIDGE" -C "$T/console"                       # -> console/mpc/ (bridg
 find "$T" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 find "$T" -name '._*' -delete 2>/dev/null || true
 if [ -z "$VER" ]; then
-  SHA=$(git -C "$CM" rev-parse --short HEAD 2>/dev/null || echo "?")
+  SHA=$(cat "$CM/SOURCE_COMMIT" 2>/dev/null || echo "?")
   CSHA=$(git -C "$HERE" rev-parse --short HEAD 2>/dev/null || echo "?")
-  VER="v$(cat "$HERE/VERSION" 2>/dev/null || echo 0) | $(cat "$T/console/mpc/BUILD" 2>/dev/null || date -u +%F) | move $SHA | card $CSHA"        # (changes with every card build: the Sample installs it)
+  VER="v$(cat "$HERE/VERSION" 2>/dev/null || echo 0) | $(cat "$T/console/mpc/BUILD" 2>/dev/null || date -u +%F) | console $SHA | card $CSHA"        # (changes with every card build: the Sample installs it)
 fi
 COPYFILE_DISABLE=1 tar czf "$CARD/Console/payload/console.tgz" -C "$T" console
 cp "$PY" "$CARD/Console/payload/python.tgz"
