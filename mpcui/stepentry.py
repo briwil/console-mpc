@@ -145,7 +145,9 @@ def in_seq(T):
             return False
         if T.punch.active() or T.auto.active() or T.synth_shown():
             return False
-        return T.engine is not None and T.engine.drums is not None
+        if T.engine is None or T.engine.drums is None:
+            return False
+        return hasattr(T.engine.seq, "lane")                    # (a synth's NoteSequencer has no drum lanes: not this page)
     except Exception:
         return False
 
