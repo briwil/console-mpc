@@ -77,6 +77,9 @@ class Slot:
             h = sw_modules.host()
             self.seq = core.add_module(h.sh_render, h.sh_midi, m._seq.ptr)
             self.live = core.add_module(h.sh_render, h.sh_midi, m._live.ptr) if m._live is not m._seq else self.seq
+            if getattr(m, "live_input", False):          # GUITAR: it plays the audio input, so it never sleeps
+                core.set_input_fn(h.sh_set_input)
+                core.wake(self.live)
         self.arp = arplib.Arp()              # a synth's arpeggiator: the pads you hold (live source) ...
         self.arp_seq = arplib.Arp()          # ... and the sequencer's chords (seq source); they share the settings
         self._refresh_after = None          # (core frame) a module re-reads its settings once the core has them

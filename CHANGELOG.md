@@ -5,6 +5,7 @@ To update, drag the new `autorun` and `Console` folders from the zip onto the SD
 
 ## Next
 
+- GUITAR instrument (first version): plays the Sample's audio input (your guitar) through Stompbox, so you can arm it on the tape page and record live. Needs `stompbox.so` in `ConsoleData/plugins` (or `/data/UserData/console/plugins`). It shows up in the instrument list as GUITAR. Its own sound pages, with no sequencer, song, PUNCH FX or insert pages, come next.
 - Metronome on the sequencer pages: Shift + TAP TEMPO switches it on and off there too, and it clicks while a sequence plays (and while recording, as before).
 - VST2 effects as insert effects: Console can now run a VST2 audio effect from the MPC plugin catalog as an instrument's insert effect. First one: STOMPBOX (guitar amps and pedals). Put the plugin's 64-bit `stompbox.so` into `ConsoleData/plugins` on the card (the folder appears after the first start); STOMPBOX then shows up in the insert effect list, with the plugin's presets on knob 1. (An experiment: the knobs' labels are generic until we've tried it on a Sample.)
 - Console's own code now lives in this repo (the `console` folder), so building the card no longer needs the Move repo.

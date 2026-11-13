@@ -381,6 +381,23 @@ PLUGIN_FX = [("stompbox", "STOMPBOX", "stompbox.so")]       # (module folder, ti
 _add_plugin_fx()
 
 
+def _add_guitar():
+    """GUITAR: an instrument that plays the audio input (your guitar) through the Stompbox plugin (vst2fx.so as an instrument)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    plugins = os.environ.get("CONSOLE_PLUGINS", "")
+    folder = os.path.join(here, "modules", "guitar")
+    if not (plugins and os.path.exists(os.path.join(plugins, "stompbox.so")) and os.path.exists(os.path.join(folder, "dsp.so"))):
+        return
+    if "guitar" in BY_ID:
+        return
+    MODULES.append({"id": "guitar", "title": "GUITAR", "kind": "synth", "license": "see its repo", "repo": "", "commit": "installed",
+                    "json": "module.json", "build": [], "prebuilt": True, "one_copy": True})
+    BY_ID["guitar"] = MODULES[-1]
+
+
+_add_guitar()
+
+
 def recipe_version(m):
     """A short tag of how a module is built, so changing its recipe here builds it again."""
     parts = [m["build"], m["json"], m.get("files", [])] + ([m["patches"]] if m.get("patches") else [])

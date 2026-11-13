@@ -34,6 +34,7 @@ class Core:
                 ("core_rate", [], i32), ("core_block", [], i32), ("core_now", [], u64), ("core_cycles", [], C.c_uint), ("core_load", [], f32),
                 ("core_add_engine", [vp, vp, i32], i32), ("core_add_module", [vp, vp, vp], i32),
                 ("core_source_on", [i32, i32], None), ("core_remove", [i32], None),
+                ("core_set_input_fn", [vp], None), ("core_source_wake", [i32], None),
                 ("core_set_pan", [i32, i32, f32, f32], None), ("core_set_sends", [i32, i32, f32, f32], None),
                 ("core_set_gain", [i32, f32], None), ("core_set_master", [f32], None), ("core_slot_insert", [i32, i32, vp, vp], None),
                 ("core_set_effects", [vp, vp, vp, vp], None), ("core_set_effect_levels", [f32, f32], None),
@@ -107,6 +108,14 @@ class Core:
         if s < 0:
             raise RuntimeError("no room for another source")
         return s
+
+    def set_input_fn(self, fn):
+        """sh_set_input of the module host: each cycle the core hands it the audio input first (modules that play the input: GUITAR)."""
+        self.lib.core_set_input_fn(addr(fn))
+
+    def wake(self, s):
+        """A source that never sleeps (it plays the live input, not notes)."""
+        self.lib.core_source_wake(s)
 
     def on(self, s, on=True):
         self.lib.core_source_on(s, 1 if on else 0)

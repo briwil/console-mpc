@@ -53,6 +53,7 @@ def host():
                                     ("sh_get", [vp, cp, cp, i], i), ("sh_bpm", [ctypes.c_float], None),
                                     ("sh_render", [vp, ctypes.POINTER(ctypes.c_float), i], None),
                                     ("sh_module_error", [vp, cp, i], i),
+                                    ("sh_set_input", [ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), i], None),
                                     ("sh_fx_open", [cp, cp, cp], vp), ("sh_fx_close", [vp], None),
                                     ("sh_fx_set", [vp, cp, cp], None), ("sh_fx_get", [vp, cp, cp, i], i),
                                     ("sh_fx_midi", [vp, i, i, i], None),
@@ -172,6 +173,7 @@ class Module:
         dsp = os.path.join(folder, "dsp.so")
         info = json.load(open(os.path.join(folder, "module.json")))
         defaults = info.get("defaults") or {}
+        self.live_input = bool(info.get("live_input"))      # GUITAR: plays the audio input (the core wakes it and feeds it)
         self._seq = Instance(dsp, folder, defaults)
         live = os.path.join(folder, "dsp_live.so")
         try:

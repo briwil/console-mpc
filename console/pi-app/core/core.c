@@ -138,6 +138,7 @@ static float send_d[2][MAX_BLOCK];
 static float cap[CAP_PARTS][CAP_FRAMES], cap_now[CAP_PARTS][MAX_BLOCK];
 static int64_t cap_pos;
 static int capture_on;
+static void (*in_fn)(const float *, const float *, int);   /* sh_set_input: this cycle's audio input, for modules that read it (GUITAR) */
 static float ext_monitor = 0.0f;                      /* how loud the Move's audio input is heard (0: not) */
 static int ext_stereo = 1;                            /* 1: left and right as they are; 0: the left on both sides */
 
@@ -577,9 +578,10 @@ static int process(jack_nframes_t n, void *arg) {
     if (capture_on) for (int p = 0; p < CAP_PARTS; p++) memset(cap_now[p], 0, sizeof(float) * n);
     memset(send_l, 0, sizeof(float) * 2 * MAX_BLOCK);
     memset(send_d, 0, sizeof(float) * 2 * MAX_BLOCK);
+    const float *il = J.port_get_buffer(in_l, n), *ir = J.port_get_buffer(in_r, n);
+    if (in_fn) in_fn(il, ir, (int)n);                 /* (before the slots render: the GUITAR module plays the input) */
     slots_cycle((int)n);
     {
-        const float *il = J.port_get_buffer(in_l, n), *ir = J.port_get_buffer(in_r, n);
         memcpy(inputs[EXT_IN], il, sizeof(float) * n);
         memcpy(inputs[EXT_IN + 1], ir, sizeof(float) * n);
         if (ext_monitor > 0.0f)                       /* hear the Move's input (a guitar...) while you play */
@@ -740,6 +742,9 @@ int core_add_module(void *sh_render, void *sh_midi, void *inst) {
 }
 
 /* turn a source off before removing it, and wait a cycle (core_cycles) before freeing what it uses */
+void core_set_input_fn(void *fn) { in_fn = (void (*)(const float *, const float *, int))fn; }
+/* a source that never sleeps (the GUITAR module: it plays the live input, not notes) */
+void core_source_wake(int s) { if (s >= 0 && s < MAX_SOURCES) { sources[s].awake = 1LL << 60; sources[s].silent = 0; } }
 void core_source_on(int s, int on) { if (s >= 0 && s < MAX_SOURCES) sources[s].on = on; }
 void core_remove(int s) { if (s >= 0 && s < MAX_SOURCES) { sources[s].on = 0; sources[s].kind = 0; } }
 void core_set_pan(int s, int v, float l, float r) {

@@ -1,0 +1,8 @@
+{
+  "id": "guitar",
+  "name": "Guitar",
+  "description": "Your guitar (the audio input) played through Stompbox: amps, pedals, cabinet and effects",
+  "dsp": "dsp.so",
+  "component_type": "sound_generator",
+  "live_input": true
+}

@@ -263,6 +263,45 @@ static int get_param(void *h, const char *key, char *buf, int len)
 
 static const fx_api_t api = { 2, create, destroy, process, set_param, get_param, NULL };
 
+/* ---- the same plugin as an INSTRUMENT (the GUITAR instrument): it plays the audio input through the plugin ----
+ * The host (schwung/host.c) hands each module its block of the audio input at mapped_memory + audio_in_offset
+ * (128 frames, interleaved int16 stereo, as on the Move). The start of host_api_v1_t, as in plugin_api_v1.h: */
+typedef struct { uint32_t api_version; int sample_rate, frames_per_block; uint8_t *mapped_memory; int audio_out_offset, audio_in_offset; } host_t;
+static const host_t *the_host;
+
+typedef struct {
+    uint32_t api_version;
+    void *(*create_instance)(const char *, const char *);
+    void (*destroy_instance)(void *);
+    void (*on_midi)(void *, const uint8_t *, int, int);
+    void (*set_param)(void *, const char *, const char *);
+    int (*get_param)(void *, const char *, char *, int);
+    int (*get_error)(void *, char *, int);
+    void (*render_block)(void *, int16_t *, int);
+} inst_api_t;
+
+static void render_block(void *h, int16_t *out, int frames)
+{
+    if (!the_host || !the_host->mapped_memory || frames > BLOCK) return;
+    memcpy(out, the_host->mapped_memory + the_host->audio_in_offset, (size_t)frames * 4);
+    process(h, out, frames);
+}
+
+static int get_error(void *h, char *buf, int len)
+{
+    (void)h;
+    snprintf(buf, (size_t)len, "STOMPBOX IS NOT THERE: PUT stompbox.so IN ConsoleData/plugins");
+    return 1;
+}
+
+static const inst_api_t inst_api = { 2, create, destroy, NULL, set_param, get_param, get_error, render_block };
+
+__attribute__((visibility("default"))) const inst_api_t *move_plugin_init_v2(const host_t *host)
+{
+    the_host = host;
+    return &inst_api;
+}
+
 __attribute__((visibility("default"))) const fx_api_t *move_audio_fx_init_v2(const void *host)
 {
     (void)host;

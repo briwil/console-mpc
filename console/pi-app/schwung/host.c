@@ -39,10 +39,11 @@ typedef struct {
     void *inst;
     int16_t block[BLOCK * 2];
     int left;               /* frames of block not handed out yet */
+    int in_gen, in_pos;     /* the audio input (sh_set_input): which cycle's, and how far this module has read */
     pthread_mutex_t lock;   /* one call into the module at a time (see Threads, above) */
 } handle_t;
 
-static uint8_t shared_mem[16384];   /* Move's mapped memory: here just zeros (no audio in) */
+static uint8_t shared_mem[16384];   /* Move's mapped memory: the audio input block lives at MOVE_AUDIO_IN_OFFSET (see sh_set_input) */
 static host_api_v1_t host;          /* zeroed: every callback we don't give is NULL, as the API expects */
 static float song_bpm = 120.0f;
 static char last_error[512];
@@ -70,6 +71,37 @@ static void init_host(void)
 }
 
 const char *sh_error(void) { return last_error; }
+
+/* The audio input (the guitar...): the core hands over this cycle's input before it renders anything. A module that wants it
+ * (the GUITAR instrument) reads the block at host->mapped_memory + host->audio_in_offset: 128 frames, interleaved int16 stereo,
+ * as on the Move. */
+#define MAX_IN 4096
+static float in_l[MAX_IN], in_r[MAX_IN];
+static int in_n, in_gen;
+
+void sh_set_input(const float *l, const float *r, int n)
+{
+    if (n > MAX_IN) n = MAX_IN;
+    if (n < 0) n = 0;
+    memcpy(in_l, l, sizeof(float) * (size_t)n);
+    memcpy(in_r, r, sizeof(float) * (size_t)n);
+    in_n = n;
+    in_gen++;
+}
+
+static int16_t to16(float x) { x *= 32768.0f; return x > 32767.0f ? 32767 : x < -32768.0f ? -32768 : (int16_t)x; }
+
+/* the input for the block a module is about to render: the next 128 frames of this cycle's, after what it has had (zeros past the end) */
+static void feed_input(handle_t *h)
+{
+    if (h->in_gen != in_gen) { h->in_gen = in_gen; h->in_pos = 0; }
+    int16_t *dst = (int16_t *)(shared_mem + MOVE_AUDIO_IN_OFFSET);
+    for (int i = 0; i < BLOCK; i++) {
+        int k = h->in_pos + i;
+        dst[2 * i] = k < in_n ? to16(in_l[k]) : 0;
+        dst[2 * i + 1] = k < in_n ? to16(in_r[k]) : 0;
+    }
+}
 
 void sh_bpm(float bpm) { if (bpm > 0) song_bpm = bpm; }
 
@@ -170,6 +202,7 @@ void sh_render(handle_t *h, float *out, int frames)
     while (done < frames) {
         if (h->left == 0) {
             memset(h->block, 0, sizeof h->block);
+            feed_input(h);
             h->api->render_block(h->inst, h->block, BLOCK);
             h->left = BLOCK;
         }
@@ -180,6 +213,7 @@ void sh_render(handle_t *h, float *out, int frames)
         done += n;
         h->left -= n;
     }
+    if (h->in_gen == in_gen) h->in_pos += frames;             /* (the input moves on with the sound handed out) */
     pthread_mutex_unlock(&h->lock);
 }
 
