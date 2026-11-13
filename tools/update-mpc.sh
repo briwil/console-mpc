@@ -51,11 +51,7 @@ curl -fsSL "https://github.com/$CP/releases/download/bridge-latest/mpc-bridge.tg
 
 if [ "$LIBS" = 1 ]; then
   say "     The synths and drum machines (about 75 MB)"
-  REL=$(curl -fsSL -H "$AUTH" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$CM/releases/tags/libs-latest")
-  ASSET=$(printf '%s' "$REL" | grep -o '"url": *"[^"]*/assets/[0-9]*"' | head -n 1 | sed 's/.*"\(http[^"]*\)"/\1/')
-  [ -n "$ASSET" ] || { say "No libs-latest release found on $CM (run its 'Build Move libraries' action)."; exit 1; }
-  LOC=$(curl -fsS -H "$AUTH" -H "Accept: application/octet-stream" -o /dev/null -w '%{redirect_url}' "$ASSET")
-  curl -fsSL "$LOC" -o "$T/libs.tgz"
+  curl -fsSL "https://github.com/$CP/releases/download/libs-latest/move-libs.tgz" -o "$T/libs.tgz"
 fi
 if [ "$PY" = 1 ]; then
   say "     Python + numpy"
