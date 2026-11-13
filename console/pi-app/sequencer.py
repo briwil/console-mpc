@@ -221,6 +221,8 @@ class Sequencer:
         self.patterns = [Pattern(self.new_length()) for _ in range(PATTERNS)]
         self.current = 0
         self.queued = None                   # the pattern to switch to at the end of this one
+        self.silent = False                  # song mode: this instrument plays nothing (a row with "-" for it)
+        self.queued_silent = None            # ... from the next pattern change on: True / False, None = no change
         self.anchor = 0.0                    # tape frame where the current pattern's step 0 falls
         self._decided = {}                   # (lane, k) -> chance result, so ratchets agree across blocks
         self._skip = set()                   # (lane, k): a step recorded live just before it came round
@@ -373,16 +375,29 @@ class Sequencer:
             n = max(0, min(PATTERNS - 1, n))
             import lfo
             lfo.inherit(self, n)
-            if not playing or n == self.current:
-                self.current, self.queued = n, None
+            if not playing or (n == self.current and not self.silent):
+                self.current, self.queued, self.silent, self.queued_silent = n, None, False, None
             else:
-                self.queued = n
+                self.queued, self.queued_silent = n, False
+
+    def choose_silent(self, playing):
+        """Song mode, a row with "-" for this instrument: it plays nothing (straight away when stopped, else when the
+        current pattern ends)."""
+        with self.lock:
+            if not playing:
+                self.silent, self.queued, self.queued_silent = True, None, None
+            elif not (self.silent and self.queued is None):
+                if self.queued is None:
+                    self.queued = self.current
+                self.queued_silent = True
 
     def stop(self):
         """The tape stopped: a queued pattern takes over, and the next play starts from the tape's bars."""
         with self.lock:
             if self.queued is not None:
                 self.current, self.queued = self.queued, None
+                if self.queued_silent is not None:
+                    self.silent, self.queued_silent = self.queued_silent, None
             self.anchor = 0.0
             import punch
             punch.stop(self)
@@ -406,17 +421,19 @@ class Sequencer:
                 length = self.pattern_frames(frames_per_beat)
                 boundary = self.anchor + math.ceil((start - self.anchor) / length - 1e-9) * length
                 if boundary < end:
-                    out += self._events(start, boundary, start, frames_per_beat)
+                    out += [] if self.silent else self._events(start, boundary, start, frames_per_beat)
                     if self.queued is not None:
                         self.current, self.queued = self.queued, None
+                        if self.queued_silent is not None:
+                            self.silent, self.queued_silent = self.queued_silent, None
                     punch.take_queued(self, boundary)
                     self.trip = TRIPLETS                 # (triplets on / off: from the pattern's start)
                     self.anchor = boundary
                     self._decided.clear()
                     self._cyc.clear()
-                    out += self._events(boundary, end, start, frames_per_beat)
+                    out += [] if self.silent else self._events(boundary, end, start, frames_per_beat)
                     return out
-            out += self._events(start, end, start, frames_per_beat)
+            out += [] if self.silent else self._events(start, end, start, frames_per_beat)
             if len(self._decided) > 512:
                 self._decided.clear()
         return out
@@ -574,6 +591,7 @@ class Sequencer:
         with self.lock:
             self.patterns = [Pattern(self.new_length()) for _ in range(PATTERNS)]
             self.current, self.queued, self.anchor = 0, None, 0.0
+            self.silent, self.queued_silent = False, None
             import punch
             punch.from_json(self, None)
             if not isinstance(data, dict):

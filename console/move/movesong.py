@@ -3,7 +3,7 @@ times it plays. With song mode on, PLAY starts at row 1 and the rows follow each
 
   step buttons 1-16   the rows (press one past the end: a new row, a copy of the last). Lit: the rows there are;
                       bright: the row picked; blinking: the row playing
-  knobs 1-7           the picked row's pattern for instruments 1-7 (turned all the way down: "-", leave it as is)
+  knobs 1-7           the picked row's pattern for instruments 1-7 (turned all the way down: "-", that instrument plays nothing in the row)
   Shift + knobs 1-7   the picked row's PUNCH FX pattern for them (the screen shows those while Shift is held)
   knob 8              how many times the row plays (1-16)
   + / -               song mode on / off
@@ -143,14 +143,26 @@ class Song:
             self.T.say("ROW %d  %s  %s" % (self.pick + 1, self.short(s), "-" if v < 0 else
                                             ("PUNCH FX %d" if shift else "PATTERN %d") % (v + 1)), 2)
         self.save()
+        if self.on and not self.T.playing and self.rows:
+            self.apply(0, False)                           # stopped: row 1 is what PLAY will play
 
     def set_on(self, on):
         if on != self.on:
             self.toggle()
 
+    def unsilence(self):
+        """Song mode is off: every instrument plays its own pattern again."""
+        for s in self.slots():
+            q = self.seq_of(s)
+            if q is not None:
+                with q.lock:
+                    q.silent, q.queued_silent = False, None
+
     def toggle(self):
         self.on = not self.on
         self._ready = False
+        if not self.on:
+            self.unsilence()
         self.T.say(("SONG MODE ON: PLAY STARTS AT ROW 1" if self.rows else "SONG MODE ON: ADD ROWS FIRST (STEPS)")
                    if self.on else "SONG MODE OFF: THE PICKED PATTERN PLAYS", 2)
         self.save()
@@ -169,7 +181,11 @@ class Song:
         import punch
         for s, p in self.rows[i]["pats"].items():
             q = self.seq_of(s)
-            if q is not None and p is not None:
+            if q is None:
+                continue
+            if p is None:
+                q.choose_silent(playing)               # "-": this instrument plays nothing in this row
+            else:
                 q.choose_pattern(p, playing)
         for s, p in self.rows[i].get("punch", {}).items():
             q = self.seq_of(s)
@@ -188,6 +204,8 @@ class Song:
             self._was_playing, self.playing_row = playing, None
             return
         if playing and (not self._was_playing or self.playing_row is None):   # (or song mode turned on while playing)
+            if not self._was_playing:
+                self.apply(0, False)                       # row 1 as it is now (it may have been changed since it was last set up)
             self.playing_row, self._loops, self._cycle, self._queued = 0, 0, None, False
         elif not playing:
             if self._was_playing or not getattr(self, "_ready", False):
