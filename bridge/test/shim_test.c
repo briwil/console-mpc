@@ -331,6 +331,12 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
         send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
         CHECK(expect(b, 0xBF, 43, 127) && expect(b + 1, 0xBF, 43, 0), "A: sound page with a sequencer: SEQ = B1, the sequencer");
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('R', pf); fclose(pf);      /* R: an instrument's presets / LFO page: SEQ = its sequencer too */
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
+        CHECK(expect(b, 0xBF, 43, 127) && expect(b + 1, 0xBF, 43, 0), "A: presets / LFO page: SEQ = B1, the sequencer");
         remove("/tmp/console-pagemode");
     }
     int s0 = ngot;

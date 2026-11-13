@@ -9,6 +9,7 @@ PATH = os.environ.get("CONSOLE_METRO", "/tmp/console-metro")
 SAVE = os.path.join(os.environ.get("CONSOLE_HOME", "/data/UserData/console"), "metronome.json")
 STATE = {"on": False, "vol": 60, "sent": 0.0, "was": False, "count": 0}
 COUNTS = [0, 1, 2, 4]                       # COUNT IN: OFF, or this many bars of clicks before a recording starts
+BEAT = {"n": 0, "est": None, "bpm": 0, "bar": 0}      # the click grid: a steady bar start, and a heartbeat the bridge watches
 CI = {"active": False, "end": 0.0, "start_ns": 0, "e": None, "last": -1, "patched": False}
 
 
@@ -36,6 +37,30 @@ def _write(text):
         os.replace(PATH + ".tmp", PATH)
     except OSError:
         pass
+
+
+def _send(vol, bpm, bar, t0):
+    BEAT["n"] += 1
+    _write("1 %d %d %d %d %d" % (vol, round(bpm * 100), bar, t0, BEAT["n"]))
+
+
+def _steady(m, bpm, bar):
+    """m = a bar start worked out from the playhead just now: late by however long the loop took to get here (never early).
+    Keeps one steady grid instead of moving the clicks every time: only a real jump (a seek, a new tempo) moves it."""
+    bar_ns = bar * 6e10 / bpm
+    est = BEAT["est"]
+    if est is None or BEAT["bpm"] != bpm or BEAT["bar"] != bar:
+        est = m
+    else:
+        k = round((m - est) / bar_ns)
+        adv = est + k * bar_ns
+        d = m - adv
+        if abs(d) > 40e6:
+            est = m
+        else:
+            est = adv + (d if d < 0 else 0.05 * d)         # (a late reading is noise: follow it only a little)
+    BEAT["est"], BEAT["bpm"], BEAT["bar"] = est, bpm, bar
+    return int(est)
 
 
 def toggle(T):
@@ -93,7 +118,7 @@ def _count_tick(T):
         T.say("COUNT IN  %d" % left, 2)
     if now - STATE["sent"] >= 0.2:
         STATE["sent"], STATE["was"] = now, True
-        _write("1 %d %d %d %d" % (max(STATE["vol"], 40), round(e.bpm * 100), bar, CI["start_ns"]))
+        _send(max(STATE["vol"], 40), e.bpm, bar, CI["start_ns"])
 
 
 def tick(T):
@@ -115,6 +140,7 @@ def tick(T):
     if not live:
         if STATE["was"]:
             STATE["was"] = False
+            BEAT["est"] = None
             _write("0 0 12000 4 0")
         return
     if now - STATE["sent"] < 0.2:
@@ -124,8 +150,8 @@ def tick(T):
     bar = max(1, int(round(e.bar_beats())))
     beats = e.pos / fpb
     within = beats % bar
-    t0 = time.monotonic_ns() - int(within * 60e9 / e.bpm)
-    _write("1 %d %d %d %d" % (STATE["vol"], round(e.bpm * 100), bar, t0))
+    t0 = _steady(time.monotonic_ns() - within * 60e9 / e.bpm, e.bpm, bar)
+    _send(STATE["vol"], e.bpm, bar, t0)
 
 
 def install_menu(menu_mod):

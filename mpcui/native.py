@@ -664,12 +664,12 @@ def install(pages):
             if card is None and T.engine and fxpages.on_lfo_page(T, menu):
                 fxpages.draw_lfo(T, sys.modules[__name__])
                 publish()
-                set_mode("O")
+                set_mode("N" if fxpages._guitar(T) else "R")      # R: SEQ goes to the sequencer (not on GUITAR)
                 return
             if card is None and T.engine and fxpages.on_presets_page(T, menu):
                 fxpages.draw_presets(T, sys.modules[__name__])
                 publish()
-                set_mode("O")
+                set_mode("N" if fxpages._guitar(T) else "R")      # R: SEQ goes to the sequencer (not on GUITAR)
                 return
             if card is None and T.engine and fxpages.on_punch_page(T, menu):
                 fxpages.draw_punch(T, sys.modules[__name__])

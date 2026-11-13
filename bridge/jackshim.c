@@ -521,7 +521,7 @@ static void pagemode_poll(void)
     char ch = two[0];
     close(fd);
     if (n >= 1) page_linear = (n == 2 && two[1] == 'y');             /* second letter y: a synth (the note pads run in order) */
-    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N' || ch == 'Q'); page_sound = (ch == 'Q'); page_retrig = (ch == 'Q' || ch == 'P'); page_seq = (ch == 'S' || ch == 'P'); }
+    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N' || ch == 'Q' || ch == 'R'); page_sound = (ch == 'Q' || ch == 'R'); page_retrig = (ch == 'Q' || ch == 'P'); page_seq = (ch == 'S' || ch == 'P'); }
 }
 
 /* ---- the metronome: /tmp/console-metro = "on volume bpm*100 beats-per-bar t0_ns" (Console writes it while recording; t0 = a bar's start on CLOCK_MONOTONIC) ---- */
@@ -539,9 +539,9 @@ static void metro_poll(void)
     close(fd);
     if (n <= 0) { metro_on = 0; return; }
     b[n] = 0;
-    long long v[5] = { 0, 0, 0, 0, 0 };
+    long long v[6] = { 0, 0, 0, 0, 0, 0 };
     int k = 0;
-    for (long i = 0; i < n && k < 5; i++) {
+    for (long i = 0; i < n && k < 6; i++) {
         if (b[i] >= '0' && b[i] <= '9') v[k] = v[k] * 10 + (b[i] - '0');
         else if (i > 0 && b[i - 1] >= '0' && b[i - 1] <= '9') k++;
     }
@@ -551,11 +551,11 @@ static void metro_poll(void)
     metro_bar = (int)v[3];
     metro_t0 = v[4];
     {   /* Console rewrites the file every few tenths of a second while it is recording; if that stops, so do the clicks */
-        static long long last_t0, last_change;
+        static long long last_t0, last_beat, last_change;
         struct mts ts;
         mpc_clock(1, &ts);
         long long now = (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
-        if (v[4] != last_t0) { last_t0 = v[4]; last_change = now; }
+        if (v[4] != last_t0 || v[5] != last_beat) { last_t0 = v[4]; last_beat = v[5]; last_change = now; }      /* (v[5]: a count Console adds each time it writes) */
         metro_on = (v[0] && now - last_change < 1500000000LL) ? 1 : 0;
     }
 }
