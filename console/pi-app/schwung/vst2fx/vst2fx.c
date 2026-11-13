@@ -314,7 +314,7 @@ static void render_block(void *h, int16_t *out, int frames)
 
 static int get_error(void *h, char *buf, int len)
 {
-    (void)h;
+    if (h) { if (len > 0) buf[0] = 0; return 0; }          /* a running instance has no error */
     snprintf(buf, (size_t)len, "STOMPBOX IS NOT THERE: PUT stompbox.so IN ConsoleData/plugins");
     return 1;
 }
