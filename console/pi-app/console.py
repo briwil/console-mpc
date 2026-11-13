@@ -473,6 +473,14 @@ class Transport:
 
     PAD_NAMES = ["DRUM 1", "DRUM 2", "DRUM 3", "SNARE", "CYMBAL", "CLOSED HAT", "OPEN HAT"]
 
+    def guitar_shown(self):
+        """True while the instrument shown is GUITAR (the audio input through Stompbox): no patterns, sequencer, song or punch pages."""
+        e = self.engine
+        try:
+            return bool(e and e.slot is not None and getattr(e.drums.get(e.slots[e.slot]), "live_input", False))
+        except Exception:                                   # noqa: BLE001
+            return False
+
     def drums_key(self):
         """The MIDI key, forwards: the tape -> the INSTRUMENTS page -> the picked slot's drum page -> its
         sequencer -> back to the INSTRUMENTS page (round and round). Over an FX page it closes the FX page first."""
@@ -481,6 +489,9 @@ class Transport:
             self.fx_page = None
             if self.drum_page or self.inst_page:
                 return
+        if self.drum_page and not self.seq_page and self.guitar_shown():
+            self.say("GUITAR HAS NO SEQUENCER", 2)         # (so no automation or punch FX pages either)
+            return
         if self.drum_page and getattr(self, "list_is_top", False):
             # (the Move) round the instrument's own pages: sound -> sequencer -> automation -> sound; Back: the list
             if not self.seq_page:

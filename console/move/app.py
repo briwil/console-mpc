@@ -231,8 +231,8 @@ class MoveBoard:
             if vel:
                 self.keys.put(("PUNCHPAT", p))             # the PUNCH FX page: Shift + pad picks a punch pattern
             return
-        if self.shift and p < 16:                          # Shift + pad: the instrument's pattern 1-16
-            if vel:
+        if self.shift and p < 16:                          # Shift + pad: the instrument's pattern 1-16 (GUITAR has no patterns)
+            if vel and not T.guitar_shown():
                 self.keys.put(("PATTERN", p))
             return
         if T.punch.active() or (not vel and p in T.punch.pads_down):
