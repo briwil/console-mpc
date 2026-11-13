@@ -1119,7 +1119,7 @@ class Transport:
         if e.port:
             note = "" if e.route == "phones" else "  (%s)" % e.output_label
         else:
-            note = "  (OUTPUT IS %s: USE ITS OWN VOLUME)" % (e.output_label or "NOT SET")
+            note = ""                                       # (the MPC has no separate tape output device to name)
         self.say("VOLUME %d%%%s" % (round(v * 100), note), 2)
 
     def clip_text(self):

@@ -3,17 +3,17 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
-## Next
-- GUITAR: no sequencer, automation or punch FX pages (B1 says so), and Shift + pad does not switch patterns.
-- COUNT IN (SETTINGS): 1, 2 or 4 bars of clicks before a recording starts.
-- SEQ on an instrument's sound page goes to its sequencer.
-- METRONOME row: push = on / off, wheel = volume; GUITAR clicks while it plays.
-- GUITAR switches the input to REAR while it is loaded and puts it back when it is gone.
-- The sound core and module host are now built here (aarch64) so GUITAR can take the audio input.
+## 0.0.5
 
-- GUITAR instrument (first version): plays the Sample's audio input (your guitar) through Stompbox, so you can arm it on the tape page and record live. Needs `stompbox.so` in `ConsoleData/plugins` (or `/data/UserData/console/plugins`). It shows up in the instrument list as GUITAR. Its own sound pages, with no sequencer, song, PUNCH FX or insert pages, come next.
-- Metronome on the sequencer pages: Shift + TAP TEMPO switches it on and off there too, and it clicks while a sequence plays (and while recording, as before).
-- VST2 effects as insert effects: Console can now run a VST2 audio effect from the MPC plugin catalog as an instrument's insert effect. First one: STOMPBOX (guitar amps and pedals). Put the plugin's 64-bit `stompbox.so` into `ConsoleData/plugins` on the card (the folder appears after the first start); STOMPBOX then shows up in the insert effect list, with the plugin's presets on knob 1. (An experiment: the knobs' labels are generic until we've tried it on a Sample.)
+- **GUITAR instrument:** plays the Sample's audio input (your guitar, in the back jacks) through Stompbox, built in: 40 presets (amps, pedals, cabinet, effects) on the PRESETS page, its settings on the sound page. Pick it as an instrument and play; arm its track on the tape page to record live. No sequencer, automation, PUNCH FX or song pages, and no patterns on it. The input is switched to REAR while GUITAR is loaded and put back afterwards. It needs `stompbox.so` (64-bit ARM, from the plugin's Sample release) in `/data/UserData/console/plugins`.
+- **STOMPBOX as an insert effect** (and any other VST2 effect put in `plugins`): Console can run VST2 audio effects as an instrument's insert effect.
+- **COUNT IN** (SETTINGS): 1, 2 or 4 bars of clicks before a recording starts.
+- **Metronome:** Shift + TAP TEMPO switches it on and off on the tape page and on the sequencer pages (it clicks while a sequence plays there); the SETTINGS row pushes it on / off and the wheel sets its volume.
+- SEQ on an instrument's sound page goes to its sequencer.
+- INSERT pages are titled INSERT 1 / INSERT 2, and SENDS no longer says which slot.
+- SETTINGS: no UPDATE row (update over SSH), no OP-XY wording in SYNC.
+- The audio inputs are on by default (the file `DISABLE_INPUT` in `/data/UserData/console` turns them off).
+- The volume knob no longer shows a cut-off "OUTPUT IS ..." message.
 - Console's own code now lives in this repo (the `console` folder), so building the card no longer needs the Move repo.
 
 ## 0.0.4
