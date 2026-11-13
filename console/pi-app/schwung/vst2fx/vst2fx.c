@@ -332,6 +332,11 @@ static void render_block(void *h, int16_t *out, int frames)
 {
     if (!the_host || !the_host->mapped_memory || frames > BLOCK) return;
     memcpy(out, the_host->mapped_memory + the_host->audio_in_offset, (size_t)frames * 4);
+    {   /* A rig built by the plugin's loader thread is put in play by its next parameter call (adopt): ask for a value now and then, */
+        static int tick;                                 /* or a heavy preset (Solo Lead...) stays out of play until something else asks */
+        inst_t *pi = h;
+        if ((++tick & 7) == 0 && pi->e->getParameter) (void)pi->e->getParameter(pi->e, pi->nk && pi->kidx[0] >= 0 ? pi->kidx[0] : 0);
+    }
     inst_t *gi = h;                                      /* the plugin only wakes up on a preset change made while it runs. At the start, and again */
     static int blocks, quiet, back, cool;                      /* whenever it stays silent while the guitar plays, go to the next preset and back */
     if (++blocks == 20 && gi->pcount > 1) { gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0); back = 40; }
