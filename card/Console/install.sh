@@ -23,7 +23,7 @@ exec >> "$C/install.log" 2>&1
 echo "--- install.sh $(date)"
 mkdir "$RUN/console-install.lock" 2>/dev/null || { echo "already ran at this power-on"; exit 0; }
 
-say() { echo "$*"; printf '%s\n' "$*" > "$SRC/install-status.txt" 2>/dev/null; }
+say() { echo "$*"; printf '%s\n' "$*" > "$SRC/install-status.txt" 2>/dev/null; tail -n 150 "$C/install.log" > "$SRC/install-log.txt" 2>/dev/null; }
 start() { rm -f "$ATT"; [ -x "$C/mpc/boot.sh" ] && exec /bin/sh "$C/mpc/boot.sh"; exit 0; }      # (boot.sh has its own safety checks)
 
 [ -e "$ROOT/NOCONSOLE" ] && { echo "NOCONSOLE is on the card: leaving the stock app alone"; exit 0; }
@@ -72,13 +72,28 @@ systemctl unset-environment LD_PRELOAD 2>/dev/null
 systemctl stop ac50.service
 sleep "$SLP"
 [ -w "$BLANK" ] && { echo 1 > "$BLANK"; echo 0 > "$BLANK"; }
-show() { [ -f "$SRC/install-screens.raw" ] && dd if="$SRC/install-screens.raw" of="$FB" bs=307200 skip="$1" count=1 conv=notrunc 2>/dev/null; return 0; }
+for f in name bits_per_pixel stride virtual_size blank state; do echo "fb0 $f: $(cat /sys/class/graphics/fb0/$f 2>&1)"; done
+# The progress pictures. One background loop keeps the screen open the whole time (the display may clear itself when the last user
+# closes it) and draws the current picture once a second (so nothing can wipe it for long). show N = switch to picture N.
+FRAMEF=$RUN/console-install.frame
+draw() {
+  [ -f "$SRC/install-screens.raw" ] || return 0
+  dd if="$SRC/install-screens.raw" of="$FB" bs=307200 skip="$(cat "$FRAMEF" 2>/dev/null || echo 0)" count=1 2>"$RUN/console-install.dd"
+}
+show() {
+  echo "$1" > "$FRAMEF"
+  draw || echo "drawing picture $1 failed: $(cat "$RUN/console-install.dd" 2>/dev/null)"
+}
+stop_screen() { rm -f "$FRAMEF"; [ -n "${LOOP:-}" ] && kill "$LOOP" 2>/dev/null; LOOP=; }
+echo 0 > "$FRAMEF"
+( exec 3<>"$FB"; while [ -f "$FRAMEF" ]; do draw 2>/dev/null; sleep 1; done ) &
+LOOP=$!
 # nothing has been changed yet: the old Console (if there is one) can still start; else the stock app
-fail_safe() { say "$1"; show 5; sleep $((SLP * 6)); rm -f "$ATT"
+fail_safe() { say "$1"; show 5; sleep $((SLP * 6)); stop_screen; rm -f "$ATT"
   if [ -x "$C/mpc/boot.sh" ] && [ -x "$C/python/bin/python3" ]; then export CONSOLE_TOOK_OVER=1; exec /bin/sh "$C/mpc/boot.sh"; fi
   systemctl start ac50.service; exit 1; }
 # something was half replaced: back to the stock app
-fail_broken() { say "$1"; show 5; sleep $((SLP * 6)); rm -f "$ATT"; systemctl start ac50.service; exit 1; }
+fail_broken() { say "$1"; show 5; sleep $((SLP * 6)); stop_screen; rm -f "$ATT"; systemctl start ac50.service; exit 1; }
 
 show 0
 kb() { _k=$(du -k "$1" 2>/dev/null | cut -f1); echo "${_k:-0}"; }
@@ -124,6 +139,7 @@ sync
 say "Console installed: $NEW ($(date))"
 show 4
 sleep "$SLP"
+stop_screen
 rm -f "$ATT"
 export CONSOLE_TOOK_OVER=1                            # (boot.sh: the stock app is already stopped; go straight to the startup menu)
 exec /bin/sh "$C/mpc/boot.sh"
