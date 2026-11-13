@@ -4,9 +4,11 @@ Put the "autorun" and "Console" folders from the zip on the root of the SD card 
 the MPC Sample and switch it on.  The first start copies Console to the Sample (about a minute: the normal MPC screen stays up
 meanwhile).  Then the startup menu appears:  PAD 1 = Console,  PAD 2 = the normal MPC app.  (No answer in 15 seconds = MPC.)
 
-Your projects and presets are kept on the card, in Console/data.  Copy that folder to keep them safe.
+Your projects and presets are kept on the card, in a folder of their own: ConsoleData.  Copy that folder to keep them safe.
+A copy is also kept on the Sample, and fills ConsoleData again if the card ever loses it.
 
-UPDATE      Replace the Console and autorun folders on the card with the new ones (keep Console/data) and switch on.
+UPDATE      Drag the new autorun and Console folders onto the card, choose Replace, and switch on.  (ConsoleData is a separate
+            folder: replacing these two never touches your songs.)
 SKIP        An empty file called NOCONSOLE on the card (next to the Console folder) starts the normal MPC app.
 REMOVE      Put an empty file called UNINSTALL in the Console folder and switch on once: Console is taken off the Sample
             (your songs stay on the card).  To use Console again, delete UNINSTALL.  Or just delete the autorun folder.

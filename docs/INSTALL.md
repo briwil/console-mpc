@@ -6,7 +6,7 @@
 3. Put the card in the MPC Sample and switch it on. The first start copies Console to the Sample's internal drive (about a
    minute; the normal MPC screen stays up meanwhile). Then the startup menu appears: **PAD 1 = Console, PAD 2 = MPC**.
 
-Projects and presets are kept on the card in `Console/data`.
+Projects and presets are kept on the card in their own folder, `ConsoleData`, with a copy on the Sample.
 
 ## How it works
 - The firmware runs `autorun/autorun.sh` from the card (its `autorun.check` file is the checksum the firmware wants).
@@ -14,10 +14,10 @@ Projects and presets are kept on the card in `Console/data`.
   checks the files (`SHA256SUMS`), needs enough free room, unpacks `payload/console.tgz` (Console's code, the synths and effects, the
   bridge) and `payload/python.tgz` (only when the runtime changed) into `/data/UserData/console`, and then runs `boot.sh`.
   Nothing on the card is executed directly: the card is mounted `noexec`.
-- Songs and presets live on the card (`Console/data`); the card is found by its device, not its label.
+- Songs and presets live on the card (`ConsoleData`); the card is found by its device, not its label.
 
 ## Update / skip / remove
-- **Update:** replace `autorun` and `Console` on the card with the new ones (keep `Console/data`) and switch on.
+- **Update:** drag the new `autorun` and `Console` folders onto the card, choose Replace, and switch on. `ConsoleData` is a separate folder and isn't touched. (Coming from 1.0.0, whose songs are in `Console/data`: copy that folder out first, or hold Option to Merge, once. The new version then copies it to `ConsoleData`.)
 - **Skip Console for one start:** an empty file `NOCONSOLE` on the card root.
 - **Remove:** an empty file `Console/UNINSTALL`, switch on once (Console comes off the Sample; songs on the card stay).
   Delete that file to install again. Or simply delete the `autorun` folder.

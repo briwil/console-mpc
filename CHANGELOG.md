@@ -1,10 +1,12 @@
 # Changelog
 
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
-To update, unzip the new zip onto the SD card again (`unzip -o Console-MPC.zip -d /Volumes/<card>`), so `Console/data` (your projects) is kept.
+To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
 ## Next
 
+- Your projects, presets and settings now live in `ConsoleData`, a folder of their own on the card, so replacing the `Console` and `autorun` folders (the way to update) can't delete them. A copy is kept on the Sample and refills the card if it ever loses `ConsoleData`.
+  Updating from 1.0.0 (songs in `Console/data`): copy `Console/data` out first, or hold Option to Merge, once. The new version then moves them to `ConsoleData`.
 - Shift + K1, K2, K3 and the FADER are knobs 5-8 on the drum / synth sound pages and the insert pages.
 
 ## 1.0.0

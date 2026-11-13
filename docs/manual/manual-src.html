@@ -116,8 +116,8 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
 <dl class="rows">
   <div class="r"><dt>Start</dt><dd>Switch the Sample on with the SD card in. A startup menu appears: <kbd>PAD 1</kbd> = Console, <kbd>PAD 2</kbd> = the normal MPC app. No answer in 15 seconds starts the normal MPC app.</dd></div>
   <div class="r"><dt>Quit</dt><dd><kbd>Shift</kbd> + <kbd>STOP</kbd>. Saves your song, quits and gives the Sample back to the normal MPC software.</dd></div>
-  <div class="r"><dt>Your songs</dt><dd>Projects, presets and settings are kept on the SD card, in <code>Console/data</code>. Copy that folder to keep them safe. With no card, Console uses the Sample's internal drive.</dd></div>
-  <div class="r"><dt>Update</dt><dd>Download the new zip. Replace the <code>autorun</code> and <code>Console</code> folders on the card, but keep <code>Console/data</code>, then switch on. The first start copies the new version across.</dd></div>
+  <div class="r"><dt>Your songs</dt><dd>Projects, presets and settings are kept on the SD card, in a folder of their own, <code>ConsoleData</code>. Copy that folder to keep them safe. The Sample also keeps a copy, which refills the folder if the card ever loses it. With no card, Console uses the Sample's internal drive.</dd></div>
+  <div class="r"><dt>Update</dt><dd>Download the new zip. Drag the new <code>autorun</code> and <code>Console</code> folders onto the card and choose Replace, then switch on. Your songs are in <code>ConsoleData</code>, a separate folder, so they stay. The first start copies the new version across.</dd></div>
   <div class="r"><dt>Remove</dt><dd>Put an empty file called <code>UNINSTALL</code> in the <code>Console</code> folder and switch on once. Console comes off the Sample and your songs stay on the card. Delete that file to install again. Or just delete the <code>autorun</code> folder.</dd></div>
   <div class="r"><dt>If something goes wrong</dt><dd><code>Console/install-status.txt</code> on the card says what happened. If Console doesn't get through starting, the normal MPC app starts at the next power-on.</dd></div>
 </dl>
@@ -407,14 +407,14 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
   <div class="r"><dt>Menu (Sample Select)</dt><dd>The project menu: songs (new, open, save as), tempo, time signature, export format, settings. Wheel: pick, push: choose, Back: close.</dd></div>
   <div class="r"><dt>Shift in the project menu</dt><dd>NEW PROJECT becomes DELETE PROJECT and SAVE PROJECT becomes RENAME PROJECT. Pick the project, then confirm ARE YOU SURE?.</dd></div>
   <div class="r"><dt>Settings</dt><dd>Push the wheel on a setting to edit it (the value shows in a white box), turn to change, push again to let go. They include METRONOME, REC TIMING, TRIPLETS and INPUT.</dd></div>
-  <div class="r"><dt>Shift + Sample Select</dt><dd>Export: a stereo mix and one file per track (wav, aiff, flac or m4a, as chosen in the project menu). They go to the SD card, in <code>Console/data/exports</code>, in a folder named for the song and the time. Take the card out and open that folder on your computer.</dd></div>
+  <div class="r"><dt>Shift + Sample Select</dt><dd>Export: a stereo mix and one file per track (wav, aiff, flac or m4a, as chosen in the project menu). They go to the SD card, in <code>ConsoleData/exports</code>, in a folder named for the song and the time. Take the card out and open that folder on your computer.</dd></div>
   <div class="r"><dt>INPUT</dt><dd>MENU &gt; SETTINGS &gt; INPUT: REAR (the jacks on the back), MIC (the built-in microphone) or USB (what a computer plays to "MPC Sample Audio"). A track's input (zoomed track, knob 2) then offers that input's LEFT and RIGHT. Pick one for a mono track, both for stereo. You hear it while you arm the track. The REC GAIN knob on the back sets the level of REAR and MIC.</dd></div>
 </dl>
 </section>
 
 <section id="notyet">
 <h2>Sharing your work</h2>
-<p class="intro">Everything you make is a plain file on the SD card, so there's nothing to set up. Songs are in <code>Console/data/projects</code> and exports in <code>Console/data/exports</code>. Take the card out, put it in your computer and copy what you want. Copy the whole <code>Console/data</code> folder to back everything up.</p>
+<p class="intro">Everything you make is a plain file on the SD card, so there's nothing to set up. Songs are in <code>ConsoleData/projects</code> and exports in <code>ConsoleData/exports</code>. Take the card out, put it in your computer and copy what you want. Copy the whole <code>ConsoleData</code> folder to back everything up.</p>
 </section>
 </main>
 </div>

@@ -43,7 +43,9 @@ jobs:
           repository: briwil/console-move
           path: move-src
       - name: Test the installer
-        run: sh card/test/run.sh
+        run: |
+          sh card/test/run.sh
+          sh card/test/data.sh
       - name: Download the parts
         run: |
           mkdir -p parts

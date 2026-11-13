@@ -14,20 +14,12 @@ SDR=$(sd_root 2>/dev/null)             # the SD card, whatever its label (/media
 SMP=""
 for d in "$SDR" /data/UserData/UserLibrary/Samples /data/UserData/console/samples; do [ -n "$d" ] && [ -d "$d" ] && SMP="$SMP${SMP:+:}$d"; done
 export CONSOLE_SAMPLES="$SMP"
-mkdir -p "$C/data"
-# Projects, presets and settings (CONSOLE_DATA) live on the SD card: <card>/Console/data, made if it isn't there. The first time,
-# what is on the internal drive is copied across (the internal copy stays where it is). No card, or it can't be written: the internal drive.
-DATA="$C/data"
-if [ -n "$SDR" ] && [ -d "$SDR" ]; then
-  SD="$SDR/Console"
-  if [ ! -d "$SD/data" ]; then
-    mkdir -p "$SD" && rm -rf "$SD/data.new" && cp -r "$C/data" "$SD/data.new" && mv "$SD/data.new" "$SD/data" && sync
-    [ -f "$C/knob-sensitivity" ] && cp "$C/knob-sensitivity" "$SD/knob-sensitivity" 2>/dev/null
-  fi
-  if [ -d "$SD/data" ] && touch "$SD/data/.writable" 2>/dev/null; then rm -f "$SD/data/.writable"; DATA="$SD/data"; fi
-fi
+# Projects, presets and settings (CONSOLE_DATA): <card>/ConsoleData, a folder of its own (see data-folder.sh); a copy is kept on the internal drive.
+. "$C/mpc/data-folder.sh"
+resolve_data "$SDR" "$C" >> "$C/boot.log" 2>&1
 export CONSOLE_DATA="$DATA"
 echo "$DATA" > "$C/data-folder.txt"
+( backup_data >> "$C/boot.log" 2>&1 & )          # (in the background, so the start is not held up)
 
 restore() { systemctl start ac50.service; }
 trap 'touch "$C/STOP"' INT TERM

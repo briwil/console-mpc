@@ -1,7 +1,7 @@
 #!/bin/sh
 # Console for the MPC Sample: installs or updates Console from this card onto the Sample's internal drive, then starts it.
 # (The card can't run programs itself: it is mounted "noexec". So the programs are copied once, here; your projects and
-# presets stay on the card, in Console/data.)  Started by autorun/autorun.sh at power-on.
+# presets stay on the card, in ConsoleData.)  Started by autorun/autorun.sh at power-on.
 #
 #   first start / a newer card version : the screen says INSTALLING CONSOLE, Console is copied (about a minute), then it starts
 #   same version already installed     : goes straight to Console's startup menu
@@ -31,7 +31,7 @@ start() { rm -f "$ATT"; [ -x "$C/mpc/boot.sh" ] && exec /bin/sh "$C/mpc/boot.sh"
 if [ -e "$SRC/UNINSTALL" ]; then
   for f in "$C"/* "$C"/.[!.]*; do
     [ -e "$f" ] || continue
-    case "$f" in "$C/data"|"$C/install.log") ;; *) rm -rf "$f" ;; esac
+    case "$f" in "$C/data"|"$C/data-backup"|"$C/install.log") ;; *) rm -rf "$f" ;; esac
   done
   say "Console was removed from the Sample ($(date)). Delete Console/UNINSTALL (and Console/payload) to install it again."
   exit 0
