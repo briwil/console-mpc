@@ -611,8 +611,19 @@ def main():
     next_lights = 0.0
     next_icon_check, icon_test, icon_k = 0.0, None, 0
     hand_back = False
+    perf = {"prev": 0.0, "max": 0.0, "sum": 0.0, "n": 0, "dmax": 0.0, "dsum": 0.0, "dn": 0, "rep": time.monotonic()}
     try:
         while True:
+            _t = time.monotonic()                        # how long one trip round this loop takes (app.log, "perf:" when it is slow)
+            if perf["prev"]:
+                perf["max"], perf["sum"], perf["n"] = max(perf["max"], _t - perf["prev"]), perf["sum"] + _t - perf["prev"], perf["n"] + 1
+            perf["prev"] = _t
+            if _t - perf["rep"] >= 5.0:
+                if perf["max"] > 0.04 and perf["n"]:
+                    print("perf: a trip round the loop takes %d ms on average, %d ms at worst; the screen draw %d ms on average, %d ms at worst (%d draws in %.0f s)" % (
+                        1000 * perf["sum"] / perf["n"], 1000 * perf["max"], 1000 * perf["dsum"] / max(1, perf["dn"]), 1000 * perf["dmax"],
+                        perf["dn"], _t - perf["rep"]), flush=True)
+                perf.update(max=0.0, sum=0.0, n=0, dmax=0.0, dsum=0.0, dn=0, rep=_t)
             while True:
                 try:
                     board(e.move_midi.get_nowait())
@@ -698,6 +709,7 @@ def main():
                 lights.update(T, board)
             if now >= next_screen:
                 next_screen = now + 1 / FPS_SCREEN
+                _ds = time.monotonic()
                 menu_tick(m)
                 if T.live_rec and (not (T.seq_page or T.drum_page) or (getattr(T, "_rec_was_playing", False) and not e.playing)):
                     T.live_rec = False                        # recording into the pattern ends at Stop, or when you leave the page
@@ -718,6 +730,8 @@ def main():
                     frame.rect(99, 57, 29, 7, 1)
                     frame.small(100, 58, "T%3d:%02d" % (left // 60, left % 60), 0)
                 core.display(frame.bytes())
+                _dd = time.monotonic() - _ds
+                perf["dmax"], perf["dsum"], perf["dn"] = max(perf["dmax"], _dd), perf["dsum"] + _dd, perf["dn"] + 1
             time.sleep(0.005)
     except KeyboardInterrupt:
         pass
