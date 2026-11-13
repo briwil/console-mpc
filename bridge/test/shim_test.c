@@ -337,14 +337,14 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);
         send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
         CHECK(expect(b, 0xBF, 43, 127) && expect(b + 1, 0xBF, 43, 0), "A: presets / LFO page: SEQ = B1, the sequencer");
-        b = ngot;                                                                          /* SAMPLE (0x49) on an instrument's page: page 1; Shift + SAMPLE: SETTINGS */
-        send((unsigned char[]){ 0x90, 0x49, 0x7F }, 3);
-        send((unsigned char[]){ 0x80, 0x49, 0x00 }, 3);
+        b = ngot;                                                                          /* SAMPLE (0x06) on an instrument's page: page 1; Shift + SAMPLE: SETTINGS */
+        send((unsigned char[]){ 0x90, 0x06, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x06, 0x00 }, 3);
         CHECK(expect(b, 0xBF, 112, 127) && expect(b + 1, 0xBF, 112, 0), "A: SAMPLE off the tape page = page 1 of the instrument");
         b = ngot;
         send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);
-        send((unsigned char[]){ 0x90, 0x49, 0x7F }, 3);
-        send((unsigned char[]){ 0x80, 0x49, 0x00 }, 3);
+        send((unsigned char[]){ 0x90, 0x06, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x06, 0x00 }, 3);
         send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);
         { int hit = 0; for (int i = b; i < ngot; i++) if (got[i][0] == 0xBF && got[i][1] == 113 && got[i][2] == 127) hit = 1; CHECK(hit, "A: Shift + SAMPLE = SETTINGS"); }
         remove("/tmp/console-pagemode");
