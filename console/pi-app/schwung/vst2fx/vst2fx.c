@@ -88,6 +88,7 @@ typedef struct {
     char klabel[MAXK][16];
     int npre;                            /* presets the plugin lists */
     int prog;                            /* the preset last chosen (set_param) */
+    int pfirst, pcount;                  /* the presets offered: pcount from pfirst (plugin.txt: presets FIRST COUNT); 0 = all */
     float lin[BLOCK], rin[BLOCK], lout[BLOCK], rout[BLOCK];
 } inst_t;
 
@@ -154,6 +155,7 @@ static void *create(const char *dir, const char *cfg)
         char save = *eol;
         *eol = 0;
         if (!strncmp(p, "file ", 5)) snprintf(file, sizeof file, "%s", p + 5);
+        else if (!strncmp(p, "presets ", 8)) { char *e2; s->pfirst = (int)strtod(p + 8, &e2); s->pcount = (int)strtod(e2, NULL); }
         else if (!strncmp(p, "knob ", 5) && s->nk < MAXK) {
             char *end;
             int idx = (int)strtod(p + 5, &end);
@@ -190,8 +192,10 @@ static void *create(const char *dir, const char *cfg)
     e->dispatcher(e, eSetBlock, 0, BLOCK, NULL, 0);
     e->dispatcher(e, eMains, 0, 1, NULL, 0);
     s->npre = e->numPrograms;
-    if (s->npre > 1) e->dispatcher(e, eSetProgram, 0, 1, NULL, 0);     /* (a plugin that only wakes up when the preset CHANGES: go to the second, then back to the first) */
-    if (s->npre > 0) e->dispatcher(e, eSetProgram, 0, 0, NULL, 0);
+    if (s->pfirst < 0 || s->pfirst >= s->npre) s->pfirst = 0;
+    if (s->pcount <= 0 || s->pfirst + s->pcount > s->npre) s->pcount = s->npre - s->pfirst;
+    s->prog = s->pfirst;
+    if (s->npre > 0) e->dispatcher(e, eSetProgram, 0, s->prog, NULL, 0);
     {
         char m[400], nm[40];
         int n = snprintf(m, sizeof m, "vst2fx: %d presets, first:", s->npre);
@@ -257,7 +261,7 @@ static void set_param(void *h, const char *key, const char *val)
     inst_t *s = h;
     if (!strcmp(key, "preset")) {
         char nm[40];
-        for (int i = 0; i < s->npre; i++) {
+        for (int i = s->pfirst; i < s->pfirst + s->pcount; i++) {
             preset_name(s, i, nm);
             if (!strcmp(nm, val)) {
                 s->prog = i;
@@ -285,10 +289,10 @@ static int get_param(void *h, const char *key, char *buf, int len)
     if (strcmp(key, "chain_params")) return -1;
     int n = snprintf(buf, (size_t)len, "[{\"key\":\"preset\",\"name\":\"PRESET\",\"type\":\"enum\",\"default\":0,\"options\":[");
     int cur = (int)s->e->dispatcher(s->e, eGetProgram, 0, 0, NULL, 0);
-    for (int i = 0; i < s->npre && n < len - 80; i++) {
+    for (int i = s->pfirst; i < s->pfirst + s->pcount && n < len - 80; i++) {
         char nm[40];
         preset_name(s, i, nm);
-        n += snprintf(buf + n, (size_t)(len - n), "%s\"%s\"", i ? "," : "", nm);
+        n += snprintf(buf + n, (size_t)(len - n), "%s\"%s\"", i > s->pfirst ? "," : "", nm);
     }
     n += snprintf(buf + n, (size_t)(len - n), "]}");
     for (int k = 0; k < s->nk && n < len - 120; k++) {
@@ -328,7 +332,7 @@ static void render_block(void *h, int16_t *out, int frames)
     memcpy(out, the_host->mapped_memory + the_host->audio_in_offset, (size_t)frames * 4);
     static int blocks;                                   /* the plugin only wakes up on a preset change made while it runs: */
     inst_t *gi = h;                                      /* go to the second preset a moment after the start, then back to the first */
-    if (++blocks == 20 && gi->npre > 1) gi->e->dispatcher(gi->e, eSetProgram, 0, 1, NULL, 0);
+    if (++blocks == 20 && gi->pcount > 1) gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0);
     if (blocks == 60 && gi->npre > 0) gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog, NULL, 0);
     static int calls, pin, pout;                         /* a check line every ~3 s in the log: what goes in and out of the plugin */
     for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > pin) pin = a; }

@@ -6,3 +6,4 @@ knob 86 TONE 1
 knob 87 TONE 2
 knob 88 TONE 3
 knob 96 CAB 1
+presets 1 9
