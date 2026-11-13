@@ -43,8 +43,10 @@ if [ -z "${CONSOLE_TOOK_OVER:-}" ]; then
     sleep 1; n=$((n + 1))
   done
   echo "panel ready after ${n}s (tx ${tx:-?}, midi device: $([ -e /dev/snd/midiC0D0 ] && echo yes || echo no))"
-  UP_MIN=0
-  [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (optional extra wait, in seconds of uptime:  echo 40 > $C/UP_MIN)
+  # Taking over earlier than this (7-10 s after power-on) left the panel silent about one boot in three: the stock app was stopped in
+  # the middle of its own start-up. 8 boots out of 8 were fine when waiting until 40 s. (The file UP_MIN overrides it, in seconds.)
+  UP_MIN=40
+  [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (override, in seconds of uptime:  echo 40 > $C/UP_MIN)
   up=$(cut -d. -f1 /proc/uptime)
   [ "$up" -lt "$UP_MIN" ] && sleep $((UP_MIN - up))
   echo "panel before: $(grep "^ *3:" /proc/tty/driver/* | sed "s/.*tx/tx/")"
