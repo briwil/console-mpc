@@ -17,9 +17,15 @@ jobs:
     steps:
       - run: |
           curl -fsSL -o move-libs.tgz "${{ inputs.source }}"
-          tar tzf move-libs.tgz | head -n 5
-          sha256sum move-libs.tgz | tee move-libs.sha256
+          # the archive lists each .so again as a hard link to itself (and the files before their folders): the MPC's tar
+          # can't unpack that. Unpack and pack again as plain files, folders first.
+          mkdir unpacked && tar xzf move-libs.tgz -C unpacked
+          rm move-libs.tgz
+          tar --hard-dereference --sort=name --owner=0 --group=0 -czf move-libs.tgz -C unpacked .
+          test "$(tar tvzf move-libs.tgz | grep -c '^h')" = 0
+          tar tvzf move-libs.tgz | head -n 5
+          find unpacked -name '*.so' | wc -l
           gh release delete libs-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
-          gh release create libs-latest move-libs.tgz move-libs.sha256 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+          gh release create libs-latest move-libs.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
             --title "Console's synths, drum machines and effects (prebuilt)" \
             --notes "The prebuilt libraries the card zip is made with. Copied from ${{ inputs.source }}."

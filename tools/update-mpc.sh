@@ -66,12 +66,7 @@ mpc "mkdir -p $DEST/console/mpc $DEST/console/pi-app"
 COPYFILE_DISABLE=1 tar --format ustar -cf - -C "$T/pack" console | mpc "cd $DEST && tar xf -"
 cat "$T/bridge.tgz" | mpc "cd $DEST/console && tar xzf -"
 mpc "[ -f $DEST/console/mpc/vst2fx.so ] && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/stompbox/vst2fx.so || true"     # (the VST2 effect host for STOMPBOX)
-if [ "$LIBS" = 1 ]; then         # (the libs archive has hard links, which the MPC's tar can't unpack: unpack here, send plain files)
-  mkdir -p "$T/libs" "$T/libs2"
-  tar xzf "$T/libs.tgz" -C "$T/libs"
-  cp -R "$T/libs/." "$T/libs2/"
-  COPYFILE_DISABLE=1 tar --format ustar -cf - -C "$T/libs2" . | mpc "cd $DEST/console/pi-app && tar xf -"
-fi
+[ "$LIBS" = 1 ] && cat "$T/libs.tgz" | mpc "cd $DEST/console/pi-app && tar xzf -"
 [ "$PY" = 1 ] && cat "$T/python.tgz" | mpc "cd $DEST/console && rm -rf python && tar xzf -"
 mpc "sync"
 say "5/5  Done. Start Console from the startup menu (PAD 1), or:  sh $DEST/console/mpc/mpc-console.sh"
