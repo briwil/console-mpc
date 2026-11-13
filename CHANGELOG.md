@@ -3,6 +3,10 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## Next
+
+- The LFO's DEST names the drum on a drum machine: "SNR DECAY" instead of just "DECAY".
+
 ## 0.0.2
 
 - Shift + K1, K2, K3 and the FADER now really are knobs 5-8 on an instrument's pages (its sound pages, LFO / INSERT / SENDS / PADS / ARP) and the song insert pages. In 0.0.1 this didn't work: the code that turns it on failed at start-up.
