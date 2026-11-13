@@ -61,6 +61,7 @@ static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
 static volatile int page_tapeonly;          /* the tape recorder page itself (not the instrument list, song or mixer): its own button layout */
 static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
+static volatile int page_retrig;            /* a sound page, or steps selected: knob mode re-plays the drum while a knob is turned (not on song, punch FX, automation, LFO, mixer ...) */
 static volatile int page_sound;             /* the instrument's sound / parameter page that has a sequencer: SEQ goes to it (as B1 does) */
 static volatile int page_nostep;            /* a page with no steps (the sound page): SEQ does nothing there and step mode / step settings don't apply (written by the screen thread) */
 static volatile int page_param;             /* a step is selected on the sequencer page (written by the screen thread): the pads are its settings, as with param_mode */
@@ -264,7 +265,7 @@ static void mapping_tick(void)
     return;
 #endif
     if (retrig_on && tick_n >= retrig_off) { send3(0x8F, retrig_on, 0); retrig_on = 0; }
-    if (!knob_mode || last_drum < 0 || move_btn[85] || held_knob() < 0 || tick_n - last_turn > RETRIG_WHILE) return;
+    if (!knob_mode || !page_retrig || last_drum < 0 || move_btn[85] || held_knob() < 0 || tick_n - last_turn > RETRIG_WHILE) return;
     if (!retrig_on && tick_n >= retrig_at) {
         send3(0x9F, last_drum, 100);
         retrig_on = last_drum; retrig_off = tick_n + RETRIG_LEN; retrig_at = tick_n + RETRIG_EVERY;

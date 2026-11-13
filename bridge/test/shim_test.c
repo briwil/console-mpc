@@ -112,7 +112,9 @@ int main(int argc, char **argv)
     CHECK(*frames > 1000, "A: audio loop is running");
 
 #ifdef RETRIG_TEST
-    {   /* the drum repeat in knob mode: only while a pad is held and the encoder is turning */
+    {   /* the drum repeat in knob mode: only while a pad is held and the encoder is turning, and only on a sound page */
+        { FILE *pf = fopen("/tmp/console-pagemode", "wb"); fputc('Q', pf); fclose(pf); }
+        usleep(400000);
         send((unsigned char[]){ 0x99, 37, 90 }, 3);
         send((unsigned char[]){ 0x89, 37, 0 }, 3);                    /* last drum = note 68 */
         send((unsigned char[]){ 0x90, 0x00, 0x7F }, 3);
@@ -129,6 +131,14 @@ int main(int argc, char **argv)
         for (int i = before; i < ngot; i++) if (got[i][0] == 0x9F && got[i][1] == 68 && got[i][2] == 100) hits++;
         for (int i = before; i < ngot; i++) if (got[i][0] == 0x8F && got[i][1] == 68) offs++;
         CHECK(hits >= 3 && hits <= 7 && offs == hits, "R: 3-7 repeats, and every repeat gets its note-off");
+        { FILE *pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf); }   /* song, punch FX, automation ...: no repeats */
+        usleep(400000);
+        before = ngot;
+        for (int i = 0; i < 10; i++) { send((unsigned char[]){ 0xB0, 0x64, 0x01 }, 3); usleep(170000); }
+        int again = 0;
+        for (int i = before; i < ngot; i++) if (got[i][0] == 0x9F && got[i][1] == 68 && got[i][2] == 100) again++;
+        CHECK(again == 0, "R: no repeats on a page that is not a sound page");
+        remove("/tmp/console-pagemode");
         printf(failures ? "FAILED\n" : "ALL PASSED\n");
         return failures ? 1 : 0;
     }
