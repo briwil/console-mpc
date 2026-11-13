@@ -216,6 +216,8 @@ try:                                                     # no "Shift + turn = on
     _T = G["Transport"]
     _kc = _T.knob_clicks
     _T.knob_clicks = lambda self, number, delta, shift: _kc(self, number, delta, False)
+    import shiftknobs
+    shiftknobs.install(_T)                               # Shift + K1-K3 / FADER = knobs 5-8 on the sound pages
 except Exception:
     import traceback
     print("fine steps could not be turned off:\n" + traceback.format_exc(), flush=True)

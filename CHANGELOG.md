@@ -3,6 +3,10 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, unzip the new zip onto the SD card again (`unzip -o Console-MPC.zip -d /Volumes/<card>`), so `Console/data` (your projects) is kept.
 
+## Next
+
+- Shift + K1, K2, K3 and the FADER are knobs 5-8 on the drum / synth sound pages and the insert pages.
+
 ## 1.0.0
 
 First release of Console for the Akai MPC Sample (firmware 1.3.0).
