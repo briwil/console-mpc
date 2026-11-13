@@ -283,6 +283,14 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x90, 0x20, 0x7F }, 3);               /* a button with no job here: done with the steps too */
         send((unsigned char[]){ 0x80, 0x20, 0x00 }, 3);
         CHECK(expect(b, 0x9F, 16, 100) && expect(b + 1, 0x8F, 16, 0) && ngot == b + 2, "A: steps selected: any unused button finishes the selection");
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('S', pf); fclose(pf);
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);               /* Shift + TAP TEMPO on a sequencer page: the metronome (not Copy) */
+        send((unsigned char[]){ 0x90, 0x35, 0x7F }, 3);
+        send((unsigned char[]){ 0x80, 0x35, 0x00 }, 3);
+        send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);
+        CHECK(expect(b, 0xBF, 49, 127) && expect(b + 1, 0xBF, 108, 127) && expect(b + 2, 0xBF, 49, 0) && ngot == b + 3, "A: sequencer page: Shift + TAP TEMPO = the metronome");
         /* Oy / Ny: a synth: the note pads are in order (pad 5 = the 5th note of the scale, not the Move's second row) */
         pf = fopen("/tmp/console-pagemode", "wb"); fputs("Ny", pf); fclose(pf);
         usleep(200000);

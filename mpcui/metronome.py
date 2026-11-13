@@ -1,4 +1,4 @@
-"""The metronome: Shift + TAP TEMPO on the tape page turns it on / off; it clicks while you record. Its volume is a row in SETTINGS.
+"""The metronome: Shift + TAP TEMPO on the tape page or a sequencer page turns it on / off; it clicks while you record, and while a sequence plays on a sequencer page. Its volume is a row in SETTINGS.
 Console writes /tmp/console-metro (on, volume, tempo, beats per bar, when a bar started) a few times a second while recording, and the
 bridge (bridge/jackshim.c) makes the clicks in the audio, on the same clock."""
 import json
@@ -38,7 +38,7 @@ def _write(text):
 def toggle(T):
     STATE["on"] = not STATE["on"]
     save()
-    T.say("METRONOME %s  (CLICKS WHILE RECORDING, VOLUME %d%%)" % ("ON" if STATE["on"] else "OFF", STATE["vol"]), 3)
+    T.say("METRONOME %s  (CLICKS WHILE RECORDING, OR PLAYING ON A SEQUENCER PAGE, VOLUME %d%%)" % ("ON" if STATE["on"] else "OFF", STATE["vol"]), 3)
 
 
 def set_volume(delta):
@@ -49,7 +49,8 @@ def set_volume(delta):
 def tick(T):
     """Every screen frame: keep the bridge told while recording."""
     e = T.engine
-    live = bool(e and STATE["on"] and e.recording and e.playing)
+    seq = bool(getattr(T, "seq_page", False) and not getattr(T, "fx_page", False))      # a sequencer page: it clicks while the sequence plays too
+    live = bool(e and STATE["on"] and e.playing and (e.recording or seq))
     now = time.monotonic()
     if not live:
         if STATE["was"]:
@@ -85,7 +86,7 @@ def install_menu(menu_mod):
 
     def setting_text(self, what):
         if what == "METRONOME":
-            return "%s %d%%  (SHIFT + TAP TEMPO: ON / OFF, CLICKS WHILE RECORDING)" % ("ON" if STATE["on"] else "OFF", STATE["vol"])
+            return "%s %d%%  (SHIFT + TAP TEMPO: ON / OFF, CLICKS WHILE RECORDING OR PLAYING A SEQUENCE)" % ("ON" if STATE["on"] else "OFF", STATE["vol"])
         return o_text(self, what)
 
     def settings_key(self, name):

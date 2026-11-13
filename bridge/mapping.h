@@ -333,6 +333,10 @@ static void mpc_button_event(int note, int down)
         else send3(0xBF, plus ? 55 : 54, 0);
         return;
     }
+    if (note == 0x35 && shift_held && page_seq) {            /* a sequencer page: Shift + TAP TEMPO = the metronome on / off (as on the tape page) */
+        if (down) send3(0xBF, 108, 127);
+        return;
+    }
     if (note == 0x0B && shift_held) {                       /* Shift + NOTE REPEAT (labelled TRIPLET): triplets on / off (Console's own undo moved to 16 LEVELS) */
         if (down) send3(0xBF, 107, 127);
         return;
