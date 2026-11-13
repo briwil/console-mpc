@@ -153,7 +153,7 @@ def tick(T):
         try:
             sq = e.seqs.get(e.slots[e.slot]) if e.slot is not None else None
             if sq is not None:
-                beats = (e._heard_frame() - sq.anchor) / fpb
+                beats = (e.seq_clock + e.read_ahead - sq.anchor) / fpb      # (not _heard_frame(): that one is moved on for the screen)
         except Exception:                             # noqa: BLE001
             pass
     within = beats % bar

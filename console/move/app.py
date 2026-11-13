@@ -89,6 +89,9 @@ updater.Updater = moveupdater.Updater   # SETTINGS > SOFTWARE UPDATE: from GitHu
 from screen import Frame, W       # noqa: E402
 
 FPS_SCREEN = 20
+PROFILE_FLAG = os.path.join(os.path.dirname(stress.FLAG), "profile-draw")
+PROFILE_OUT = os.path.join(os.path.dirname(stress.FLAG), "draw-profile.txt")
+PROF = {}
 DRAW_THREAD = os.environ.get("CONSOLE_DRAW_THREAD", "1") != "0"   # the screen is drawn on a thread of its own (0: in the main loop, as before)
 
 # ---------------------------------------------------------------- the Move's controls -> the app's actions
@@ -619,6 +622,14 @@ def main():
 
     def render(started):
         """The screen picture: drawn on a thread of its own, so that a slow page (it takes 50-100 ms on the Sample) never holds up the pads."""
+        prof = None
+        if os.path.exists(PROFILE_FLAG):                      # touch console/profile-draw: where the time of a screen picture goes (console/draw-profile.txt)
+            try:
+                import cProfile
+                prof = PROF.setdefault("p", cProfile.Profile())
+                prof.enable()
+            except Exception:                                 # noqa: BLE001
+                prof = None
         try:
             drew_at = time.monotonic()
             if not intro.draw(frame, drew_at):
@@ -636,8 +647,25 @@ def main():
             import traceback
             print("screen draw failed:\n" + traceback.format_exc(), flush=True)
         finally:
+            if prof is not None:
+                prof.disable()
+                PROF["n"] = PROF.get("n", 0) + 1
+                if PROF["n"] >= 120:
+                    try:
+                        import io
+                        import pstats
+                        out = io.StringIO()
+                        pstats.Stats(prof, stream=out).sort_stats("cumulative").print_stats(45)
+                        with open(PROFILE_OUT, "w") as fh:
+                            fh.write("%d screen pictures\n" % PROF["n"] + out.getvalue())
+                        os.remove(PROFILE_FLAG)
+                    except Exception:                         # noqa: BLE001
+                        pass
+                    PROF.pop("p", None)
+                    PROF.pop("n", None)
             dd = time.monotonic() - started
-            e.screen_lead = int((0.7 * dd + 0.05) * 44100)     # (what the playhead under the steps is moved on by: the draw, and the way to the screen)
+            PROF["dd"] = 0.85 * PROF.get("dd", dd) + 0.15 * dd          # (a steady figure: the playhead mustn't jump about)
+            e.screen_lead = int((0.7 * PROF["dd"] + 0.05) * 44100)     # (what the playhead under the steps is moved on by: the draw, and the way to the screen)
             perf["dmax"], perf["dsum"], perf["dn"] = max(perf["dmax"], dd), perf["dsum"] + dd, perf["dn"] + 1
             draw_busy.clear()
 
