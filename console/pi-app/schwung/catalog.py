@@ -391,7 +391,7 @@ def _add_guitar():
     if "guitar" in BY_ID:
         return
     MODULES.append({"id": "guitar", "title": "GUITAR", "kind": "synth", "license": "see its repo", "repo": "", "commit": "installed",
-                    "json": "module.json", "build": [], "prebuilt": True, "one_copy": True})
+                    "json": "module.json", "build": [], "prebuilt": True, "one_copy": True, "hide_on_pages": ["preset"]})
     BY_ID["guitar"] = MODULES[-1]
 
 

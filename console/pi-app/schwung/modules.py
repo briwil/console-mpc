@@ -746,6 +746,10 @@ class SynthModule(Module):
 
     def pages(self, voice=0):
         pages = self._kit_pages or [("SOUND", [])]
+        hide = {self.index[k] for k in self.spec.get("hide_on_pages", ()) if k in self.index}     # (GUITAR: the PRESETS page has the preset)
+        if hide:
+            pages = [(n, [i for i in idx if i not in hide]) for n, idx in pages]
+            pages = [pg for pg in pages if pg[1]] or [("SOUND", [])]
         return [("MAIN" if n == "KIT" else n, idx) for n, idx in pages]
 
     def note_on(self, note, velocity=100):
