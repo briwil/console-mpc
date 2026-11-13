@@ -189,6 +189,7 @@ static void *create(const char *dir, const char *cfg)
     e->dispatcher(e, eSetBlock, 0, BLOCK, NULL, 0);
     e->dispatcher(e, eMains, 0, 1, NULL, 0);
     s->npre = e->numPrograms;
+    if (s->npre > 1) e->dispatcher(e, eSetProgram, 0, 1, NULL, 0);     /* (a plugin that only wakes up when the preset CHANGES: go to the second, then back to the first) */
     if (s->npre > 0) e->dispatcher(e, eSetProgram, 0, 0, NULL, 0);
     {
         char m[400], nm[40];
