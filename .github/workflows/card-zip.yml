@@ -18,6 +18,10 @@ on:
     paths: ["card/**", "tools/make-card.sh", ".github/workflows/card-zip.yml"]
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Publish this version as a release (e.g. 1.0.0): also creates the tag v<version>"
+        required: false
 
 permissions:
   contents: write
@@ -54,11 +58,13 @@ jobs:
             --title "Console for the MPC Sample: SD card zip (built $(date -u +%F\ %H:%M) UTC)" \
             --notes "Unzip onto the root of the SD card (the autorun and Console folders), put the card in the MPC Sample, switch on. See Console/README.txt inside."
       - name: Attach to the version tag's release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.version != ''
         run: |
           # the notes: this version's section of CHANGELOG.md (from its "## <version>" line to the next "## ")
-          v="${GITHUB_REF_NAME#v}"
+          if [ -n "${{ inputs.version }}" ]; then v="${{ inputs.version }}"; TAG="v$v"; else TAG="${GITHUB_REF_NAME}"; v="${TAG#v}"; fi
           awk -v v="$v" '/^## /{p=($2==v)} p' CHANGELOG.md > notes.md
-          [ -s notes.md ] || echo "Console for the MPC Sample ${GITHUB_REF_NAME}" > notes.md
-          gh release create "${GITHUB_REF_NAME}" out/Console-MPC.zip --repo "$GITHUB_REPOSITORY" --latest \
-            --title "Console for the MPC Sample ${GITHUB_REF_NAME}" --notes-file notes.md
+          [ -s notes.md ] || echo "Console for the MPC Sample $TAG" > notes.md
+          gh release create "$TAG" out/Console-MPC.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
+            --title "Console for the MPC Sample $TAG" --notes-file notes.md
+          # the rolling releases are pre-releases, so "latest" is always a version
+          for t in bridge-latest runtime-latest card-latest; do gh release edit "$t" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false || true; done
