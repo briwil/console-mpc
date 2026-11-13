@@ -2,8 +2,7 @@
 
 1. Download `Console-MPC.zip` (the **card-latest** release of this repo; version releases are tagged `v…`).
 2. Unzip it onto the **root** of the SD card (exFAT or FAT32), so the card has an `autorun` folder and a `Console` folder.
-   The card's name doesn't matter. If the card already has an `autorun` folder (the open-source SSH one, SampQOL…), only one
-   autorun folder runs per card: use a card without one, or remove it first.
+   The card's name doesn't matter. Only one `autorun` folder runs per card, so if the card already has one, remove it first.
 3. Put the card in the MPC Sample and switch it on. The first start copies Console to the Sample's internal drive (about a
    minute; the normal MPC screen stays up meanwhile). Then the startup menu appears: **PAD 1 = Console, PAD 2 = MPC**.
 
