@@ -368,12 +368,23 @@ _touched = []                                                    # knob-mode pad
 MENU_KINDS = ("menu", "onoff", "voice", "vel_target", "lfo_target")
 
 
+LINGER = 0.5                                                     # seconds a turned setting stays big after the last turn (K1-K3, FADER, the wheel)
+_released = [0.0]                                                # when a knob-mode pad was last let go
+
+
 def set_touch(knob, down):
     """Called from the board for the touch notes the bridge sends in knob mode (a pad held = that knob touched)."""
     if knob in _touched:
         _touched.remove(knob)
+        if not down:
+            _released[0] = time.monotonic()
     if down:
         _touched.append(knob)
+
+
+def recent(when, now):
+    """Was the setting turned just now? Not after its pad was let go: then it shrinks straight away."""
+    return now - when < LINGER and when > _released[0]
 
 
 def draw_sound(T):

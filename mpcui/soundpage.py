@@ -29,6 +29,7 @@ NEAR = 5.0                                   # the settings left of the big one 
 SAME_ROW = 49.0                              # the ones right of it in its row make room
 OTHER_ROW = 89.4                             # ... and in the row above it (it reaches up into that row)
 TAU = 0.06                                   # seconds: how quickly things ease
+TAU_BACK = 0.035                             # ... and how quickly they go back when nothing is being turned any more
 LAST = {"key": None, "t": 0.0, "state": None}
 
 _bands = {}
@@ -82,9 +83,9 @@ def targets(n, active, texts):
     return out
 
 
-def step(state, goal, dt, snap=False):
+def step(state, goal, dt, snap=False, back=False):
     """Eases the settings' current values (state) toward the targets (goal)."""
-    k = 1.0 if snap else 1.0 - math.exp(-dt / TAU)
+    k = 1.0 if snap else 1.0 - math.exp(-dt / (TAU_BACK if back else TAU))
     for s, g in zip(state, goal):
         for key in ("cx", "lb", "vm", "ls", "vs", "t"):
             s[key] = g[key] if snap or key not in s else s[key] + (g[key] - s[key]) * k
@@ -147,7 +148,7 @@ def grid(nat, key, top, title, items, active, now, message=None, head=None, band
     if snap:
         LAST["state"] = [dict() for _ in range(n)]
     dt = min(0.12, max(0.0, now - LAST["t"])) if not snap else 0.0
-    step(LAST["state"], goal, dt, snap)
+    step(LAST["state"], goal, dt, snap, active is None)
     LAST["key"], LAST["t"] = key, now
     order = sorted(range(n), key=lambda i: i == active)             # the big one last, so nothing runs over it
     for i in order:
@@ -183,7 +184,7 @@ def draw(T, nat):
         newest = 0.0
         for i, _p in enumerate(params):
             when = T.drumpage.edited.get(i + 1, 0.0)
-            if now - when < 1.0 and when > newest:
+            if nat.recent(when, now) and when > newest:
                 active, newest = i, when
     if active is not None and active >= len(params):
         active = None
@@ -220,7 +221,7 @@ def draw_mixer(T, nat):
         newest = 0.0
         for i in range(8):
             w = MIX["when"].get(i, -9.0)
-            if now - w < 1.0 and w > newest:
+            if nat.recent(w, now) and w > newest:
                 active, newest = i, w
     shift = False
     try:
@@ -375,7 +376,7 @@ def draw_song(T, nat):
         newest = 0.0
         for i in range(8):
             w = SONG["when"].get(i, -9.0)
-            if now - w < 1.0 and w > newest:
+            if nat.recent(w, now) and w > newest:
                 active, newest = i, w
     if active is not None and not items[active][0]:
         active = None
@@ -510,7 +511,7 @@ def draw_seq(T, nat):
             newest = 0.0
             for i in range(len(items)):
                 w = SEQ["when"].get(i, -9.0)
-                if now - w < 1.0 and w > newest:
+                if nat.recent(w, now) and w > newest:
                     active, newest = i, w
         if active is not None and active >= len(items):
             active = None
@@ -624,7 +625,7 @@ def draw_synth_seq(T, nat):
             newest = 0.0
             for i in range(len(items)):
                 w = SYN["when"].get(i, -9.0)
-                if now - w < 1.0 and w > newest:
+                if nat.recent(w, now) and w > newest:
                     active, newest = i, w
         if active is not None and active >= len(items):
             active = None

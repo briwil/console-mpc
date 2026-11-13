@@ -26,6 +26,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: card-zip           # (two builds at once would both try to make the same release)
+  cancel-in-progress: false
+
 jobs:
   card:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'

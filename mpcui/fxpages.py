@@ -24,7 +24,7 @@ def _active(T, nat, key, vals):
         newest = 0.0
         for i in range(len(vals)):
             w = SEEN["when"].get(i, -9.0)
-            if now - w < 1.0 and w > newest:
+            if nat.recent(w, now) and w > newest:
                 active, newest = i, w
     if active is not None and active >= len(vals):
         active = None
