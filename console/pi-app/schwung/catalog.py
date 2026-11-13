@@ -365,6 +365,22 @@ def _add_fx_assets():
 _add_fx_assets()
 
 
+def _add_plugin_fx():
+    """VST2 effects (STOMPBOX ...) the vst2fx.so host can run: listed only when the plugin's file is there
+    (the launcher copies <card>/ConsoleData/plugins/*.so to $CONSOLE_PLUGINS) and the host is built."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    plugins = os.environ.get("CONSOLE_PLUGINS", "")
+    for mid, title, plugin in PLUGIN_FX:
+        folder = os.path.join(here, "modules", mid)
+        if not (plugins and os.path.exists(os.path.join(plugins, plugin)) and os.path.exists(os.path.join(folder, "vst2fx.so"))):
+            continue
+        add_record(mid, {"kind": "fx", "title": title, "dsp": "vst2fx.so", "description": "A VST2 plugin (%s)" % plugin})
+
+
+PLUGIN_FX = [("stompbox", "STOMPBOX", "stompbox.so")]       # (module folder, title, the plugin's file)
+_add_plugin_fx()
+
+
 def recipe_version(m):
     """A short tag of how a module is built, so changing its recipe here builds it again."""
     parts = [m["build"], m["json"], m.get("files", [])] + ([m["patches"]] if m.get("patches") else [])

@@ -45,6 +45,7 @@ jobs:
         run: |
           sh card/test/run.sh
           sh card/test/data.sh
+          sh bridge/test/vst2fx.sh
       - name: Download the parts
         run: |
           mkdir -p parts

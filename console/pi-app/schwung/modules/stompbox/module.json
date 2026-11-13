@@ -1,0 +1,7 @@
+{
+  "id": "stompbox",
+  "name": "Stompbox",
+  "description": "A guitar rig: amp, tone stack, cabinet and effects (the Stompbox VST2 plugin, loaded by vst2fx.so)",
+  "dsp": "vst2fx.so",
+  "component_type": "audio_fx"
+}

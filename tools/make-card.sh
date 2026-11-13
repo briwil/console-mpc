@@ -22,6 +22,7 @@ tar xzf "$LIBS" -C "$T/console/pi-app"
 rm -rf "$T/console/move/manual" "$T/console/move/anim"
 tar xzf "$BRIDGE" -C "$T/console"                       # -> console/mpc/ (bridge, launcher scripts, native screens)
 [ -f "$T/console/mpc/boot.sh" ] || { echo "the bridge archive has no mpc/boot.sh"; exit 1; }
+[ -f "$T/console/mpc/vst2fx.so" ] && cp "$T/console/mpc/vst2fx.so" "$T/console/pi-app/schwung/modules/stompbox/vst2fx.so"     # (the VST2 effect host: STOMPBOX in the insert list)
 find "$T" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 find "$T" -name '._*' -delete 2>/dev/null || true
 if [ -z "$VER" ]; then

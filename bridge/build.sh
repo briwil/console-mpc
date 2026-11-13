@@ -53,3 +53,15 @@ clang --target=aarch64-linux-gnu -shared -nostdlib -fPIC -fuse-ld=lld -Wl,-sonam
 ld.lld -shared -o panelsniff.so panelsniff.o -L stubs/sniff -l:libc.so.6 --no-as-needed -z noexecstack --build-id=none -soname panelsniff.so
 llvm-strip panelsniff.so
 echo built: panelsniff.so $(ls -l panelsniff.so | awk '{print $5}') bytes
+
+# ---- vst2fx.so: the VST2 effect host for Console's insert effects (console/pi-app/schwung/vst2fx); needs libc (dlopen is in glibc 2.34+) ----
+VF=../console/pi-app/schwung/vst2fx/vst2fx.c
+clang --target=aarch64-linux-gnu -O2 -fPIC -fno-stack-protector -ffreestanding -fvisibility=hidden -Wall -Wextra -Wno-unused-parameter -c $VF -o vst2fx.o
+llvm-nm -u vst2fx.o | awk '{print $2}' | sort -u > undef_vst2fx.txt
+: > stubs/vst2fx_libc.c
+while read -r sym; do echo "void $sym(void) {}" >> stubs/vst2fx_libc.c; done < undef_vst2fx.txt
+mkdir -p stubs/vst2fx
+clang --target=aarch64-linux-gnu -shared -nostdlib -fPIC -fuse-ld=lld -Wl,-soname=libc.so.6 -o stubs/vst2fx/libc.so.6 stubs/vst2fx_libc.c
+ld.lld -shared -o vst2fx.so vst2fx.o -L stubs/vst2fx -l:libc.so.6 --no-as-needed -z noexecstack --build-id=none -soname vst2fx.so
+llvm-strip vst2fx.so
+echo built: vst2fx.so $(ls -l vst2fx.so | awk '{print $5}') bytes

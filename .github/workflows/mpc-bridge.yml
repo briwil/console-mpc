@@ -7,7 +7,7 @@ name: Build MPC bridge
 on:
   push:
     branches: [main]
-    paths: ["bridge/**", "launcher/**", "mpcui/**"]
+    paths: ["bridge/**", "launcher/**", "mpcui/**", "console/pi-app/schwung/vst2fx/**"]
   workflow_dispatch:
 
 permissions:
@@ -33,8 +33,10 @@ jobs:
             cd bridge && ./build.sh
           else
             echo "no compiler: using the binaries committed in bridge/prebuilt"
-            cp bridge/prebuilt/libjack_mpc.so bridge/prebuilt/bridge_demo bridge/prebuilt/bootmenu bridge/prebuilt/panelsniff.so bridge/
+            cp bridge/prebuilt/libjack_mpc.so bridge/prebuilt/bridge_demo bridge/prebuilt/bootmenu bridge/prebuilt/panelsniff.so bridge/prebuilt/vst2fx.so bridge/
           fi
+      - name: Host test of the VST2 effect host (a fake plugin)
+        run: sh bridge/test/vst2fx.sh
       - name: Host test of the menu (fake hardware)
         run: |
           gcc -O1 -fPIC -shared -DHOST_TEST -fvisibility=hidden -Wno-unused-variable bridge/jackshim.c -o /tmp/libjack_mpc_host.so -lpthread
@@ -47,7 +49,7 @@ jobs:
       - name: Pack
         run: |
           mkdir -p pack/mpc
-          cp bridge/libjack_mpc.so bridge/bridge_demo bridge/bootmenu bridge/panelsniff.so launcher/*.sh launcher/bootanim.bin mpcui/*.py pack/mpc/
+          cp bridge/libjack_mpc.so bridge/bridge_demo bridge/bootmenu bridge/panelsniff.so bridge/vst2fx.so launcher/*.sh launcher/bootanim.bin mpcui/*.py pack/mpc/
           mkdir -p pack/mpc/fonts && cp mpcui/fonts/* pack/mpc/fonts/
           cp mpcui/*.json pack/mpc/ 2>/dev/null || true
           chmod +x pack/mpc/*

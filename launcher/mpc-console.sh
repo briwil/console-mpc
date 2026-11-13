@@ -20,6 +20,11 @@ resolve_data "$SDR" "$C" >> "$C/boot.log" 2>&1
 export CONSOLE_DATA="$DATA"
 echo "$DATA" > "$C/data-folder.txt"
 ( backup_data >> "$C/boot.log" 2>&1 & )          # (in the background, so the start is not held up)
+# VST2 effect plugins for the insert effects (STOMPBOX ...): put the plugin's .so file in <card>/ConsoleData/plugins; the card can't run
+# programs, so it is copied to the internal drive here, every start
+export CONSOLE_PLUGINS="$C/plugins"
+mkdir -p "$CONSOLE_PLUGINS" "$DATA/plugins" 2>/dev/null
+for f in "$DATA"/plugins/*.so; do [ -f "$f" ] && cp -f "$f" "$CONSOLE_PLUGINS/" 2>/dev/null; done
 
 restore() { systemctl start ac50.service; }
 trap 'touch "$C/STOP"' INT TERM
