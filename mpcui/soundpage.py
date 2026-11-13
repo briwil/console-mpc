@@ -457,8 +457,9 @@ def draw_seq(T, nat):
                 c.rect(x, y, 17, 40, WHITE)
             if at is not None and i == at:
                 c.rect(x, y + 42, 17, 3, WHITE)
-            num = str(i + 1)
-            c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 54, num, WHITE if k % 4 == 0 else colour.GREENS[4], 8, 0)
+            if not e.playing:                                       # while it plays the numbers go: less to draw, the bar moves smoother
+                num = str(i + 1)
+                c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 54, num, WHITE if k % 4 == 0 else colour.GREENS[4], 8, 0)
         if cur is not None and getattr(ms, "cur_on", False) and first <= cur < first + 16 and cur < ln.length:
             x = 8 + (cur - first) * 19
             c.frame(x - 1, y - 1, 19, 42, WHITE)
@@ -516,6 +517,9 @@ def draw_seq(T, nat):
         if active is not None and active >= len(items):
             active = None
         gkey = ("seqlane", lane)
+    if e.playing and not selected and active is None:                # playing and nothing being turned: no knob text
+        items = [("", "", 1.0) for _ in items]
+        gkey = gkey + ("playing",)
     items, active = by_pad_rows(items, active)
     grid(nat, gkey, "", "", items, active, now, None, head=head, band_dy=SEQ_DY)
 
@@ -576,8 +580,9 @@ def draw_synth_seq(T, nat):
                 c.frame(x - 1, y - 1, 19, 42, WHITE)
             if at is not None and i == at:
                 c.rect(x, y + 42, 17, 3, WHITE)
-            num = str(i + 1)
-            c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 54, num, WHITE if k % 4 == 0 else colour.GREENS[4], 8, 0)
+            if not e.playing:
+                num = str(i + 1)
+                c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 54, num, WHITE if k % 4 == 0 else colour.GREENS[4], 8, 0)
         npages = max(1, (length + 15) // 16)
         seg = (W - 16 - 4 * (npages - 1)) // npages
         for p in range(npages):

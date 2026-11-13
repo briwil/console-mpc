@@ -1211,6 +1211,11 @@ def handle(name, T, m, e):
         if (_q.active() and _q.selected and not (m.open or m.kits.open) and T.fx_page is None and name == "BACK"):
             _q.selected, _q.sel = [], None
             return
+        # any other button that has no job while steps are selected finishes it too, and then does its own job
+        if (_q.active() and _q.selected and not (m.open or m.kits.open) and T.fx_page is None and isinstance(name, str)
+                and name not in ("LEFT", "RIGHT", "HOME", "PLAY", "STOP", "REWIND")
+                and not re.match(r"^MUTE[1-8]$", name)):
+            _q.selected, _q.sel = [], None
     if T.msyn.active() and not (m.open or m.kits.open) and T.fx_page is None:
         if isinstance(name, tuple) and name[0] == "KNOB" and name[1] <= 8:
             T.msyn.knob(name[1], name[2], name[3])
