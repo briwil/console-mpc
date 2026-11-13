@@ -354,8 +354,14 @@ static void mpc_cc_event(int cc, int val)
     case 0x64: {                                          /* encoder: relative already */
         int k = held_knob();                              /* a knob-mode pad held: that knob; else the jog wheel */
         if (k >= 0) last_turn = tick_n;
-        for (int i = 0; i < (k >= 0 ? KNOB_STEP : 1); i++)   /* the MPC encoder is slow next to a Move knob: several clicks per notch */
-            send3(0xBF, k >= 0 ? 71 + k : 14, val == 0x7F ? 127 : 1);
+        /* relative, two's complement: 01 / 7F = one notch up / down, but a quick turn sends bigger steps (02, 03 ... 7E, 7D ...).
+           Only 7F used to count as "down": every other value, a quick turn left included, went up. */
+        int dir = val >= 64 ? 127 : 1;
+        int notches = val >= 64 ? 128 - val : val;
+        if (notches < 1) notches = 1;
+        if (notches > 8) notches = 8;
+        for (int i = 0; i < notches * (k >= 0 ? KNOB_STEP : 1); i++)   /* the MPC encoder is slow next to a Move knob: several clicks per notch */
+            send3(0xBF, k >= 0 ? 71 + k : 14, dir);
         break;
     }
     }

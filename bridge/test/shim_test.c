@@ -167,6 +167,11 @@ int main(int argc, char **argv)
     send((unsigned char[]){ 0x89, 47, 0 }, 3);
     send((unsigned char[]){ 0xB0, 0x64, 0x01 }, 3);                   /* no pad held: jog wheel */
     CHECK(ngot == 19 && expect(18, 0xBF, 14, 1), "A: knob mode: pad 10 silent; encoder alone = jog wheel");
+    send((unsigned char[]){ 0xB0, 0x64, 0x7E }, 3);                   /* a quick turn left: -2 = two clicks left, never right */
+    CHECK(ngot == 21 && expect(19, 0xBF, 14, 127) && expect(20, 0xBF, 14, 127), "A: jog wheel: 7E = two clicks left");
+    send((unsigned char[]){ 0xB0, 0x64, 0x03 }, 3);                   /* +3 = three clicks right */
+    CHECK(ngot == 24 && expect(21, 0xBF, 14, 1) && expect(23, 0xBF, 14, 1), "A: jog wheel: 03 = three clicks right");
+    ngot = 19;                                                        /* (these five clicks are not part of the count below) */
     send((unsigned char[]){ 0x99, 37, 80 }, 3);                       /* pad 1 held, then KNOB FX off: touch ends */
     send((unsigned char[]){ 0x90, 0x00, 0x7F }, 3);
     send((unsigned char[]){ 0x80, 0x00, 0x00 }, 3);

@@ -146,7 +146,7 @@ def grid(nat, key, top, title, items, active, now, message=None, head=None, band
     snap = LAST["key"] != key or now - LAST["t"] > 0.4 or LAST["state"] is None or len(LAST["state"]) != n
     if snap:
         LAST["state"] = [dict() for _ in range(n)]
-    dt = min(0.05, max(0.0, now - LAST["t"])) if not snap else 0.0
+    dt = min(0.12, max(0.0, now - LAST["t"])) if not snap else 0.0
     step(LAST["state"], goal, dt, snap)
     LAST["key"], LAST["t"] = key, now
     order = sorted(range(n), key=lambda i: i == active)             # the big one last, so nothing runs over it
@@ -275,7 +275,7 @@ def listview(nat, key, top, title, rows, focus, now, message=None, first=0):
     snap = LST["key"] != key or now - LST["t"] > 0.4 or LST["rows"] is None or len(LST["rows"]) != n
     if snap:
         LST["rows"] = [dict() for _ in rows]
-    dt = 0.0 if snap else min(0.05, max(0.0, now - LST["t"]))
+    dt = 0.0 if snap else min(0.12, max(0.0, now - LST["t"]))
     k = 1.0 if snap else 1.0 - math.exp(-dt / TAU)
     for s, g in zip(LST["rows"], goal):
         for kk in ("y", "size", "t"):
