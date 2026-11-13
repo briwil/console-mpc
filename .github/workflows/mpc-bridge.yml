@@ -42,6 +42,8 @@ jobs:
           cd /tmp
           r=0; ./bootmenu_host 3 || r=$?     # 11 = timeout, stock app
           test "$r" = 11
+          r=0; ./bootmenu_host 3 x 1 || r=$?  # nothing from the panel for 1 s: 12 = it is wedged, try again
+          test "$r" = 12
       - name: Pack
         run: |
           mkdir -p pack/mpc

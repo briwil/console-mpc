@@ -18,6 +18,15 @@ SDR=$(sd_root 2>/dev/null)
 [ -x "$C/python/bin/python3" ] || exit 0
 if [ -e "$TRY" ]; then rm -f "$TRY"; exit 0; fi      # last time it never got through: let the stock app start
 
+takeover() {
+  echo "panel before: $(grep "^ *3:" /proc/tty/driver/* | sed "s/.*tx/tx/")"
+  echo "taking over at uptime $(cut -d. -f1 /proc/uptime) s (firmware tool seen: ${seen:-0}, waited ${w:-0}s)"
+  touch "$TRY"                                         # from here on: if Console never gets through, the next power-on starts the stock app
+  systemctl unset-environment LD_PRELOAD 2>/dev/null
+  systemctl stop ac50.service
+  sleep 2
+}
+
 if [ -z "${CONSOLE_TOOK_OVER:-}" ]; then
   n=0
   while ! systemctl is-active --quiet ac50.service && [ $n -lt 90 ]; do sleep 1; n=$((n + 1)); done
@@ -43,29 +52,40 @@ if [ -z "${CONSOLE_TOOK_OVER:-}" ]; then
     sleep 1; n=$((n + 1))
   done
   echo "panel ready after ${n}s (tx ${tx:-?}, midi device: $([ -e /dev/snd/midiC0D0 ] && echo yes || echo no))"
-  # Taking over earlier than this (7-10 s after power-on) left the panel silent about one boot in three: the stock app was stopped in
-  # the middle of its own start-up. 8 boots out of 8 were fine when waiting until 40 s. (The file UP_MIN overrides it, in seconds.)
-  UP_MIN=40
-  [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (override, in seconds of uptime:  echo 40 > $C/UP_MIN)
+  UP_MIN=0
+  [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (optional extra wait, in seconds of uptime:  echo 40 > $C/UP_MIN)
   up=$(cut -d. -f1 /proc/uptime)
   [ "$up" -lt "$UP_MIN" ] && sleep $((UP_MIN - up))
-  echo "panel before: $(grep "^ *3:" /proc/tty/driver/* | sed "s/.*tx/tx/")"
-  echo "taking over at uptime $(cut -d. -f1 /proc/uptime) s (firmware tool seen: $seen, waited ${w}s)"
-  touch "$TRY"                                         # from here on: if Console never gets through, the next power-on starts the stock app
-  systemctl unset-environment LD_PRELOAD 2>/dev/null
-  systemctl stop ac50.service
-  sleep 2
+  takeover
 else
   echo "the stock app was already stopped by install.sh"
   touch "$TRY"
 fi
-"$M/bootmenu" 15 "$M/bootanim.bin" &                                   # the startup menu: PAD 1 = Console, PAD 2 = MPC; no answer = MPC
-P=$!
-( sleep 40; kill "$P" 2>/dev/null ) &
-W=$!
-wait "$P"; R=$?
-kill "$W" 2>/dev/null
-rm -f "$TRY"                                         # the menu worked
+# The panel is sometimes left silent when the stock app is stopped in the middle of its own start-up (about one boot in three if we
+# take over at 7-10 s). The menu notices (nothing from the panel for 5 s: exit 12); then the stock app gets the screen back, settles
+# for 20 s, and we try again (up to 3 tries; the last one waits for the normal 15 s and then leaves it to the stock app).
+attempt=1
+while :; do
+  SILENT=5
+  [ "$attempt" -ge 3 ] && SILENT=0
+  [ -n "${CONSOLE_TOOK_OVER:-}" ] && SILENT=0
+  "$M/bootmenu" 15 "$M/bootanim.bin" "$SILENT" &                       # the startup menu: PAD 1 = Console, PAD 2 = MPC; no answer = MPC
+  P=$!
+  ( sleep 40; kill "$P" 2>/dev/null ) &
+  W=$!
+  wait "$P"; R=$?
+  kill "$W" 2>/dev/null
+  rm -f "$TRY"                                         # the menu worked
+  if [ "$R" = 12 ] && [ "$attempt" -lt 3 ]; then
+    echo "panel silent on try $attempt: giving the stock app back for a while, then trying again"
+    systemctl start ac50.service
+    attempt=$((attempt + 1))
+    sleep 20
+    takeover
+    continue
+  fi
+  break
+done
 if [ "$R" = 10 ]; then
   exec sh "$M/mpc-console.sh"
 fi

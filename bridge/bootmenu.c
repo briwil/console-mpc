@@ -252,6 +252,7 @@ static void draw(int secs_left)
 int main(int argc, char **argv)
 {
     int secs = argc > 1 ? atoi(argv[1]) : 6;
+    int silent = argc > 3 ? atoi(argv[3]) : 0;        /* seconds of nothing from the panel after which to give up (exit 12): the panel is wedged */
     if (secs < 2) secs = 2;
     if (secs > 30) secs = 30;
     fb_open();
@@ -275,6 +276,7 @@ int main(int argc, char **argv)
         uint8_t buf[64];
         int k = midi_read(buf, sizeof buf), picked = 0;
         if (k > 0) heard = 1;
+        if (silent > 0 && !heard && t >= silent * 50) { choice = 12; break; }
         if (!heard && t > 0 && t % 50 == 0) {       /* silent so far: the panel may still be starting up: say hello again, every second */
             panel_hello();
             pad_led(0, 0, 110, 20); pad_led(1, 70, 70, 70);
