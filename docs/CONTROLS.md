@@ -59,9 +59,9 @@ Off the tape page: Shift + NOTE REPEAT (labelled TRIPLET) turns triplets on / of
 ## Step settings and lane settings (the drum sequencer)
 
 Step settings (velocity, chance, multiply, pulse, hold, jump, random, ramps, nudge, then the drum's own sounds):
-1. SEQ on. Hold SHIFT and tap the steps you want (they blink).
-2. Shift + SEQ: the pads are now the settings. Tap one (it's picked), turn K1 to set it (K2 = its chance). Tap the same pad again: it's off.
-3. SEQ: back to the steps. Tap any step to finish.
+1. SEQ on. Hold SHIFT and tap the steps you want (they blink). While steps are selected, holding Shift shows the steps on the pads again, so you can add more (or tap a selected one to take it out).
+2. Let go of Shift: the pads are now the settings (orange). Tap one (it's picked), turn K1 to set it (K2 = its chance). Tap the same pad again: it's off.
+3. Done: press SEQ (or STOP/BACK; while playing, the first STOP stops playback). The steps stop blinking and the pads are the steps again.
 
 Lane settings (no steps selected): K1 = length, K2 = rate, K3 = Euclid. Shift needs knob 4: KNOB FX on, hold pad 4, turn the encoder.
 

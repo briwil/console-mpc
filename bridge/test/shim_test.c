@@ -265,6 +265,18 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x99, 48, 71 }, 3);                   /* pad 9 -> note 76 */
         send((unsigned char[]){ 0x89, 48, 0 }, 3);
         CHECK(expect(b, 0x9F, 69, 70) && expect(b + 2, 0x9F, 76, 71), "A: steps selected (P): pads are the step settings in order");
+        /* ... but with Shift held they are the steps again (to add to / take off the selection), and SEQ = done */
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x31, 0x7F }, 3);               /* Shift down */
+        send((unsigned char[]){ 0x99, 36, 70 }, 3);                   /* pad 2 -> step 2 = note 17 (Console sees Shift too) */
+        send((unsigned char[]){ 0x89, 36, 0 }, 3);
+        send((unsigned char[]){ 0x80, 0x31, 0x00 }, 3);               /* Shift up */
+        CHECK(expect(b, 0xBF, 49, 127) && expect(b + 1, 0x9F, 17, 70) && expect(b + 2, 0x8F, 17, 0) && expect(b + 3, 0xBF, 49, 0),
+              "A: steps selected + Shift held: a pad is its step (note 16 + n), not a setting");
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);               /* SEQ: done with the selected steps = a tap on step 1 */
+        send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
+        CHECK(expect(b, 0x9F, 16, 100) && expect(b + 1, 0x8F, 16, 0) && ngot == b + 2, "A: steps selected: SEQ taps a step (done)");
         /* Oy / Ny: a synth: the note pads are in order (pad 5 = the 5th note of the scale, not the Move's second row) */
         pf = fopen("/tmp/console-pagemode", "wb"); fputs("Ny", pf); fclose(pf);
         usleep(200000);

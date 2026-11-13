@@ -8,6 +8,24 @@ default velocity, 100, for these):
 
 "The pad's velocity" is what Console plays: the PADS page's fixed velocity if it is on, else the hit through the curve."""
 
+import os
+import time
+
+
+def log(text):
+    """A short trace for finding out why a velocity did not arrive: <card>/ConsoleData/padvel.txt (the last ~60 lines)."""
+    try:
+        path = os.path.join(os.environ.get("CONSOLE_DATA", "/tmp"), "padvel.txt")
+        try:
+            lines = open(path).read().splitlines()[-60:]
+        except OSError:
+            lines = []
+        lines.append("%s %s" % (time.strftime("%H:%M:%S"), text))
+        open(path, "w").write("\n".join(lines) + "\n")
+    except Exception:
+        pass
+
+
 step = {}                      # step number 1-16 -> the velocity of its pad's last press
 cur = [None]                   # while a pad is being handled: its velocity (for a live recording)
 STEPS = range(16, 32)
@@ -17,13 +35,15 @@ def install(MoveBoard, MoveSeq, MoveSynth, Sequencer, pad_velocity):
     if pad_velocity is None:
         return
     orig_note, orig_pad = MoveBoard.note, MoveBoard.pad
+    log("installed")
 
     def note(self, num, val):
         if num in STEPS and val:
             try:
                 step[num - 15] = pad_velocity(self.T, val)
-            except Exception:
-                pass
+                log("step pad %d raw %d -> %d (fixed %s, curve %s)" % (num - 15, val, step[num - 15], getattr(self.T, "pad_vel", "?"), getattr(self.T, "pad_curve", "?")))
+            except Exception as ex:
+                log("step pad failed: %r" % (ex,))
         return orig_note(self, num, val)
     MoveBoard.note = note
 
@@ -81,12 +101,14 @@ def install(MoveBoard, MoveSeq, MoveSynth, Sequencer, pad_velocity):
         r = drum_step(self, n, down, shift)
         try:
             v = step.get(n)
+            if down and not shift:
+                log("step %s: was on %s, now on %s, pad vel %s" % (n, before, self.seq.step(lane, i).on if i is not None else "?", v))
             if i is not None and v and not before and self.seq.step(lane, i).on:
                 with self.seq.lock:
                     self.seq.step(lane, i).vel = v
                 self.T.engine.seq_changed()
-        except Exception:
-            pass
+        except Exception as ex:
+            log("step failed: %r" % (ex,))
         return r
     MoveSeq.step = seq_step
 

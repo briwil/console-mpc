@@ -233,6 +233,11 @@ try:
 except Exception:
     import traceback
     print("pad velocity on steps is off:\n" + traceback.format_exc(), flush=True)
+    try:
+        import padvel
+        padvel.log("INSTALL FAILED: " + traceback.format_exc().replace("\n", " | ")[-600:])
+    except Exception:
+        pass
 try:
     import shiftknobs
     _handle = shiftknobs.wrap(_handle)                   # Shift + K1-K3 / FADER = knobs 5-8 on an instrument's pages; no fine steps there

@@ -102,7 +102,8 @@ static void colour_rgb(int v, int *r, int *g, int *b)
 static void refresh_pads(void)
 {
     for (int i = 0; i < 16; i++) {
-        int v = ((param_mode && !page_nostep) || page_param) ? move_pad[i + (right_bank ? 16 : 0)] : ((step_mode && !page_nostep) || page_tape) ? move_step[i] : move_pad[page_linear ? i + (right_bank ? 16 : 0) : (i / 4) * 8 + (i % 4) + (right_bank ? 4 : 0)];
+        int v = (page_param && shift_held && !knob_mode) ? move_step[i]                       /* steps selected + Shift held: the steps, to add or take off more */
+              : ((param_mode && !page_nostep) || page_param) ? move_pad[i + (right_bank ? 16 : 0)] : ((step_mode && !page_nostep) || page_tape) ? move_step[i] : move_pad[page_linear ? i + (right_bank ? 16 : 0) : (i / 4) * 8 + (i % 4) + (right_bank ? 4 : 0)];
         int r, g, b;
         colour_rgb(v, &r, &g, &b);
         if (v == 0) { r = 0; g = 6; b = 14; }                       /* idle: a faint blue so the pads can be found */
@@ -237,7 +238,8 @@ static void mpc_pad_event(int idx, int vel, int on)
         return;
     }
     if (on) {
-        int note = ((param_mode && !page_nostep) || page_param) ? 68 + idx + (right_bank ? 16 : 0)
+        int note = (page_param && shift_held) ? 16 + idx                                       /* (Shift + a pad while steps are selected: that step, with Shift = in / out of the selection) */
+                 : ((param_mode && !page_nostep) || page_param) ? 68 + idx + (right_bank ? 16 : 0)
                  : ((step_mode && !page_nostep) || page_tape) ? 16 + idx : page_linear ? 68 + idx + (right_bank ? 16 : 0) : 68 + (idx / 4) * 8 + (idx % 4) + (right_bank ? 4 : 0);
         pad_target[idx] = note;
         if ((!step_mode || page_nostep) && (!param_mode || page_nostep) && !page_param && !page_tape) last_drum = note;
@@ -272,7 +274,7 @@ static void mapping_tick(void)
 #define MPC_STOP  0x51
 static void mpc_button_event(int note, int down)
 {
-    if (note == MPC_SHIFT) shift_held = down;
+    if (note == MPC_SHIFT) { shift_held = down; if (page_param) refresh_pads(); }      /* (steps selected: the pads show the steps while Shift is held) */
     if (note == MPC_STOP) {
         if (down) stop_target = (!shift_held && move_btn[85]) ? 85 : 51;   /* move_btn[85]: Console's Play light = playing */
         if (stop_target >= 0) send3(0xBF, stop_target, down ? 127 : 0);
@@ -305,6 +307,10 @@ static void mpc_button_event(int note, int down)
         }
     }
     if (note == MPC_SEQ && page_nostep) return;                       /* a page with no steps: SEQ does nothing (and nothing carries over to the next page) */
+    if (note == MPC_SEQ && page_param && !shift_held) {                  /* steps selected: SEQ = done with them (a tap on any step, as Console has it) */
+        if (down) { send3(0x9F, 16, 100); send3(0x8F, 16, 0); }
+        return;
+    }
     if (down && note == MPC_SEQ) {
         if (shift_held) param_mode = !param_mode;                     /* Shift + SEQ: the pads are a step's settings */
         else if (param_mode) { param_mode = 0; step_mode = 1; }       /* SEQ from there: back to the steps */
