@@ -50,7 +50,12 @@ def tick(T):
     """Every screen frame: keep the bridge told while recording."""
     e = T.engine
     seq = bool(getattr(T, "seq_page", False) and not getattr(T, "fx_page", False))      # a sequencer page: it clicks while the sequence plays too
-    live = bool(e and STATE["on"] and e.playing and (e.recording or seq))
+    guitar = False                                    # GUITAR has no sequencer page: it clicks while it plays
+    try:
+        guitar = bool(e and e.inst_view and getattr(e.drums.get(e.slots[e.slot]), "live_input", False))
+    except Exception:                                 # noqa: BLE001
+        pass
+    live = bool(e and STATE["on"] and e.playing and (e.recording or seq or guitar))
     now = time.monotonic()
     if not live:
         if STATE["was"]:
@@ -86,12 +91,13 @@ def install_menu(menu_mod):
 
     def setting_text(self, what):
         if what == "METRONOME":
-            return "%s %d%%  (SHIFT + TAP TEMPO: ON / OFF, CLICKS WHILE RECORDING OR PLAYING A SEQUENCE)" % ("ON" if STATE["on"] else "OFF", STATE["vol"])
+            return "%s   VOLUME %d%%   (PUSH: ON / OFF, WHEEL: VOLUME)" % ("ON" if STATE["on"] else "OFF", STATE["vol"])
         return o_text(self, what)
 
     def settings_key(self, name):
         if name in menu_mod.CONFIRM and menu_mod.SETTINGS[self.row] == "METRONOME":
-            self.editing = not self.editing
+            STATE["on"] = not STATE["on"]               # push = on / off (the wheel is the volume)
+            save()
             return
         o_key(self, name)
 
