@@ -34,6 +34,13 @@ sha256sum "$PY" | cut -c1-16 > "$CARD/Console/payload/PYTHON_VERSION"
 ( cd "$CARD/Console/payload" && sha256sum console.tgz python.tgz > SHA256SUMS )
 printf '%s\n' "$VER" > "$CARD/Console/VERSION"
 cp "$HERE/card/Console/install.sh" "$HERE/card/Console/README.txt" "$CARD/Console/"
+mkdir -p "$CARD/Console/licenses"                      # the licences travel with the files (GPL v3 + the third-party notices)
+cp "$HERE/LICENSE" "$CARD/Console/licenses/LICENSE-console-mpc.txt"
+[ -f "$CM/LICENSE" ] && cp "$CM/LICENSE" "$CARD/Console/licenses/LICENSE-console.txt"
+[ -f "$CM/THIRD-PARTY-NOTICES.md" ] && cp "$CM/THIRD-PARTY-NOTICES.md" "$CARD/Console/licenses/THIRD-PARTY-NOTICES.md"
+find "$T/console/pi-app" \( -name 'LICENSE*' -o -name 'COPYING*' -o -name 'NOTICE*' \) -type f 2>/dev/null | head -n 100 | while read -r f; do
+  n=$(echo "${f#"$T"/console/pi-app/}" | tr '/' '_'); cp "$f" "$CARD/Console/licenses/$n" 2>/dev/null || true
+done
 cp "$HERE/card/autorun/"* "$CARD/autorun/"
 chmod +x "$CARD/Console/install.sh" "$CARD/autorun/"*.sh
 { cat "$CARD/autorun/autorun.json" "$CARD/autorun/autorun.sh"; printf '%s' "$SECRET"; } | sha256sum | cut -d' ' -f1 | tr -d '\n' > "$CARD/autorun/autorun.check"

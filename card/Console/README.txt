@@ -14,4 +14,4 @@ IF SOMETHING GOES WRONG   Console/install-status.txt says what happened.  If Con
             starts at the next power-on.
 
 Do not update the Sample's firmware without checking that this still works with the new version.
-Console is free software (GPL v3).  Not affiliated with or endorsed by Akai Professional or inMusic.  Use at your own risk.
+Console is free software (GPL v3). The licences of Console and the instruments and effects it includes are in Console/licenses.  Not affiliated with or endorsed by Akai Professional or inMusic.  Use at your own risk.
