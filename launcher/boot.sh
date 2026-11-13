@@ -21,6 +21,9 @@ if [ -e "$TRY" ]; then rm -f "$TRY"; exit 0; fi      # last time it never got th
 takeover() {
   echo "panel before: $(grep "^ *3:" /proc/tty/driver/* | sed "s/.*tx/tx/")"
   echo "taking over at uptime $(cut -d. -f1 /proc/uptime) s (firmware tool seen: ${seen:-0}, waited ${w:-0}s)"
+  # The sound chip switches itself off 5 s after the stock app lets go of it, and switching it on again when Console starts makes a loud pop
+  # (heard at the black flash of the start-up screen, even with the volume down). Keep it on for a minute: no pop.
+  for f in /sys/devices/platform/sound/*/pmdown_time; do [ -w "$f" ] && echo 60000 > "$f" && echo "sound chip stays on for 60 s after the stock app stops ($f)"; done 2>/dev/null
   touch "$TRY"                                         # from here on: if Console never gets through, the next power-on starts the stock app
   systemctl unset-environment LD_PRELOAD 2>/dev/null
   systemctl stop ac50.service
