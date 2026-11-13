@@ -277,6 +277,12 @@ int main(int argc, char **argv)
         send((unsigned char[]){ 0x90, 0x07, 0x7F }, 3);               /* SEQ: done with the selected steps = a tap on step 1 */
         send((unsigned char[]){ 0x80, 0x07, 0x00 }, 3);
         CHECK(expect(b, 0x9F, 16, 100) && expect(b + 1, 0x8F, 16, 0) && ngot == b + 2, "A: steps selected: SEQ taps a step (done)");
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('P', pf); fclose(pf);
+        usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0x90, 0x20, 0x7F }, 3);               /* a button with no job here: done with the steps too */
+        send((unsigned char[]){ 0x80, 0x20, 0x00 }, 3);
+        CHECK(expect(b, 0x9F, 16, 100) && expect(b + 1, 0x8F, 16, 0) && ngot == b + 2, "A: steps selected: any unused button finishes the selection");
         /* Oy / Ny: a synth: the note pads are in order (pad 5 = the 5th note of the scale, not the Move's second row) */
         pf = fopen("/tmp/console-pagemode", "wb"); fputs("Ny", pf); fclose(pf);
         usleep(200000);

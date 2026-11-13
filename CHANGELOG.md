@@ -3,6 +3,10 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## Next
+
+- Steps selected: any button with no job on that page now finishes the selection, like SEQ, STOP and BACK.
+
 ## 0.0.3
 
 - Selecting steps (Shift + pads): while steps are selected, holding Shift shows the step pads again so you can add or remove steps with the pads, not only with the wheel's box. SEQ finishes the selection.

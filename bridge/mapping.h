@@ -347,6 +347,9 @@ static void mpc_button_event(int note, int down)
     }
     for (int i = 0; i < NBUTTONS; i++)
         if (BUTTONS[i].mpc == note) { send3(0xBF, BUTTONS[i].move, down ? 127 : 0); return; }
+    if (down && page_param && !shift_held && note != MPC_SHIFT) {        /* steps selected: a button with no job on this page = done with them, like SEQ */
+        send3(0x9F, 16, 100); send3(0x8F, 16, 0);
+    }
 }
 
 static void mpc_cc_event(int cc, int val)
