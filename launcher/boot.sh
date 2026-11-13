@@ -33,6 +33,16 @@ if [ -z "${CONSOLE_TOOK_OVER:-}" ]; then
     sleep 1; w=$((w + 1))
   done
   sleep 1
+  # The panel's serial MIDI port only works once the stock start-up has talked to the panel (its counter, tx, climbs to ~1300) and
+  # the MIDI device exists. Taking over a few seconds too early gave a menu that could not open the port: pads dead, MPC after 15 s
+  # (the log said "midi: could not open"). So wait for both, for up to 40 s, then go on regardless.
+  n=0; tx=0
+  while [ $n -lt 40 ]; do
+    tx=$(grep "^ *3:" /proc/tty/driver/* 2>/dev/null | sed 's/.*tx:\([0-9]*\).*/\1/' | head -n1)
+    [ -e /dev/snd/midiC0D0 ] && [ "${tx:-0}" -gt 100 ] 2>/dev/null && break
+    sleep 1; n=$((n + 1))
+  done
+  echo "panel ready after ${n}s (tx ${tx:-?}, midi device: $([ -e /dev/snd/midiC0D0 ] && echo yes || echo no))"
   UP_MIN=0
   [ -f "$C/UP_MIN" ] && UP_MIN=$(cat "$C/UP_MIN")                  # (optional extra wait, in seconds of uptime:  echo 40 > $C/UP_MIN)
   up=$(cut -d. -f1 /proc/uptime)
