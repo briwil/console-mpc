@@ -638,6 +638,7 @@ def main():
                     st.handle(handle, name, T, m, e)      # the menu test: an error is noted, and it goes on
                 else:
                     handle(name, T, m, e)
+                next_lights = 0.0                            # a control was used: the lights are redone straight away
             if m.restart and not quit_now:          # a software update was installed: start the new version
                 frame.clear()
                 frame.centre(64, 28, "RESTARTING...")
@@ -692,6 +693,9 @@ def main():
                     core.display(frame.bytes())
                 time.sleep(0.005)
                 continue
+            if now >= next_lights:                           # (the pads' lights before the screen is drawn: drawing takes a while,
+                next_lights = now + 0.03                     #  and a pad should light the moment it is pressed)
+                lights.update(T, board)
             if now >= next_screen:
                 next_screen = now + 1 / FPS_SCREEN
                 menu_tick(m)
@@ -714,9 +718,6 @@ def main():
                     frame.rect(99, 57, 29, 7, 1)
                     frame.small(100, 58, "T%3d:%02d" % (left // 60, left % 60), 0)
                 core.display(frame.bytes())
-            if now >= next_lights:
-                next_lights = now + 0.03
-                lights.update(T, board)
             time.sleep(0.005)
     except KeyboardInterrupt:
         pass
