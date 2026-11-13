@@ -25,6 +25,9 @@ extern char *getenv(const char *);
 extern int open(const char *, int, ...);
 extern long read(int, void *, unsigned long);
 extern int close(int);
+extern long write(int, const void *, unsigned long);
+extern int unlink(const char *);
+extern int getpid(void);
 extern int snprintf(char *, size_t, const char *, ...);
 extern size_t strlen(const char *);
 extern int strcmp(const char *, const char *);
@@ -113,6 +116,28 @@ static int readfile(const char *path, char *buf, int n)
     return (int)got;
 }
 
+/* Every instance loads its own copy of the plugin file, so two of them (an insert and the GUITAR instrument) never share the
+ * plugin's global state (the same file loaded twice is one library to the loader). The copy is removed at once. */
+static void *open_private(const char *path)
+{
+    static int count;
+    char tmp[600];
+    static char buf[65536];
+    snprintf(tmp, sizeof tmp, "%s.%d.%d.tmp.so", path, getpid(), ++count);
+    int in = open(path, 0), out = in < 0 ? -1 : open(tmp, 0x241, 0755);
+    void *dl = NULL;
+    if (out >= 0) {
+        long n, ok = 1;
+        while ((n = read(in, buf, sizeof buf)) > 0)
+            if (write(out, buf, (unsigned long)n) != n) { ok = 0; break; }
+        close(out);
+        if (ok && n == 0) dl = dlopen(tmp, RTLD_NOW);
+        unlink(tmp);
+    }
+    if (in >= 0) close(in);
+    return dl ? dl : dlopen(path, RTLD_NOW);
+}
+
 static void *create(const char *dir, const char *cfg)
 {
     (void)cfg;
@@ -143,7 +168,7 @@ static void *create(const char *dir, const char *cfg)
     s->dl = NULL;
     if (pd && pd[0]) {
         snprintf(path, sizeof path, "%s/%s", pd, file);
-        s->dl = dlopen(path, RTLD_NOW);
+        s->dl = open_private(path);
     }
     if (!s->dl) {
         snprintf(path, sizeof path, "%s/%s", dir, file);
