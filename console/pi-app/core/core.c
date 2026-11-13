@@ -547,6 +547,8 @@ static int process(jack_nframes_t n, void *arg) {
             waiting_order[i] = waiting_order[waiting_n];
         } else i++;
     }
+    const float *il = J.port_get_buffer(in_l, n), *ir = J.port_get_buffer(in_r, n);
+    if (in_fn) in_fn(il, ir, (int)n);                 /* (before the sources render: the GUITAR module plays this cycle's input) */
     /* play them, each at its exact frame: every source renders up to it first */
     int pos = 0;
     for (int i = 0; i < due_n; i++) {
@@ -578,8 +580,6 @@ static int process(jack_nframes_t n, void *arg) {
     if (capture_on) for (int p = 0; p < CAP_PARTS; p++) memset(cap_now[p], 0, sizeof(float) * n);
     memset(send_l, 0, sizeof(float) * 2 * MAX_BLOCK);
     memset(send_d, 0, sizeof(float) * 2 * MAX_BLOCK);
-    const float *il = J.port_get_buffer(in_l, n), *ir = J.port_get_buffer(in_r, n);
-    if (in_fn) in_fn(il, ir, (int)n);                 /* (before the slots render: the GUITAR module plays the input) */
     slots_cycle((int)n);
     {
         memcpy(inputs[EXT_IN], il, sizeof(float) * n);
@@ -592,13 +592,14 @@ static int process(jack_nframes_t n, void *arg) {
     }
     input_peaks((int)n);
     if (in_fn) {                                      /* GUITAR check: every ~3 s, how loud the input and the mix are (goes to app.log) */
-        static float pin, pmix; static int cyc;
+        static float pin, pmix, pkit; static int cyc;
         for (jack_nframes_t i = 0; i < n; i++) {
             float a = fabsf(il[i]), b = fabsf(mix[0][i]);
             if (a > pin) pin = a;
             if (b > pmix) pmix = b;
+            for (int sl_ = 0; sl_ < SLOTS; sl_++) { float k = fabsf(inputs[sl_ * SLOT_CH + DRUM_KIT][i]); if (k > pkit) pkit = k; }
         }
-        if (++cyc >= 1000) { fprintf(stderr, "guitar check: input peak %.4f, slot mix peak %.4f\n", pin, pmix); fflush(stderr); cyc = 0; pin = pmix = 0.0f; }
+        if (++cyc >= 1000) { fprintf(stderr, "guitar check: input peak %.4f, instruments peak %.4f, heard peak %.4f\n", pin, pkit, pmix); fflush(stderr); cyc = 0; pin = pmix = pkit = 0.0f; }
     }
     for (int s = 0; s < MAX_SOURCES; s++) {
         Source *src = &sources[s];
