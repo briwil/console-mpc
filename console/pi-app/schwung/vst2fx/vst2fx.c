@@ -309,7 +309,16 @@ static void render_block(void *h, int16_t *out, int frames)
 {
     if (!the_host || !the_host->mapped_memory || frames > BLOCK) return;
     memcpy(out, the_host->mapped_memory + the_host->audio_in_offset, (size_t)frames * 4);
+    static int calls, pin, pout;                         /* a check line every ~3 s in the log: what goes in and out of the plugin */
+    for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > pin) pin = a; }
     process(h, out, frames);
+    for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > pout) pout = a; }
+    if (++calls >= 1000) {
+        char m[120];
+        int n = snprintf(m, sizeof m, "guitar plugin: in %d, out %d (of 32767)\n", pin, pout);
+        write(2, m, (unsigned long)n);
+        calls = pin = pout = 0;
+    }
 }
 
 static int get_error(void *h, char *buf, int len)
