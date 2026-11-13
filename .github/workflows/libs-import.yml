@@ -1,0 +1,25 @@
+# One-time copy of the prebuilt synths / drum machines / effects ("libs") into this repo's own "libs-latest" release,
+# so building the card no longer needs the Move repo. Run it from the Actions tab (or `gh workflow run libs-import.yml`).
+# It copies the file as it is; to change the libs later, run it again with another source URL.
+name: Import libs
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Where the libs archive comes from
+        default: https://github.com/briwil/console-move/releases/download/libs-latest/move-libs.tgz
+        type: string
+jobs:
+  import:
+    runs-on: ubuntu-24.04
+    permissions: { contents: write }
+    env: { GH_TOKEN: "${{ github.token }}" }
+    steps:
+      - run: |
+          curl -fsSL -o move-libs.tgz "${{ inputs.source }}"
+          tar tzf move-libs.tgz | head -n 5
+          sha256sum move-libs.tgz | tee move-libs.sha256
+          gh release delete libs-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create libs-latest move-libs.tgz move-libs.sha256 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "Console's synths, drum machines and effects (prebuilt)" \
+            --notes "The prebuilt libraries the card zip is made with. Copied from ${{ inputs.source }}."
