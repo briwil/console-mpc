@@ -185,6 +185,8 @@ class MoveBoard:
                 if val and n <= 8:
                     k.put(("ARM%d" if self.shift else "TRACK%d") % n)
                 return
+            if T.inst_page and not (T.seq_page or T.drum_page or T.fx_page or T.sbrowse.active):
+                return                                     # the instruments list: the step buttons do nothing (no accidental mutes)
             if getattr(T, "song_page", False) and not T.seq_page:
                 if val:
                     k.put(("ROW", n, "CUT" in self.held))  # song mode's rows (Delete + a row: take it out)
