@@ -122,6 +122,9 @@ class CoreBridge:
     # ------------------------------------------------------------ every tick
     def _step(self):
         e, c = self.e, self.core
+        for _frame, msg in c.read_midi():                  # the controls first: a pad must not wait behind the rest of this step
+            e.pad_read_t = time.monotonic()
+            e.move_midi.put(msg)
         self._tick += 1
         slow = self._tick % SLOW_EVERY == 0
         self._sync_tape_memory()
@@ -161,8 +164,6 @@ class CoreBridge:
         self._punch_live()
         self._take_recorded()
         self._read_back()
-        for _frame, msg in c.read_midi():
-            e.move_midi.put(msg)
 
     # ---- the tape's memory, and each track
     def _sync_tape_memory(self):

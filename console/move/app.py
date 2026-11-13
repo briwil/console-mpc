@@ -223,6 +223,9 @@ class MoveBoard:
             k.put("MUTE%d" % (num + 1))
             return
         if num in PADS:
+            if val:                                         # how long a pad waited between the core's read and here (app.log "pad wait")
+                _w = time.monotonic() - getattr(self.T.engine, "pad_read_t", time.monotonic())
+                PROF["pw"], PROF["pn"] = max(PROF.get("pw", 0.0), _w), PROF.get("pn", 0) + 1
             self.pad(num - PADS[0], val)
 
     def pad(self, p, vel):
@@ -705,6 +708,7 @@ def main():
         while draw_busy.is_set() and time.monotonic() < t_end:
             time.sleep(0.005)
 
+    sys.setswitchinterval(0.001)                         # a thread waiting for the interpreter (a pad, the core) gets it within 1 ms, not 5
     try:
         while True:
             _t = time.monotonic()                        # how long one trip round this loop takes (app.log, "perf:" when it is slow)
@@ -716,6 +720,9 @@ def main():
                     print("perf: a trip round the loop takes %d ms on average, %d ms at worst; the screen draw %d ms on average, %d ms at worst (%d draws in %.0f s)" % (
                         1000 * perf["sum"] / perf["n"], 1000 * perf["max"], 1000 * perf["dsum"] / max(1, perf["dn"]), 1000 * perf["dmax"],
                         perf["dn"], _t - perf["rep"]), flush=True)
+                if PROF.get("pn"):
+                    print("perf: pad wait up to %d ms (%d pads in %.0f s)" % (1000 * PROF["pw"], PROF["pn"], _t - perf["rep"]), flush=True)
+                    PROF["pw"], PROF["pn"] = 0.0, 0
                 perf.update(max=0.0, sum=0.0, n=0, dmax=0.0, dsum=0.0, dn=0, rep=_t)
             while True:
                 try:
