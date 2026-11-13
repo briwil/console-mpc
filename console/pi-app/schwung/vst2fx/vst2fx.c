@@ -88,6 +88,7 @@ typedef struct {
     char klabel[MAXK][16];
     int npre;                            /* presets the plugin lists */
     int prog;                            /* the preset last chosen (set_param) */
+    volatile int changed;                /* a preset was chosen (set_param) and has not sounded yet (a log line says how long it took) */
     int pfirst, pcount;                  /* the presets offered: pcount from pfirst (plugin.txt: presets FIRST COUNT); 0 = all */
     float lin[BLOCK], rin[BLOCK], lout[BLOCK], rout[BLOCK];
 } inst_t;
@@ -265,6 +266,7 @@ static void set_param(void *h, const char *key, const char *val)
             preset_name(s, i, nm);
             if (!strcmp(nm, val)) {
                 s->prog = i;
+                s->changed = 1;
                 s->e->dispatcher(s->e, eSetProgram, 0, i, NULL, 0);
                 char m[100]; int n = snprintf(m, sizeof m, "vst2fx: preset %d [%s]\n", i, nm); write(2, m, (unsigned long)n);
                 return;
@@ -345,9 +347,17 @@ static void render_block(void *h, int16_t *out, int frames)
     ip = last_in;
     if (op == 0 && ip > 300) quiet++; else if (op > 0) quiet = 0;
     if (cool > 0) cool--;
-    if (quiet >= 150 && back == 0 && cool == 0 && gi->pcount > 1) {      /* ~0.4 s of playing and nothing out: kick it again */
+    if (quiet >= 150 && back == 0 && cool == 0 && blocks < 2000 && gi->pcount > 1) {      /* (only at the start: a later kick would cancel the preset a slow rig is loading) */      /* ~0.4 s of playing and nothing out: kick it again */
         gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0);
         back = 40; quiet = 0; cool = 1000;                 /* (at most once in ~3 s) */
+    }
+    {   /* how long a chosen preset takes to sound (a heavy rig builds in the plugin's own thread) */
+        static int waited;
+        if (gi->changed) {
+            waited++;
+            if (op > 0) { char m[90]; int n = snprintf(m, sizeof m, "guitar plugin: preset %d sounded after %d ms\n", gi->prog, waited * 128 * 1000 / 44100); write(2, m, (unsigned long)n); gi->changed = 0; waited = 0; }
+            else if (waited == 1700) { char m[90]; int n = snprintf(m, sizeof m, "guitar plugin: preset %d still silent after 5 s\n", gi->prog); write(2, m, (unsigned long)n); }
+        } else waited = 0;
     }
     if (++calls >= 1000) {
         char m[120];
