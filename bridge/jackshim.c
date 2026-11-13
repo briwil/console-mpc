@@ -589,7 +589,7 @@ static void metro_mix(float *l, float *r)
         long long m = rel / metro_beat_ns;
         if (rel % metro_beat_ns < 0) m--;                           /* (round down, also before t0) */
         long long at = metro_t0 + m * metro_beat_ns;
-        if (!primed) { primed = 1; last_beat = at >= now ? m - 1 : m; }     /* (just switched on: wait for the next beat) */
+        if (!primed) { primed = 1; last_beat = (at >= now || now - at < 150000000LL) ? m - 1 : m; }     /* (just switched on: the beat that started it is still clicked, if it was only a moment ago) */
         if (m < last_beat) last_beat = m;                           /* (the grid was moved back: carry on from here) */
         if (m > last_beat) {
             next_i = at >= now ? (int)((at - now) * RATE / 1000000000LL) : 0;

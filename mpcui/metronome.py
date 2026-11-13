@@ -148,7 +148,14 @@ def tick(T):
     STATE["sent"], STATE["was"] = now, True
     fpb = e.frames_per_beat()
     bar = max(1, int(round(e.bar_beats())))
-    beats = e.pos / fpb
+    beats = e.pos / fpb                               # (the tape's own bars)
+    if seq and not e.recording:                       # a sequencer page: the clicks follow the pattern, as the white line under the steps does
+        try:
+            sq = e.seqs.get(e.slots[e.slot]) if e.slot is not None else None
+            if sq is not None:
+                beats = (e._heard_frame() - sq.anchor) / fpb
+        except Exception:                             # noqa: BLE001
+            pass
     within = beats % bar
     t0 = _steady(time.monotonic_ns() - within * 60e9 / e.bpm, e.bpm, bar)
     _send(STATE["vol"], e.bpm, bar, t0)
