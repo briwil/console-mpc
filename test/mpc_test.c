@@ -303,7 +303,7 @@ static int fb_init(void)
         say("fb: unexpected format (need 320x240 at 32 bits); screen disabled\n");
         return 0;
     }
-    /* what SampQOL does before it draws its splash */
+    /* what the stock app does before it draws its splash */
     int b = open("/sys/class/graphics/fb0/blank", O_WRONLY_);
     if (b >= 0) {
         write(b, "1", 1);
