@@ -87,6 +87,7 @@ typedef struct {
     int nk, kidx[MAXK];
     char klabel[MAXK][16];
     int npre;                            /* presets the plugin lists */
+    int prog;                            /* the preset last chosen (set_param) */
     float lin[BLOCK], rin[BLOCK], lout[BLOCK], rout[BLOCK];
 } inst_t;
 
@@ -258,7 +259,12 @@ static void set_param(void *h, const char *key, const char *val)
         char nm[40];
         for (int i = 0; i < s->npre; i++) {
             preset_name(s, i, nm);
-            if (!strcmp(nm, val)) { s->e->dispatcher(s->e, eSetProgram, 0, i, NULL, 0); return; }
+            if (!strcmp(nm, val)) {
+                s->prog = i;
+                s->e->dispatcher(s->e, eSetProgram, 0, i, NULL, 0);
+                char m[100]; int n = snprintf(m, sizeof m, "vst2fx: preset %d [%s]\n", i, nm); write(2, m, (unsigned long)n);
+                return;
+            }
         }
         return;
     }
@@ -320,6 +326,10 @@ static void render_block(void *h, int16_t *out, int frames)
 {
     if (!the_host || !the_host->mapped_memory || frames > BLOCK) return;
     memcpy(out, the_host->mapped_memory + the_host->audio_in_offset, (size_t)frames * 4);
+    static int blocks;                                   /* the plugin only wakes up on a preset change made while it runs: */
+    inst_t *gi = h;                                      /* go to the second preset a moment after the start, then back to the first */
+    if (++blocks == 20 && gi->npre > 1) gi->e->dispatcher(gi->e, eSetProgram, 0, 1, NULL, 0);
+    if (blocks == 60 && gi->npre > 0) gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog, NULL, 0);
     static int calls, pin, pout;                         /* a check line every ~3 s in the log: what goes in and out of the plugin */
     for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > pin) pin = a; }
     process(h, out, frames);
