@@ -31,6 +31,15 @@ def _active(T, nat, key, vals):
     return active
 
 
+def _guitar(T):
+    """True while the shown instrument is GUITAR (no patterns there)."""
+    try:
+        e = T.engine
+        return bool(getattr(e.drums.get(e.slots[e.slot]), "live_input", False))
+    except Exception:                                    # noqa: BLE001
+        return False
+
+
 def _msg(T, now):
     return T.message if (T.message and now < T.message_until) else None
 
@@ -50,7 +59,7 @@ def draw_lfo(T, nat):
     ml, e = T.mlfo, T.engine
     if ml.sends_on_page():
         pairs = [(a.replace("SONG ", ""), b) for a, b in ml.sends_values()]
-        knob_page(T, nat, ("sends", e.slot), "SLOT %d" % (e.slot + 1), "SENDS", pairs)
+        knob_page(T, nat, ("sends", e.slot), "REVERB, DELAY, SONG INSERTS", "SENDS", pairs)
         return
     if ml.pads_on_page():
         knob_page(T, nat, ("pads", e.slot), "SLOT %d" % (e.slot + 1), "PADS", [(a, b) for a, b in ml.pads_values()])
@@ -79,13 +88,13 @@ def draw_lfo(T, nat):
         for i in range(8):
             label, shown = ins.text(i)
             pairs.append((label, shown if label else ""))
-        top = "SLOT %d" % (ins.slot + 1)
+        top = "INSERT %d" % (pos + 1)
         if ins.error:
             top = str(ins.error)[:24]
-        knob_page(T, nat, ("insert", pos, ins.name()), top, ins.name().upper()[:14] or "INSERT %d" % (pos + 1), pairs)
+        knob_page(T, nat, ("insert", pos, ins.name()), top, ins.name().upper()[:14] or "NO EFFECT", pairs)
         return
     pairs = [(a, b) for a, b in ml.values()]
-    knob_page(T, nat, ("lfo", ml.tab), "PAT %d" % (e.seq.current + 1), "LFO %d" % (ml.tab + 1), pairs)
+    knob_page(T, nat, ("lfo", ml.tab), "GUITAR" if _guitar(T) else "PAT %d" % (e.seq.current + 1), "LFO %d" % (ml.tab + 1), pairs)
 
 
 def on_fx_page(T, menu):
