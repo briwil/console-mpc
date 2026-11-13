@@ -60,5 +60,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete runtime-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
-          gh release create runtime-latest mpc-python.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "MPC runtime (Python ${PYVER} + numpy + Pillow)" \
+          gh release create runtime-latest --prerelease mpc-python.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "MPC runtime (Python ${PYVER} + numpy + Pillow)" \
             --notes "Relocatable Python with numpy for the MPC Sample (aarch64, glibc). Built by .github/workflows/mpc-python.yml."

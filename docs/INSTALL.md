@@ -1,6 +1,6 @@
 # Installing Console on the MPC Sample
 
-1. Download `Console-MPC.zip` (the **card-latest** release of this repo; version releases are tagged `v…`).
+1. Download `Console-MPC.zip` (the newest version on the [Releases](https://github.com/briwil/console-mpc/releases) page, or always the newest: `https://github.com/briwil/console-mpc/releases/latest/download/Console-MPC.zip`).
 2. Unzip it onto the **root** of the SD card (exFAT or FAT32), so the card has an `autorun` folder and a `Console` folder.
    The card's name doesn't matter. Only one `autorun` folder runs per card, so if the card already has one, remove it first.
 3. Put the card in the MPC Sample and switch it on. The first start copies Console to the Sample's internal drive (about a

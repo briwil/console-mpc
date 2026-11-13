@@ -59,6 +59,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete bridge-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
-          gh release create bridge-latest mpc-bridge.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+          gh release create bridge-latest --prerelease mpc-bridge.tgz --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "MPC bridge (built $(date -u +%F\ %H:%M) UTC)" \
             --notes "libjack_mpc.so, bridge_demo, bootmenu and the launcher scripts, built for the MPC Sample (aarch64)."
