@@ -46,6 +46,7 @@ tar xzf "$T/src.tgz" -C "$T/src" --strip-components=1
 cp -R "$T/src/console/pi-app" "$T/src/console/move" "$T/pack/console/"
 cp -R "$T/src/console/tools/sim/stubs" "$T/pack/console/tools/sim/"
 rm -rf "$T/pack/console/move/manual" "$T/pack/console/move/anim"
+find "$T/pack/console" -name "*.so" -delete          # (the repo holds PC builds of the libraries; the MPC keeps its own, from the libs release)
 
 say "3/5  The MPC bridge from $CP"
 curl -fsSL "https://github.com/$CP/releases/download/bridge-latest/mpc-bridge.tgz" -o "$T/bridge.tgz"
