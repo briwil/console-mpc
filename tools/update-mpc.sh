@@ -69,6 +69,7 @@ fi
 mpc "mkdir -p $DEST/console/mpc $DEST/console/pi-app"
 COPYFILE_DISABLE=1 tar --format ustar -cf - -C "$T/pack" console | mpc "cd $DEST && tar xf -"
 cat "$T/bridge.tgz" | mpc "cd $DEST/console && tar xzf -"
+mpc "[ -f $DEST/console/mpc/vst2fx.so ] && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/stompbox/vst2fx.so || true"     # (the VST2 effect host for STOMPBOX)
 [ "$LIBS" = 1 ] && cat "$T/libs.tgz" | mpc "cd $DEST/console/pi-app && tar xzf -"
 [ "$PY" = 1 ] && cat "$T/python.tgz" | mpc "cd $DEST/console && rm -rf python && tar xzf -"
 mpc "sync"
