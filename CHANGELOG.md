@@ -3,7 +3,7 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
-## Next
+## 0.0.4
 
 - Steps selected: any button with no job on that page now finishes the selection, like SEQ, STOP and BACK.
 
