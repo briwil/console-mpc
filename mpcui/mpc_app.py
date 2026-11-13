@@ -35,6 +35,8 @@ except Exception:
     print("metronome is off:\n" + traceback.format_exc(), flush=True)
 try:
     import menu as _menu2
+    if "UPDATE" in _menu2.SETTINGS:
+        _menu2.SETTINGS.remove("UPDATE")                             # no SOFTWARE UPDATE row: updating is done over SSH
     import sequencer as _seq2
     import notes as _notes2
     import freerec

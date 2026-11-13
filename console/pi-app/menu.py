@@ -238,7 +238,7 @@ class Menu:
                 self.say("LINK NEEDS INSTALLING: RUN ~/console/pi-app/setup.sh ONCE OVER SSH, THEN RESTART")
             else:
                 self.say({"internal": "CONSOLE SENDS MIDI CLOCK, START AND STOP",
-                          "external": "CONSOLE FOLLOWS THE OP-XY'S CLOCK, START AND STOP",
+                          "external": "CONSOLE FOLLOWS THE MIDI CLOCK, START AND STOP COMING IN",
                           "link": "TEMPO, BARS AND START / STOP SHARED OVER THE NETWORK"}[e.sync_mode])
         elif what == "DRUMS":
             import drums
@@ -291,7 +291,7 @@ class Menu:
             self.msg = ""
         elif what == "TEMPO":
             if self.transport.synced:
-                self.say("THE TEMPO COMES FROM THE OP-XY (EXTERNAL SYNC)")
+                self.say("THE TEMPO COMES FROM THE MIDI CLOCK (EXTERNAL SYNC)")
             elif e.playing:
                 self.say("STOP FIRST TO CHANGE THE TEMPO")
             else:
@@ -310,9 +310,9 @@ class Menu:
                     return "LINK  (not installed yet)"
                 peers = link.peers if link else 0
                 return "LINK  (Ableton Link: %s)" % ("%d other%s" % (peers, "" if peers == 1 else "s") if peers else "nobody else yet")
-            return "EXTERNAL  (follow the OP-XY)" if e.sync_mode == "external" else "INTERNAL  (Console leads)"
+            return "EXTERNAL  (follow MIDI clock)" if e.sync_mode == "external" else "INTERNAL  (Console leads)"
         if what == "TEMPO":
-            return "%.1f BPM%s" % (e.bpm, "  (from the OP-XY)" if self.transport.synced else "")
+            return "%.1f BPM%s" % (e.bpm, "  (from MIDI clock)" if self.transport.synced else "")
         if what == "TIMESIG":
             n, d = e.time_sig
             return "%d/%d%s" % (n, d, "  (%s beats of an eighth note)" % n if d == 8 else "")
