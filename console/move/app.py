@@ -1125,6 +1125,18 @@ def handle(name, T, m, e):
         if isinstance(name, tuple) and name[0] == "KNOB" and name[1] == 9:
             T.song.set_on(name[2] > 0)                     # +: song mode on, -: off
             return
+    if name == "INST_HOME":                           # SAMPLE (the MPC): back to page 1 of the instrument, from its other pages
+        if (T.drum_page or T.seq_page) and not (menus or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active):
+            T.punch.leave()
+            T.auto_page = T.seq_page = False
+            T.seqp.held, T.synthp.held = {}, {}
+            T.mlfo.tab = None
+            T.drum_tab = 0
+        return
+    if name == "SETTINGS":                            # Shift + SAMPLE (the MPC): SETTINGS, straight from any page
+        if not menus:
+            m.open_settings()
+        return
     if name == "SONG_TOGGLE":                          # Shift + left button 2: song mode on / off, from any page
         T.song.toggle()
         return

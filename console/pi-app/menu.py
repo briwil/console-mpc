@@ -218,6 +218,8 @@ class Menu:
         elif name == "FILE":
             if self.editing:
                 self.editing = False
+            elif getattr(self, "direct", False):
+                self.close()                               # opened with Shift + SAMPLE: Back leaves the menu
             else:
                 self.mode, self.msg = "list", ""
 
@@ -651,7 +653,16 @@ class Menu:
         self.deleting = self.rename_pick = False
         self.refresh()
 
+    def open_settings(self):
+        """Straight to SETTINGS (Shift + SAMPLE on the MPC); Back leaves the menu altogether."""
+        self.open, self.mode, self.row, self.msg = True, "settings", 0, ""
+        self.direct = True
+        if self.updater is None:
+            self.updater = updater.Updater()
+        self.refresh()
+
     def close(self):
+        self.direct = False
         self.open = False
         self.mode = "list"
         self.editing = self.deleting = self.rename_pick = False

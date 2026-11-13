@@ -305,7 +305,9 @@ static void mpc_button_event(int note, int down)
         case 0x4A:                                                     /* LOOP = loop on / off; Shift + LOOP = set a loop point (Console works out in or out) */
             if (was_alt) { if (down) send3(0xBF, 105, 127); return; }
             break;
-        case 0x49: if (down) send3(0xBF, 106, 127); return;           /* SAMPLE REC = arm / disarm the selected track */
+        case 0x49:                                                     /* SAMPLE = arm / disarm the selected track; Shift + SAMPLE (INPUT CONFIG) = SETTINGS */
+            if (down) { if (was_alt) { send3(0xBF, 113, 127); send3(0xBF, 113, 0); } else send3(0xBF, 106, 127); }
+            return;
         }
     }
     if (note == MPC_SEQ && page_sound && !shift_held) { send3(0xBF, 43, down ? 127 : 0); return; }   /* the sound page: SEQ = its sequencer (B1) */
@@ -350,6 +352,10 @@ static void mpc_button_event(int note, int down)
             int step = note == 0x0B ? 18 : 17;
             send3(0xBF, 49, 127); send3(0x9F, step, 100); send3(0x8F, step, 0); send3(0xBF, 49, 0);
         }
+        return;
+    }
+    if (note == 0x49) {                                       /* SAMPLE off the tape page: back to page 1 of the instrument (as SEQ goes to its sequencer); Shift + SAMPLE: SETTINGS */
+        if (down) { int cc = shift_held ? 113 : 112; send3(0xBF, cc, 127); send3(0xBF, cc, 0); }
         return;
     }
     for (int i = 0; i < NBUTTONS; i++)

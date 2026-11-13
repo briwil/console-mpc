@@ -8,6 +8,7 @@ WHEEL = 14
 PUSH = 3                                                         # the wheel's push (the MPC encoder push)
 BACK = 51
 REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO = 104, 105, 106, 107, 108
+INSTHOME, SETTINGSKEY = 112, 113                                  # SAMPLE (page 1 of the instrument) and Shift + SAMPLE (SETTINGS), bridge/mapping.h
 PROJECT, SONGPAGE, GRIDNEXT = 109, 110, 111                     # Shift + pad 16 / 12 / 14 on the tape-style pages (as printed on the pads)
 ERASE = 119                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
 K1 = 71                                                          # Move knob 1 (relative clicks)
@@ -277,6 +278,10 @@ def install(MoveBoard, pad_velocity=None):
         if num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO):                    # the bridge's tape-page buttons (see bridge/mapping.h)
             if val:
                 tape_button(self, num)
+            return
+        if num in (INSTHOME, SETTINGSKEY):
+            if val:
+                self.keys.put("INST_HOME" if num == INSTHOME else "SETTINGS")
             return
         if num in (PROJECT, SONGPAGE, GRIDNEXT):                                # Shift + pad 16 / 12 / 14 (bridge/mapping.h)
             if val:
