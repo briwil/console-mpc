@@ -225,6 +225,15 @@ except Exception:
     import traceback
     print("LFO drum names are off:\n" + traceback.format_exc(), flush=True)
 try:
+    import moveseq as _moveseq
+    import movesynth as _movesynth
+    import sequencer as _sequencer
+    import padvel
+    padvel.install(G["MoveBoard"], _moveseq.MoveSeq, _movesynth.MoveSynth, _sequencer.Sequencer, G.get("pad_velocity"))   # steps from the pads keep the pad's velocity
+except Exception:
+    import traceback
+    print("pad velocity on steps is off:\n" + traceback.format_exc(), flush=True)
+try:
     import shiftknobs
     _handle = shiftknobs.wrap(_handle)                   # Shift + K1-K3 / FADER = knobs 5-8 on an instrument's pages; no fine steps there
 except Exception:

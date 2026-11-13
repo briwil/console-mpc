@@ -5,6 +5,7 @@ To update, drag the new `autorun` and `Console` folders from the zip onto the SD
 
 ## Next
 
+- A step laid down from the pads keeps the pad's velocity, with the PADS page's curve or fixed velocity applied: SEQ pad taps, drum hits recorded live, and a chromatic pad on a held step (drums), and SEQ pad taps on a synth. The step bars show it, taller for harder.
 - The LFO's DEST names the drum on a drum machine: "SNR DECAY" instead of just "DECAY".
 
 ## 0.0.2
