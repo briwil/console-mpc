@@ -620,16 +620,56 @@ def main():
     draw_busy = threading.Event()
     draw_q = queue.Queue()
 
+    def sample_draw():
+        """touch console/profile-draw: for 25 s, looks 200 times a second at where the screen thread is, and writes the places it
+        was most often to console/draw-profile.txt (no profiler needed: it works with this small Python)."""
+        import collections
+        own, inner = collections.Counter(), collections.Counter()
+        n = idle = 0
+        t_end = time.monotonic() + 25.0
+        try:
+            while time.monotonic() < t_end:
+                time.sleep(0.005)
+                tid = next((t.ident for t in threading.enumerate() if t.name == "screen-draw"), None)
+                fr = sys._current_frames().get(tid)
+                n += 1
+                if fr is None or not draw_busy.is_set():
+                    idle += 1
+                    continue
+                code = fr.f_code
+                own["%s  (%s:%d)" % (code.co_name, os.path.basename(code.co_filename), fr.f_lineno)] += 1
+                seen = set()
+                while fr is not None:
+                    c = fr.f_code
+                    k = "%s  (%s)" % (c.co_name, os.path.basename(c.co_filename))
+                    if k not in seen:
+                        seen.add(k)
+                        inner[k] += 1
+                    fr = fr.f_back
+            busy = max(1, n - idle)
+            with open(PROFILE_OUT, "w") as fh:
+                fh.write("%d looks, the screen thread was drawing in %d of them\n\nWHERE IT WAS (the line being run):\n" % (n, busy))
+                for k, v in own.most_common(25):
+                    fh.write("%5.1f%%  %s\n" % (100.0 * v / busy, k))
+                fh.write("\nINSIDE (a function and everything it calls):\n")
+                for k, v in inner.most_common(35):
+                    fh.write("%5.1f%%  %s\n" % (100.0 * v / busy, k))
+        except Exception:                                     # noqa: BLE001
+            import traceback
+            with open(PROFILE_OUT, "w") as fh:
+                fh.write(traceback.format_exc())
+        finally:
+            try:
+                os.remove(PROFILE_FLAG)
+            except OSError:
+                pass
+            PROF["running"] = False
+
     def render(started):
         """The screen picture: drawn on a thread of its own, so that a slow page (it takes 50-100 ms on the Sample) never holds up the pads."""
-        prof = None
-        if os.path.exists(PROFILE_FLAG):                      # touch console/profile-draw: where the time of a screen picture goes (console/draw-profile.txt)
-            try:
-                import cProfile
-                prof = PROF.setdefault("p", cProfile.Profile())
-                prof.enable()
-            except Exception:                                 # noqa: BLE001
-                prof = None
+        if os.path.exists(PROFILE_FLAG) and not PROF.get("running"):
+            PROF["running"] = True
+            threading.Thread(target=sample_draw, name="draw-sampler", daemon=True).start()
         try:
             drew_at = time.monotonic()
             if not intro.draw(frame, drew_at):
@@ -647,22 +687,6 @@ def main():
             import traceback
             print("screen draw failed:\n" + traceback.format_exc(), flush=True)
         finally:
-            if prof is not None:
-                prof.disable()
-                PROF["n"] = PROF.get("n", 0) + 1
-                if PROF["n"] >= 120:
-                    try:
-                        import io
-                        import pstats
-                        out = io.StringIO()
-                        pstats.Stats(prof, stream=out).sort_stats("cumulative").print_stats(45)
-                        with open(PROFILE_OUT, "w") as fh:
-                            fh.write("%d screen pictures\n" % PROF["n"] + out.getvalue())
-                        os.remove(PROFILE_FLAG)
-                    except Exception:                         # noqa: BLE001
-                        pass
-                    PROF.pop("p", None)
-                    PROF.pop("n", None)
             dd = time.monotonic() - started
             PROF["dd"] = 0.85 * PROF.get("dd", dd) + 0.15 * dd          # (a steady figure: the playhead mustn't jump about)
             e.screen_lead = int((0.7 * PROF["dd"] + 0.05) * 44100)     # (what the playhead under the steps is moved on by: the draw, and the way to the screen)
