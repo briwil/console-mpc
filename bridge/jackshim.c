@@ -579,15 +579,23 @@ static void metro_mix(float *l, float *r)
     mpc_clock(1, &ts);
     long long now = (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
     int next_i = -1; long long next_at = 0;
+    static long long last_beat; static int primed;
+    if (!metro_on) primed = 0;
     if (metro_on && metro_beat_ns > 0) {
-        long long n = (now - metro_t0) / metro_beat_ns;
-        if (now - metro_t0 > 0) n++;
-        long long at = metro_t0 + n * metro_beat_ns;
+        /* the newest beat that falls before the end of this block. A beat that came while this thread was late (the blocks are not
+           perfectly even) is still clicked, a moment late, instead of being stepped over. */
         long long span = (long long)PERIOD * 1000000000LL / RATE;
-        if (at >= now && at < now + span) {
-            next_i = (int)((at - now) * RATE / 1000000000LL);
-            long long m = n % metro_bar; if (m < 0) m += metro_bar;
-            next_at = m == 0;
+        long long rel = now + span - 1 - metro_t0;
+        long long m = rel / metro_beat_ns;
+        if (rel % metro_beat_ns < 0) m--;                           /* (round down, also before t0) */
+        long long at = metro_t0 + m * metro_beat_ns;
+        if (!primed) { primed = 1; last_beat = at >= now ? m - 1 : m; }     /* (just switched on: wait for the next beat) */
+        if (m < last_beat) last_beat = m;                           /* (the grid was moved back: carry on from here) */
+        if (m > last_beat) {
+            next_i = at >= now ? (int)((at - now) * RATE / 1000000000LL) : 0;
+            long long bm = m % metro_bar; if (bm < 0) bm += metro_bar;
+            next_at = bm == 0;
+            last_beat = m;
         }
     }
     float gain = metro_vol / 100.f * 0.5f;
