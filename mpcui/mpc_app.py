@@ -209,6 +209,16 @@ try:
 except Exception:
     import traceback
     print("step entry is off:\n" + traceback.format_exc(), flush=True)
+try:                                                     # no "Shift + turn = one fine step" on the MPC (Shift keeps its other jobs: pan on the mixer ...)
+    import knobgate as _kg
+    _gate = _kg.gate
+    _kg.gate = lambda key, delta, shift=False, clicks=None: _gate(key, delta, False, clicks)
+    _T = G["Transport"]
+    _kc = _T.knob_clicks
+    _T.knob_clicks = lambda self, number, delta, shift: _kc(self, number, delta, False)
+except Exception:
+    import traceback
+    print("fine steps could not be turned off:\n" + traceback.format_exc(), flush=True)
 _handle = song_after_punch(G["handle"])
 try:
     import presetpop
