@@ -19,6 +19,7 @@ import os
 import re
 import queue
 import sys
+import threading
 import time
 
 faulthandler.enable(all_threads=True)      # a crash inside an effect or synth (not Python's): app.log gets the Python line it was on
@@ -88,6 +89,7 @@ updater.Updater = moveupdater.Updater   # SETTINGS > SOFTWARE UPDATE: from GitHu
 from screen import Frame, W       # noqa: E402
 
 FPS_SCREEN = 20
+DRAW_THREAD = os.environ.get("CONSOLE_DRAW_THREAD", "1") != "0"   # the screen is drawn on a thread of its own (0: in the main loop, as before)
 
 # ---------------------------------------------------------------- the Move's controls -> the app's actions
 
@@ -612,6 +614,44 @@ def main():
     next_icon_check, icon_test, icon_k = 0.0, None, 0
     hand_back = False
     perf = {"prev": 0.0, "max": 0.0, "sum": 0.0, "n": 0, "dmax": 0.0, "dsum": 0.0, "dn": 0, "rep": time.monotonic()}
+    draw_busy = threading.Event()
+    draw_q = queue.Queue()
+
+    def render(started):
+        """The screen picture: drawn on a thread of its own, so that a slow page (it takes 50-100 ms on the Sample) never holds up the pads."""
+        try:
+            drew_at = time.monotonic()
+            if not intro.draw(frame, drew_at):
+                pages.draw(frame, T, m)
+            if st is not None and hasattr(st, "drawn"):
+                st.drawn(frame, time.monotonic() - drew_at)
+            if screenview is not None:
+                screenview.frame(frame)                       # (a copy for the big screen, if one is open)
+            if st is not None:                                # the stress test: the time left, bottom right
+                left = st.left()
+                frame.rect(99, 57, 29, 7, 1)
+                frame.small(100, 58, "T%3d:%02d" % (left // 60, left % 60), 0)
+            core.display(frame.bytes())
+        except Exception:                                     # noqa: BLE001  (a picture that fails is skipped; the next one is tried)
+            import traceback
+            print("screen draw failed:\n" + traceback.format_exc(), flush=True)
+        finally:
+            dd = time.monotonic() - started
+            perf["dmax"], perf["dsum"], perf["dn"] = max(perf["dmax"], dd), perf["dsum"] + dd, perf["dn"] + 1
+            draw_busy.clear()
+
+    def draw_worker():
+        while True:
+            render(draw_q.get())
+
+    if DRAW_THREAD:
+        threading.Thread(target=draw_worker, name="screen-draw", daemon=True).start()
+
+    def wait_drawn():
+        t_end = time.monotonic() + 1.0
+        while draw_busy.is_set() and time.monotonic() < t_end:
+            time.sleep(0.005)
+
     try:
         while True:
             _t = time.monotonic()                        # how long one trip round this loop takes (app.log, "perf:" when it is slow)
@@ -651,12 +691,14 @@ def main():
                     handle(name, T, m, e)
                 next_lights = 0.0                            # a control was used: the lights are redone straight away
             if m.restart and not quit_now:          # a software update was installed: start the new version
+                wait_drawn()
                 frame.clear()
                 frame.centre(64, 28, "RESTARTING...")
                 core.display(frame.bytes())
                 break
             if quit_now:
                 hand_back = True
+                wait_drawn()
                 frame.clear()
                 frame.centre(64, 28, "SAVING...")
                 core.display(frame.bytes())
@@ -718,20 +760,14 @@ def main():
                 if T.sbrowse.active and (T.seq_page or T.fx_page or T.inst_page or T.song_page or not T.drum_page):
                     T.sbrowse.close(False)                # (went to another page: the sample browser closes, the old sample stays)
                 T.pagefx.update(T, m)
-                drew_at = time.monotonic()
-                if not intro.draw(frame, drew_at):
-                    pages.draw(frame, T, m)
-                if st is not None and hasattr(st, "drawn"):
-                    st.drawn(frame, time.monotonic() - drew_at)
-                if screenview is not None:
-                    screenview.frame(frame)                   # (a copy for the big screen, if one is open)
-                if st is not None:                            # the stress test: the time left, bottom right
-                    left = st.left()
-                    frame.rect(99, 57, 29, 7, 1)
-                    frame.small(100, 58, "T%3d:%02d" % (left // 60, left % 60), 0)
-                core.display(frame.bytes())
-                _dd = time.monotonic() - _ds
-                perf["dmax"], perf["dsum"], perf["dn"] = max(perf["dmax"], _dd), perf["dsum"] + _dd, perf["dn"] + 1
+                if draw_busy.is_set():
+                    pass                                      # the last picture isn't finished: this one is skipped (input comes first)
+                else:
+                    draw_busy.set()
+                    if DRAW_THREAD:
+                        draw_q.put(_ds)
+                    else:
+                        render(_ds)
             time.sleep(0.005)
     except KeyboardInterrupt:
         pass
@@ -743,6 +779,7 @@ def main():
         if st is not None:
             st.finish("stopped early" if not failed else "Console hit a Python error (see console/crashes)")
         e.save(wait=True)
+        wait_drawn()
         frame.clear()
         core.display(frame.bytes())
         time.sleep(0.1)
