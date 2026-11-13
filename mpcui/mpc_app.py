@@ -54,6 +54,17 @@ except Exception:
     import traceback
     print("free recording is off:\n" + traceback.format_exc(), flush=True)
 try:
+    for _d in ("core", "schwung"):
+        _p = os.path.join(C, "pi-app", _d)
+        if _p not in sys.path:
+            sys.path.append(_p)
+    import guitarinput
+    import instruments as _instr_mod
+    guitarinput.install(_instr_mod)                                  # GUITAR: the input is REAR while it is loaded
+except Exception:
+    import traceback
+    print("guitar input switch is off:\n" + traceback.format_exc(), flush=True)
+try:
     import audio
     import redo
     redo.install(audio.Engine)           # PLUS on the tape page: REDO (Console only has UNDO)

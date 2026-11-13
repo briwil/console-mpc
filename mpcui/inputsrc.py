@@ -15,6 +15,7 @@ LOG = os.path.join(HOME, "input-status.txt")
 ROW = "INPUTSRC"
 CHOICES = ["REAR", "MIC", "USB"]
 STATE = {"src": "REAR"}
+FORCE = None                              # set while the GUITAR instrument needs the back jacks (mpcui/guitarinput.py)
 
 
 def load():
@@ -52,7 +53,7 @@ def _switch(A, ctl, name, on):
 
 def apply():
     """Sets the card's switches and tells the bridge. What happened goes to console/input-status.txt."""
-    src = STATE["src"]
+    src = FORCE or STATE["src"]
     try:
         with open(FLAG, "w") as fh:
             fh.write("u" if src == "USB" else "c")

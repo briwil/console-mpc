@@ -4,6 +4,7 @@ Each version is a release on the [Releases](https://github.com/briwil/console-mp
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
 ## Next
+- GUITAR switches the input to REAR while it is loaded and puts it back when it is gone.
 - The sound core and module host are now built here (aarch64) so GUITAR can take the audio input.
 
 - GUITAR instrument (first version): plays the Sample's audio input (your guitar) through Stompbox, so you can arm it on the tape page and record live. Needs `stompbox.so` in `ConsoleData/plugins` (or `/data/UserData/console/plugins`). It shows up in the instrument list as GUITAR. Its own sound pages, with no sequencer, song, PUNCH FX or insert pages, come next.
