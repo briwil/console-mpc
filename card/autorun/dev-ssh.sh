@@ -1,6 +1,7 @@
 #!/bin/sh
 # Developers only: starts a key-only SSH server on the USB cable (192.168.155.1, port 2222). It runs only if the files
-# authorized_keys and ssh_host_ed25519_key are in the autorun folder (Console doesn't need it).
+# authorized_keys and ssh_host_ed25519_key are in the card's ConsoleDev folder (best: updating doesn't touch it) or in the
+# autorun folder (Console doesn't need it).
 set -eu
 umask 077
 D=${1:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}

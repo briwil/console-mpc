@@ -25,7 +25,7 @@ Projects and presets are kept on the card in their own folder, `ConsoleData`, wi
   finishes is followed by the stock app at the next power-on.
 
 ## Developers
-Put `authorized_keys` and `ssh_host_ed25519_key` in the card's `autorun` folder to get a key-only SSH server on the USB cable
+Put `authorized_keys` and `ssh_host_ed25519_key` in a folder called `ConsoleDev` on the root of the card (not part of the zip, so updating leaves it alone; the `autorun` folder also works, but an update replaces that) to get a key-only SSH server on the USB cable
 (192.168.155.1, port 2222). Build the zip yourself with `tools/make-card.sh`; test the installer with `sh card/test/run.sh`.
 
 ## Risks

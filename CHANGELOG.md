@@ -5,6 +5,7 @@ To update, drag the new `autorun` and `Console` folders from the zip onto the SD
 
 ## Next
 
+- Developers: `authorized_keys` and `ssh_host_ed25519_key` can live in a `ConsoleDev` folder on the card, so updating (which replaces `autorun`) no longer removes them.
 - A step laid down from the pads keeps the pad's velocity, with the PADS page's curve or fixed velocity applied: SEQ pad taps, drum hits recorded live, and a chromatic pad on a held step (drums), and SEQ pad taps on a synth. The step bars show it, taller for harder.
 - The LFO's DEST names the drum on a drum machine: "SNR DECAY" instead of just "DECAY".
 
