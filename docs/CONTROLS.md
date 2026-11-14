@@ -8,7 +8,7 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | B2 | Mixer (again: reverb, delay, ...; Back leaves) |
 | B3 | Tape recorder (again: the selected track zoomed) |
 | PAD FX | The pads page of a synth (key, scale, octave, pad velocity and curve): the Move's Shift + step 2. Again: back |
-| Song mode on / off | on the SONG page: Shift + PLUS / MINUS |
+| Song mode on / off | on the SONG page: PLUS / MINUS (Shift + them too) |
 | Pads 1-16 | The left 4x4 pads (the drums) |
 | PAD BANK (latching) | Pads become the right 4x4 (chromatic) |
 | SEQ (latching) | Pads become the 16 step buttons (on the tape page they always are: step 1-8 = tracks, Shift + step = arm) |

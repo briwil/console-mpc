@@ -1132,6 +1132,9 @@ def handle(name, T, m, e):
         if isinstance(name, tuple) and name[0] == "KNOB" and name[1] == 9:
             T.song.set_on(name[2] > 0)                     # +: song mode on, -: off
             return
+        if name in ("LEFT", "RIGHT"):
+            T.song.set_on(name == "RIGHT")                 # PLUS (the right arrow): song mode on, MINUS: off
+            return
         if isinstance(name, tuple) and name[0] == "KNOB" and name[1] in (10, 11):
             T.song.wheel(name[2])                          # the wheel: the white box, or the picked cell (Shift: its punch FX)
             return

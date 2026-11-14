@@ -388,7 +388,7 @@ def draw_song(T, nat):
         c.text_px(6, 19, "PUNCH FX PATTERNS" if shift else "ROW %d/%d" % (sg.pick + 1, len(sg.rows)), WHITE if not shift else nat.ACC, 16, -1)
         title_line(c, title)
         for i in range(16):                                         # the rows: 16 chips, as the 16 pads
-            x, y = 6 + i * 17, 97
+            x, y = 1 + i * 17, 97
             have = i < len(sg.rows)
             c.rect(x, y, 16, 14, colour.GREENS[3] if have else colour.GREENS[0])
             num = str(i + 1)
