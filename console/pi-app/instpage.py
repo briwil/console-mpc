@@ -29,6 +29,11 @@ def building():
     return bool(drums.schwung_modules and drums.schwung_modules.building)
 
 
+def sort_key(c):
+    """A to Z by title, except 9W9 (the 909) comes right after the TR-808."""
+    return "tr-808~" if c[0] == "w9" else c[1].lower()
+
+
 def is_synth(mid):
     import drums
     sm = drums.schwung_modules
@@ -155,7 +160,7 @@ class InstPage:
         """EDIT: every drum machine, then every synth, each with a check box. Unchecked ones leave the picker
         (a song that already uses one still has it)."""
         found = machines()
-        drums = sorted(((m, t) for m, t in found if not is_synth(m)), key=lambda c: c[1].lower())
+        drums = sorted(((m, t) for m, t in found if not is_synth(m)), key=lambda c: sort_key(c))
         synths = sorted(((m, t) for m, t in found if is_synth(m)), key=lambda c: c[1].lower())
         self.items = [(None, "DRUM MACHINES")] + drums + [(None, "SYNTHS")] + synths
         self.pick = 1 if drums else (len(drums) + 2 if synths else 0)
@@ -183,7 +188,7 @@ class InstPage:
         hid = self.hidden()
         self.choices = sorted(((m, title) for m, title in machines()
                                if (e.slot_of(m) is None or m == mine) and (m not in hid or m == mine)),
-                              key=lambda c: (is_synth(c[0]), c[1].lower()))   # (drum machines A to Z, then synths A to Z)
+                              key=lambda c: (is_synth(c[0]), sort_key(c)))   # (drum machines A to Z, then synths A to Z)
         if not machines():
             self.mode = None
             self.t.say("NO DRUM MACHINES ARE BUILT: RUN ~/console/pi-app/setup.sh ONCE", 4)
