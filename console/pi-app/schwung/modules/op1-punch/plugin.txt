@@ -3,3 +3,15 @@ knob 3
 knob 2
 knob 1
 knob 0
+preset Init|0=0.183 1=0.458 2=19 3=0.855
+preset Vocal Lead Lift|0=0.6134 1=0.35 2=8 3=0.3
+preset Ad-lib Snap|0=0.7171 1=0.5 2=6 3=0.75
+preset Delay Rtn Snap|0=0.8824 1=0.6 2=2 3=0.6
+preset Drum Bus Glue|0=0.25 1=0.2 2=24 3=0.35
+preset Kick Click|0=0.7976 1=0.8 2=3 3=0.65
+preset Kick Knock|0=0.1723 1=0.3979 2=8 3=0.65
+preset Snare Crack|0=0.6495 1=0.236 2=7 3=0.65
+preset 808 Sub Punch|0=0.0519 1=0.4 2=20 3=0.3
+preset Keys Attack|0=0.4671 1=0.1542 2=24 3=0.3
+preset Hat Life|0=0.9398 1=0.315 2=9 3=0.4
+preset Glove Slam|0=0.125 1=0.9888 2=24 3=1

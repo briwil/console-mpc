@@ -14,6 +14,7 @@
  */
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 /* ---- the little bit of libc used (declared by hand: the build has no headers) ---- */
 extern void *dlopen(const char *, int);
@@ -97,6 +98,8 @@ typedef struct {
     VstMidi mev[MAXEV];
     float zero[BLOCK];                   /* its (silent) input, for plugins that insist on one */
     int npre;                            /* presets the plugin lists */
+    int nfp;                             /* presets listed in plugin.txt (preset NAME|IDX=VAL ...): a plugin that keeps its own list out of reach */
+    struct { char name[40]; int n; int idx[16]; float val[16]; } fp[32];
     int prog;                            /* the preset last chosen (set_param) */
     volatile int changed;                /* a preset was chosen (set_param) and has not sounded yet (a log line says how long it took) */
     int pfirst, pcount;                  /* the presets offered: pcount from pfirst (plugin.txt: presets FIRST COUNT); 0 = all */
@@ -134,6 +137,13 @@ static int readfile(const char *path, char *buf, int n)
 /* Every instance loads its own copy of the plugin file, so two of them (an insert and the GUITAR instrument) never share the
  * plugin's global state (the same file loaded twice is one library to the loader). The copy is removed at once. */
 static int preset_name(inst_t *s, int i, char *out);
+static void apply_prog(inst_t *s, int i)
+{
+    if (s->nfp > 0) {
+        if (i >= 0 && i < s->nfp && s->e->setParameter)
+            for (int k = 0; k < s->fp[i].n; k++) s->e->setParameter(s->e, s->fp[i].idx[k], s->fp[i].val[k]);
+    } else s->e->dispatcher(s->e, eSetProgram, 0, i, NULL, 0);
+}
 static void *open_private(const char *path)
 {
     static int count;
@@ -168,6 +178,20 @@ static void *create(const char *dir, const char *cfg)
         char save = *eol;
         *eol = 0;
         if (!strncmp(p, "file ", 5)) snprintf(file, sizeof file, "%s", p + 5);
+        else if (!strncmp(p, "preset ", 7) && s->nfp < 32) {
+            char *bar = strchr(p + 7, '|'), *q = bar ? bar + 1 : NULL;
+            if (bar) {
+                int i = s->nfp++, k = 0;
+                snprintf(s->fp[i].name, sizeof s->fp[i].name, "%.*s", (int)(bar - (p + 7) < 39 ? bar - (p + 7) : 39), p + 7);
+                while (q && *q && k < 16) {
+                    char *e2; int idx = (int)strtod(q, &e2);
+                    if (*e2 != '=') break;
+                    s->fp[i].idx[k] = idx; s->fp[i].val[k] = (float)strtod(e2 + 1, &e2); k++;
+                    q = e2; while (*q == ' ') q++;
+                }
+                s->fp[i].n = k;
+            }
+        }
         else if (!strncmp(p, "presets ", 8)) { char *e2; s->pfirst = (int)strtod(p + 8, &e2); s->pcount = (int)strtod(e2, NULL); }
         else if (!strncmp(p, "instrument ", 11)) s->synth = (int)strtod(p + 11, NULL) != 0;
         else if (!strncmp(p, "knob ", 5) && s->nk < MAXK) {
@@ -210,7 +234,8 @@ static void *create(const char *dir, const char *cfg)
     e->dispatcher(e, eMains, 0, 1, NULL, 0);
     if (s->synth) e->dispatcher(e, eStartProcess, 0, 0, NULL, 0);
     s->npre = e->numPrograms;
-    if (s->npre <= 0) {                          /* a plugin that lists no programs but still answers for their names (the OP-1 Suite): ask by index */
+    if (s->nfp > 0) s->npre = s->nfp;
+    else if (s->npre <= 0) {                     /* a plugin that lists no programs but still answers for their names (the OP-1 Suite): ask by index */
         for (int i = 0; i < 64; i++) {
             char b[64]; memset(b, 0, sizeof b);
             e->dispatcher(e, eProgramNameIndexed, i, 0, b, 0);
@@ -221,7 +246,7 @@ static void *create(const char *dir, const char *cfg)
     if (s->pfirst < 0 || s->pfirst >= s->npre) s->pfirst = 0;
     if (s->pcount <= 0 || s->pfirst + s->pcount > s->npre) s->pcount = s->npre - s->pfirst;
     s->prog = s->pfirst;
-    if (s->npre > 0) e->dispatcher(e, eSetProgram, 0, s->prog, NULL, 0);
+    if (s->npre > 0) apply_prog(s, s->prog);
     {
         char m[400], nm[40];
         int n = snprintf(m, sizeof m, "vst2fx: %d presets, first:", s->npre);
@@ -287,7 +312,8 @@ static int preset_name(inst_t *s, int i, char *out)
 {
     char buf[256];
     memset(buf, 0, sizeof buf);
-    s->e->dispatcher(s->e, eProgramNameIndexed, i, 0, buf, 0);
+    if (s->nfp > 0) snprintf(buf, sizeof buf, "%s", i >= 0 && i < s->nfp ? s->fp[i].name : "");
+    else s->e->dispatcher(s->e, eProgramNameIndexed, i, 0, buf, 0);
     if (!buf[0]) snprintf(buf, sizeof buf, "Preset %d", i + 1);
     int j = 0;                                   /* (quotes, backslashes and control characters out: the name goes into JSON) */
     for (int c = 0; buf[c] && j < 39; c++)
@@ -306,7 +332,7 @@ static void set_param(void *h, const char *key, const char *val)
             if (!strcmp(nm, val)) {
                 s->prog = i;
                 s->changed = 1;
-                s->e->dispatcher(s->e, eSetProgram, 0, i, NULL, 0);
+                apply_prog(s, i);
                 char m[100]; int n = snprintf(m, sizeof m, "vst2fx: preset %d [%s]\n", i, nm); write(2, m, (unsigned long)n);
                 return;
             }
@@ -428,8 +454,8 @@ static void render_block(void *h, int16_t *out, int frames)
     }
     inst_t *gi = h;                                      /* the plugin only wakes up on a preset change made while it runs. At the start, and again */
     static int blocks, quiet, back, cool;                      /* whenever it stays silent while the guitar plays, go to the next preset and back */
-    if (++blocks == 20 && gi->pcount > 1) { gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0); back = 40; }
-    if (back > 0 && --back == 0 && gi->npre > 0) gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog, NULL, 0);
+    if (++blocks == 20 && gi->pcount > 1 && !gi->nfp) { gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0); back = 40; }
+    if (back > 0 && --back == 0 && gi->npre > 0) apply_prog(gi, gi->prog);
     static int calls, pin, pout;                         /* a check line every ~3 s in the log: what goes in and out of the plugin */
     int last_in = 0;
     for (int i = 0; i < frames * 2; i++) { int a = out[i] < 0 ? -out[i] : out[i]; if (a > last_in) last_in = a; }
@@ -441,7 +467,7 @@ static void render_block(void *h, int16_t *out, int frames)
     ip = last_in;
     if (op == 0 && ip > 300) quiet++; else if (op > 0) quiet = 0;
     if (cool > 0) cool--;
-    if (quiet >= 150 && back == 0 && cool == 0 && blocks < 2000 && gi->pcount > 1) {      /* (only at the start: a later kick would cancel the preset a slow rig is loading) */      /* ~0.4 s of playing and nothing out: kick it again */
+    if (quiet >= 150 && back == 0 && cool == 0 && blocks < 2000 && gi->pcount > 1 && !gi->nfp) {      /* (only at the start: a later kick would cancel the preset a slow rig is loading) */      /* ~0.4 s of playing and nothing out: kick it again */
         gi->e->dispatcher(gi->e, eSetProgram, 0, gi->prog + 1 < gi->pfirst + gi->pcount ? gi->prog + 1 : gi->prog - 1, NULL, 0);
         back = 40; quiet = 0; cool = 1000;                 /* (at most once in ~3 s) */
     }

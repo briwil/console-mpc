@@ -3,3 +3,15 @@ knob 3
 knob 2
 knob 1
 knob 0
+preset Init|0=0.2441 1=3 2=7 3=0.4883
+preset Lead Sheen|0=0.3536 1=1 2=2 3=0.22
+preset Vocal Depth|0=0.1768 1=2 2=1 3=0.26
+preset Ad-lib Line|0=0.2806 1=2 2=3 3=0.55
+preset Ad-lib Throw|0=0.1768 1=5 2=13 3=0.4
+preset Drum Bus Grit|0=0.25 1=4 2=2 3=0.32
+preset Kick Knock|0=0.5 1=1 2=2 3=0.2
+preset Snare Chatter|0=0.306 1=2 2=3 3=0.25
+preset 808 Translate|0=0.433 1=1 2=3 3=0.15
+preset Pad Haze|0=0.306 1=6 2=8 3=0.42
+preset Lo-Fi Moment|0=0.236 1=15 2=2 3=0.35
+preset FX Glitch|0=0.7071 1=9 2=27 3=0.7

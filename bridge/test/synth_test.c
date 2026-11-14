@@ -53,6 +53,20 @@ int main(int argc, char **argv)
     api->get(h, "preset", v, sizeof v);
     CHECK(!strcmp(v, "Bass"), "the preset is chosen and read back by name");
     api->destroy(h);
+    /* presets listed in plugin.txt (plugins that keep their own list out of reach): names offered, values applied by parameter */
+    snprintf(cmd, sizeof cmd, "printf 'file fakesynth.so\\ninstrument 1\\nknob 0\\npreset Quiet|0=0.1\\npreset Loud|0=1.0 1=0.5\\n' > %s/plugin.txt", argv[3]);
+    if (system(cmd)) return 2;
+    h = api->create(argv[3], NULL);
+    api->get(h, "chain_params", js, sizeof js);
+    CHECK(strstr(js, "\"options\":[\"Quiet\",\"Loud\"]") != NULL, "presets from plugin.txt are the preset list");
+    api->set(h, "preset", "Loud");
+    api->midi(h, on, 3, 0);
+    api->render(h, b, 128);
+    CHECK(b[0] > 32000, "choosing one sets its parameter values");
+    api->set(h, "preset", "Quiet");
+    api->render(h, b, 128);
+    CHECK(b[0] > 3000 && b[0] < 4500, "and another preset changes them");
+    api->destroy(h);
     setenv("CONSOLE_PLUGINS", "/nonexistent", 1);
     CHECK(api->create(argv[3], NULL) == NULL, "no plugin file: no instance");
     char e[200];

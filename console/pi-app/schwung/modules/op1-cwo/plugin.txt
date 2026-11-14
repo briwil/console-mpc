@@ -4,3 +4,15 @@ knob 2
 knob 1
 knob 0
 knob 5
+preset Init|0=0.1526 1=0.25 2=0.5 3=1 5=1
+preset Vocal Micro Dbl|0=0.1994 1=0.1947 2=0.1087 3=1 5=0.18
+preset Vocal Swim|0=0.1543 1=0.6444 2=0.3478 3=0.35 5=0.2
+preset Ad-Lib Rise|0=0.3582 1=0.526 2=0.4348 3=1 5=0.26
+preset Throw Tail Sink|0=0.2445 1=0.9124 2=0.5435 3=0 5=0.3
+preset Drum Bus Feel|0=0.524 1=0.428 2=0.2391 3=0.5 5=0.1
+preset Kick Sub Ghost|0=0.4132 1=0.526 2=0.1304 3=0 5=0.14
+preset Snare Tail Rise|0=0.7003 1=0.607 2=0.6196 3=1 5=0.32
+preset 808 Dive|0=0.3667 1=0.7442 2=0.6522 3=0 5=0.3
+preset Pad Barberpole|0=0.1362 1=0.9124 2=0.6522 3=1 5=0.3
+preset FX Ring Bell|0=0.8661 1=0.3693 2=0.7826 3=0.5 5=0.8
+preset FX Riser Spiral|0=0.6553 1=0.6444 2=0.8 3=1 5=0.7

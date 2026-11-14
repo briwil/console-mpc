@@ -3,3 +3,15 @@ knob 3
 knob 2
 knob 1
 knob 0
+preset Init|0=0.4883 1=0.4883 2=0.5494 3=0.5494
+preset Vocal Plate|0=0.2695 1=0.2695 2=0.85 3=0.28
+preset Adlib Slap|0=0.3477 1=0.3477 2=0.8 3=0.5
+preset Throw Aux 1/4|0=0.9961 1=0.9258 2=0.6 3=1
+preset Drum Bus Room|0=0.1211 1=0.1211 2=0.7 3=0.22
+preset Kick Box|0=0.9961 1=0.0273 2=0.8 3=0.3
+preset Snare Chamber|0=0.2383 1=0.1836 2=0.85 3=0.4
+preset 808 Sub A|0=0.168 1=0.168 2=0.9 3=0.3
+preset Keys Halo|0=0.6758 1=0.6836 2=0.7 3=0.5
+preset Pad Cloud|0=0.5977 1=0.3008 2=0.8246 3=0.42
+preset Hat Scatter|0=0.9961 1=0.3164 2=0.7 3=0.5
+preset Metal Drone|0=0.0977 1=0.1055 2=0.995 3=0.38
