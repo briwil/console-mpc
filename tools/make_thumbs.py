@@ -242,7 +242,7 @@ OP1_FX = {"op1-cwo": "CWO", "op1-delay": "DELAY", "op1-grid": "GRID", "op1-nitro
           "op1-spring": "SPRING"}
 OTHERS = {"instimg": {"profit5": profit5, "jn106": jn106, "sturm": sturm, "monomodule": monomodule, "clementine": clementine,
                       "oxzygen": oxzygen},
-          "fximg": {"vhs-vibes": vhs, "boris": boris}}
+          "fximg": {"vhs-vibes": vhs, "boris": boris, "monomodule-fx": lambda: monomodule("MONOMODULE FX")}}
 
 
 def main():

@@ -1,0 +1,7 @@
+{
+  "id": "monomodule-fx",
+  "name": "Monomodule FX",
+  "description": "The Monomachine's effect machines (Monomodule FX VST plug-in by sd88me, AGPL-3.0; needs your own Monomachine OS file)",
+  "dsp": "vst2fx.so",
+  "component_type": "audio_fx"
+}
