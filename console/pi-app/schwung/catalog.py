@@ -178,9 +178,6 @@ MODULES = [
                 "-lm", "-ldl"]]},
     # ---------------------------------------------------------------- ready-made from Schwung's releases
     # (their own Move builds, downloaded when the libraries are built: see build.py "asset")
-    {"id": 'model-72', "title": 'MODEL-72', "kind": 'synth', "license": "see its repo",
-     "repo": 'sd88me/schwung-model72', "commit": "release", "json": "module.json", "build": [],
-     "asset": 'model-72-module.tar.gz'},
     {"id": '303', "title": '303', "kind": 'synth', "license": "see its repo",
      "repo": 'charlesvestal/schwung-303', "commit": "release", "json": "module.json", "build": [],
      "asset": '303-module.tar.gz'},
@@ -412,7 +409,7 @@ def _add_plugin_synth(mid, title, plugin_file):
 
 
 _add_guitar()
-_add_plugin_synth("model72", "MODEL-72 VST", "model72.so")
+_add_plugin_synth("model72", "MODEL-72", "model72.so")
 _add_plugin_synth("profit5", "PROFIT-5", "profit_5.so")
 _add_plugin_synth("jn106", "JN-106", "kr106.so")
 _add_plugin_synth("sturm", "STURM-TP", "sturm.so")
