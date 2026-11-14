@@ -107,6 +107,18 @@ static int waiting_n;
 static struct { uint64_t frame; uint8_t b[4]; } midi_in[MIDI_IN];
 static atomic_uint_fast64_t mi_head, mi_tail;  /* the core writes, Python reads */
 
+/* pads that play a drum straight away, without Python (Python fills in what each pad plays, and says when that holds:
+   the shown instrument is a drum machine, no menu, no punch FX ...). The pad's note-on is turned into a trigger at the
+   frame it arrived at; Python still gets the message, marked as played, for the pattern, the lights and the screen. */
+#define FAST_PAD_FIRST 68                     /* the Move's pads: 68-99, bottom row first; the left 4 x 4 are the drums */
+#define FAST_NOTE_LEN 4410                    /* how long a drum module's pad note is held (frames) */
+typedef struct { atomic_int on; int kind, src, a; } FastPad;   /* kind 1: engine trigger (voice a); 2: module note a */
+static FastPad fast_pad[16];
+static uint8_t fast_vel[128];                 /* the velocity a pad plays at, by the velocity it was hit with */
+static atomic_int fast_ok;                    /* Python's say-so for the whole thing */
+static int fast_shift;                        /* Shift is down (a Shift + pad is not a drum) */
+static atomic_uint fast_played;               /* how many pads it played itself (for the log) */
+
 #define MIDI_OUT 1024
 static uint8_t midi_out[MIDI_OUT][4];          /* [0] = length */
 static atomic_uint_fast64_t mo_head, mo_tail;  /* Python writes, the core sends */
@@ -516,9 +528,37 @@ static int process(jack_nframes_t n, void *arg) {
         if (J.midi_event_get(&ev, cin, i) || ev.size < 1 || ev.size > 3) continue;
         uint64_t h = atomic_load(&mi_head);
         if (h - atomic_load(&mi_tail) >= MIDI_IN) break;          /* Python isn't reading: drop */
+        uint8_t played = 0;
+        if (ev.size == 3) {
+            uint8_t st = ev.buffer[0] & 0xF0, d1 = ev.buffer[1], d2 = ev.buffer[2];
+            if (st == 0xB0 && d1 == 49) fast_shift = d2 > 0;
+            else if (st == 0x90 && d2 > 0 && d1 >= FAST_PAD_FIRST && d1 < FAST_PAD_FIRST + 32 && !fast_shift
+                     && atomic_load(&fast_ok)) {
+                int p = d1 - FAST_PAD_FIRST;
+                if (p % 8 < 4) {                                 /* the left 4 x 4: the drums, bottom left first */
+                    FastPad *f = &fast_pad[(p / 8) * 4 + p % 8];
+                    int kind = atomic_load(&f->on) ? f->kind : 0;
+                    uint64_t at = t0 + ev.time;
+                    int v = fast_vel[d2 & 127] ? fast_vel[d2 & 127] : d2;
+                    if (kind && waiting_n + 2 <= EVENTS) {
+                        Event e1 = { at, kind == 1 ? EV_TRIGGER : EV_MIDI, f->src, 0, 0, 0, NULL };
+                        if (kind == 1) { e1.a = f->a; e1.b = v; }
+                        else { e1.a = 0x90; e1.b = f->a; e1.c = v; }
+                        waiting[waiting_n] = e1; waiting_order[waiting_n] = next_order++; waiting_n++;
+                        if (kind == 2) {
+                            Event e2 = { at + FAST_NOTE_LEN, EV_MIDI, f->src, 0x80, f->a, 0, NULL };
+                            waiting[waiting_n] = e2; waiting_order[waiting_n] = next_order++; waiting_n++;
+                        }
+                        played = 1;
+                        atomic_fetch_add(&fast_played, 1);
+                    }
+                }
+            }
+        }
         midi_in[h % MIDI_IN].frame = t0 + ev.time;
         memset(midi_in[h % MIDI_IN].b, 0, 4);
         memcpy(midi_in[h % MIDI_IN].b, ev.buffer, ev.size);
+        midi_in[h % MIDI_IN].b[3] = played;                       /* 1: the core has played this pad already */
         atomic_store(&mi_head, h + 1);
     }
 
@@ -809,6 +849,17 @@ int core_read_midi(uint8_t *out, int max) {
     }
     return k;
 }
+
+/* what the drum pads play (lane 0-15 = pad bottom left first): kind 0 off, 1 engine trigger of voice a, 2 module note a */
+void core_fastpad_set(int lane, int kind, int src, int a) {
+    if (lane < 0 || lane >= 16) return;
+    atomic_store(&fast_pad[lane].on, 0);
+    fast_pad[lane].kind = kind; fast_pad[lane].src = src; fast_pad[lane].a = a;
+    if (kind) atomic_store(&fast_pad[lane].on, 1);
+}
+void core_fastpad_vel(const uint8_t *map128) { memcpy(fast_vel, map128, 128); }
+void core_fastpad_enable(int on) { atomic_store(&fast_ok, on); }
+unsigned core_fastpad_played(void) { return atomic_load(&fast_played); }
 
 int core_send_midi(const uint8_t *m, int len) {
     if (len < 1 || len > 3) return -1;

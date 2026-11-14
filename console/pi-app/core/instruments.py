@@ -104,6 +104,19 @@ class Slot:
     def sources(self):
         return {self.seq, self.live}
 
+    def fast_spec(self, lane):
+        """What drum pad `lane` plays by itself in the core (kind, source, voice or note), as flush() would: None if it plays nothing."""
+        m = self.m
+        if lane >= getattr(m, "lanes", 0):
+            return None
+        if self.kind == "lxr":
+            return (1, self.live, lane)
+        if self.kind == "engine":
+            return (1, self.live, m.lane_voice[lane])
+        if self.kind == "module" and sw_modules:
+            return (2, self.live, sw_modules.FIRST_PAD + lane)
+        return None
+
     def lanes(self, voices):
         """{voice: DRUM n channel (0-7)}: how the machine's drums land on their own recording inputs."""
         m = self.m

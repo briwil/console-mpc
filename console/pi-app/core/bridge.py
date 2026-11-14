@@ -30,6 +30,7 @@ import core as K                              # noqa: E402
 from core import Core                         # noqa: E402
 
 TICK = 0.004                                  # seconds between looks at the engine
+FAST_OFF = os.path.join(os.environ.get("CONSOLE_HOME", "/data/UserData/console"), "nofastpad")   # this file: the pads go through Python as before
 SLOW_EVERY = 10                               # boxes and track settings: every 10th tick (40 ms)
 
 
@@ -44,6 +45,7 @@ class CoreBridge:
         self._was_recording = False
         self._pos_sent = None                 # the pos we last copied into the engine (to see if the app moved it)
         self._tape_ids = None
+        self._fast_sig = None
         self._boxes = {}                      # channel -> what we last sent
         self._tracks = None
         self._arms = None
@@ -122,9 +124,10 @@ class CoreBridge:
     # ------------------------------------------------------------ every tick
     def _step(self):
         e, c = self.e, self.core
-        for _frame, msg in c.read_midi():                  # the controls first: a pad must not wait behind the rest of this step
+        for _frame, msg in c.read_midi(flags=True):        # the controls first: a pad must not wait behind the rest of this step
             e.pad_read_t = time.monotonic()
             e.move_midi.put(msg)
+        self._fast_pads()
         self._tick += 1
         slow = self._tick % SLOW_EVERY == 0
         self._sync_tape_memory()
@@ -164,6 +167,35 @@ class CoreBridge:
         self._punch_live()
         self._take_recorded()
         self._read_back()
+
+    # ---- drum pads the core plays by itself (core.c, "fast pads"): the app says when that is right (e.fast_ctx)
+    def _fast_pads(self):
+        e, c = self.e, self.core
+        ctx = getattr(e, "fast_ctx", None)
+        have = self.slots.get(ctx[0]) if ctx else None
+        sig = (ctx, id(have[1]) if have else None)
+        if sig == self._fast_sig:
+            return
+        self._fast_sig = sig
+        if not c.has_fastpad or os.path.exists(FAST_OFF):
+            c.fastpad_on(False)
+            return
+        if not ctx or not have or have[0] != ctx[1]:
+            c.fastpad_on(False)
+            return
+        slot = have[1]
+        try:
+            for lane in range(16):
+                spec = slot.fast_spec(lane)
+                if spec:
+                    c.fastpad(lane, *spec)
+                else:
+                    c.fastpad(lane, 0)
+            c.fastpad_vel(ctx[2])
+            c.fastpad_on(True)
+        except Exception as ex:                            # noqa: BLE001
+            print("fast pads:", ex)
+            c.fastpad_on(False)
 
     # ---- the tape's memory, and each track
     def _sync_tape_memory(self):

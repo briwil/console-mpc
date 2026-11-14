@@ -78,6 +78,10 @@ static int fake_process(uint32_t n, void *arg)
 
 static void send(const unsigned char *b, int n) { inject(b, n); usleep(30000); }
 
+static volatile int fast_n, fast_voice, fast_vel_got;
+static void fast_render(float *out, int n) { memset(out, 0, sizeof(float) * 8 * n); }
+static void fast_trigger(int voice, int vel) { fast_voice = voice; fast_vel_got = vel; fast_n++; }
+
 static int expect(int idx, int a, int b, int c)
 {
     return idx < ngot && got[idx][0] == a && got[idx][1] == b && got[idx][2] == c;
@@ -522,6 +526,55 @@ int main(int argc, char **argv)
     CHECK(r == 0, "B: the real core_open() succeeds on the shim");
     usleep(500000);
     CHECK(*frames - f0 > 3000, "B: the real core runs on the shim (audio frames flowing)");
+    {   /* C: fast pads: the core plays a plain drum pad itself, at the frame it came in, and says so to Python */
+        int (*add_engine)(void *, void *, int) = dlsym(core, "core_add_engine");
+        void (*src_on)(int, int) = dlsym(core, "core_source_on");
+        void (*fp_set)(int, int, int, int) = dlsym(core, "core_fastpad_set");
+        void (*fp_vel)(const unsigned char *) = dlsym(core, "core_fastpad_vel");
+        void (*fp_enable)(int) = dlsym(core, "core_fastpad_enable");
+        unsigned (*fp_played)(void) = dlsym(core, "core_fastpad_played");
+        int (*read_midi)(unsigned char *, int) = dlsym(core, "core_read_midi");
+        CHECK(add_engine && fp_set && fp_vel && fp_enable && fp_played && read_midi && src_on, "C: the core has the fast pad calls");
+        if (add_engine && fp_set && fp_vel && fp_enable && fp_played && read_midi && src_on) {
+            static void (*dummy)(float *, int);
+            (void)dummy;
+            int src = add_engine((void *)fast_render, (void *)fast_trigger, 8);
+            src_on(src, 1);
+            unsigned char map[128];
+            for (int i = 0; i < 128; i++) map[i] = (unsigned char)i;
+            map[90] = 45;                                              /* the velocity curve: 90 plays as 45 */
+            fp_vel(map);
+            fp_set(0, 1, src, 5);                                      /* pad 1 plays voice 5 */
+            unsigned char buf[12 * 256];
+            while (read_midi(buf, 256) == 256) { }
+            fast_n = 0;
+            send((unsigned char[]){ 0x99, 37, 90 }, 3);                /* off: the core leaves it alone */
+            send((unsigned char[]){ 0x89, 37, 0 }, 3);
+            CHECK(fast_n == 0 && fp_played() == 0, "C: not enabled: the core plays nothing");
+            while (read_midi(buf, 256) == 256) { }
+            fp_enable(1);
+            send((unsigned char[]){ 0x99, 37, 90 }, 3);                /* pad 1 down */
+            CHECK(fast_n == 1 && fast_voice == 5 && fast_vel_got == 45, "C: pad 1 plays voice 5 at the curved velocity");
+            send((unsigned char[]){ 0x89, 37, 0 }, 3);
+            CHECK(fast_n == 1, "C: the release plays nothing");
+            int k = read_midi(buf, 256), flagged = -1;
+            for (int i = 0; i < k; i++)
+                if (buf[12 * i + 8] == 0x9F && buf[12 * i + 9] == 68) flagged = buf[12 * i + 11];
+            CHECK(flagged == 1, "C: Python is told the pad was played (4th byte 1)");
+            send((unsigned char[]){ 0x99, 42, 90 }, 3);                /* pad 3: nothing set */
+            send((unsigned char[]){ 0x89, 42, 0 }, 3);
+            CHECK(fast_n == 1, "C: a pad with nothing set plays nothing");
+            send((unsigned char[]){ 0x90, 0x31, 127 }, 3);             /* Shift down: a Shift + pad is not a drum */
+            send((unsigned char[]){ 0x99, 37, 90 }, 3);
+            send((unsigned char[]){ 0x89, 37, 0 }, 3);
+            send((unsigned char[]){ 0x80, 0x31, 0 }, 3);
+            CHECK(fast_n == 1, "C: Shift + pad plays nothing");
+            fp_enable(0);
+            send((unsigned char[]){ 0x99, 37, 90 }, 3);
+            send((unsigned char[]){ 0x89, 37, 0 }, 3);
+            CHECK(fast_n == 1, "C: switched off again: plays nothing");
+        }
+    }
     if (core_close) core_close();
     printf("%s (%d failures)\n", failures ? "FAILED" : "ALL PASSED", failures);
     return failures != 0;

@@ -64,6 +64,15 @@ class Core:
             self.has_punch = True
         except AttributeError:
             self.has_punch = False
+        self.has_fastpad = False
+        try:                                   # (newer cores: drum pads played by the core itself)
+            lib.core_fastpad_set.argtypes, lib.core_fastpad_set.restype = [i32, i32, i32, i32], None
+            lib.core_fastpad_vel.argtypes, lib.core_fastpad_vel.restype = [C.c_char_p], None
+            lib.core_fastpad_enable.argtypes, lib.core_fastpad_enable.restype = [i32], None
+            lib.core_fastpad_played.argtypes, lib.core_fastpad_played.restype = [], C.c_uint
+            self.has_fastpad = True
+        except AttributeError:
+            pass
         try:                                   # (newer cores: an insert's wet/dry per instrument)
             lib.core_slot_insert_mix.argtypes, lib.core_slot_insert_mix.restype = [i32, i32, f32], None
         except AttributeError:
@@ -181,6 +190,19 @@ class Core:
                 self._keep = [k for k in self._keep if k[0] >= now]
             return True
 
+    def fastpad(self, lane, kind, src=0, a=0):
+        """What drum pad `lane` (0-15, bottom left first) plays by itself: kind 0 nothing, 1 an engine's voice a, 2 a module's note a."""
+        if self.has_fastpad:
+            self.lib.core_fastpad_set(lane, kind, src, a)
+
+    def fastpad_vel(self, table):
+        if self.has_fastpad:
+            self.lib.core_fastpad_vel(bytes(int(v) & 127 for v in table))
+
+    def fastpad_on(self, on):
+        if self.has_fastpad:
+            self.lib.core_fastpad_enable(1 if on else 0)
+
     def trigger(self, s, voice, velocity, at=0):
         return self._push(at, EV_TRIGGER, s, voice, velocity)
 
@@ -202,15 +224,16 @@ class Core:
         return self._push(at, EV_CALL, -1, vals[0], vals[1], vals[2], addr(fn), keep or None)
 
     # ---- the Move's controls, lights and screen
-    def read_midi(self):
-        """[(frame, bytes)] for every control message since the last call."""
+    def read_midi(self, flags=False):
+        """[(frame, bytes)] for every control message since the last call. With flags, each message has a fourth byte:
+        1 = the core played that pad's drum itself (fast pads)."""
         out = []
         while True:
             k = self.lib.core_read_midi(self._midibuf, 256)
             raw = self._midibuf.raw
             for i in range(k):
                 rec = raw[12 * i:12 * i + 12]
-                out.append((int.from_bytes(rec[:8], "little"), rec[8:11]))
+                out.append((int.from_bytes(rec[:8], "little"), rec[8:12] if flags else rec[8:11]))
             if k < 256:
                 return out
 

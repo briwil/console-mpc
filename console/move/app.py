@@ -133,6 +133,7 @@ class MoveBoard:
 
     def __call__(self, msg):
         kind, num, val = msg[0] & 0xF0, msg[1], msg[2]
+        self.core_played = len(msg) > 3 and bool(msg[3])        # the sound core has played this pad's drum already
         if kind == 0x80:
             kind, val = 0x90, 0
         if kind == 0xB0:
@@ -301,7 +302,8 @@ class MoveBoard:
                 if T.live_rec and e.playing and (T.seq_page or T.drum_page):
                     e.seq.live_place(lane, e._heard_frame(), e.frames_per_beat())
                     e.seq_changed()
-                e.hit(lane, vel)
+                if not getattr(self, "core_played", False):
+                    e.hit(lane, vel)                           # (the core plays it itself when it can: fast pads)
                 if lane == 0:                                  # the kick triggers a Ducker on the other instruments
                     for j, ins in list((getattr(e, "insert_fx", None) or {}).items()):
                         if j[0] != e.slot and ins.h and ins.name() == "DUCKER":   # (only it listens: others crashed)
@@ -336,6 +338,39 @@ class MoveBoard:
                     e.seq.step(lane, i).locks.update(locks)
                 e.seq_changed()
             e._auditions.append((0, lane, vel, locks))
+
+
+_fast = {"key": None, "vel": None, "ctx": None}
+
+
+def fast_context(T, m, e):
+    """When the sound core may play the drum pads itself (core.c): (slot, machine id, velocity table), else None. Only the plain
+    case: a drum machine on its sound or sequencer page, no menu, no punch FX, no steps being set. Everything else goes through
+    pad() as before. (Shift is watched by the core.)"""
+    try:
+        if e is None or e.slot is None or not e.drums or os.path.exists(os.path.join(os.path.dirname(stress.FLAG), "nofastpad")):
+            return None
+        mid = e.slots[e.slot]
+        if not mid or e.is_synth(mid) or getattr(e.drums.get(mid), "live_input", False):
+            return None
+        if m.open or m.kits.open or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active or T.fxpick.active:
+            return None
+        if not (T.drum_page or T.seq_page) or T.punch.active() or T.mlfo.active():
+            return None
+        if T.mseq.active() and T.mseq.held is not None:
+            return None
+        key = (getattr(T, "pad_vel", 0), getattr(T, "pad_curve", 1))
+        if _fast["key"] != key:
+            _fast["key"] = key
+            _fast["vel"] = tuple(pad_velocity(T, v) for v in range(128))
+        ctx = (e.slot, mid, _fast["vel"])
+        old = _fast["ctx"]
+        if old is not None and old[0] == ctx[0] and old[1] == ctx[1] and old[2] is ctx[2]:
+            return old                                         # (the same object: the core's bridge sees no change)
+        _fast["ctx"] = ctx
+        return ctx
+    except Exception:                                          # noqa: BLE001
+        return None
 
 
 def pattern_seq(T):
@@ -721,7 +756,13 @@ def main():
                         1000 * perf["sum"] / perf["n"], 1000 * perf["max"], 1000 * perf["dsum"] / max(1, perf["dn"]), 1000 * perf["dmax"],
                         perf["dn"], _t - perf["rep"]), flush=True)
                 if PROF.get("pn"):
-                    print("perf: pad wait up to %d ms (%d pads in %.0f s)" % (1000 * PROF["pw"], PROF["pn"], _t - perf["rep"]), flush=True)
+                    try:
+                        _fc = e.bridge.core
+                        _fp = _fc.lib.core_fastpad_played() if _fc.has_fastpad else -1
+                    except Exception:                         # noqa: BLE001
+                        _fp = -1
+                    print("perf: pad wait up to %d ms (%d pads in %.0f s; played by the core itself, in all: %d)" % (
+                        1000 * PROF["pw"], PROF["pn"], _t - perf["rep"], _fp), flush=True)
                     PROF["pw"], PROF["pn"] = 0.0, 0
                 perf.update(max=0.0, sum=0.0, n=0, dmax=0.0, dsum=0.0, dn=0, rep=_t)
             while True:
@@ -763,6 +804,7 @@ def main():
                 frame.centre(64, 28, "SAVING...")
                 core.display(frame.bytes())
                 break
+            e.fast_ctx = fast_context(T, m, e)               # (the core plays the plain drum pads itself)
             now = time.monotonic()
             T.song.tick()
             T.tick(now - last)
