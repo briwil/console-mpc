@@ -60,8 +60,14 @@ struct AEffect {
 };
 #define VST_MAGIC 0x56737450
 #define FLAG_REPLACING 16
-enum { eOpen = 0, eClose = 1, eSetProgram = 2, eGetProgram = 3, eSetRate = 10, eSetBlock = 11, eMains = 12,
-       eProgramNameIndexed = 29 };
+enum { eOpen = 0, eClose = 1, eSetProgram = 2, eGetProgram = 3, eGetParamName = 8, eSetRate = 10, eSetBlock = 11, eMains = 12,
+       eProcessEvents = 25, eProgramNameIndexed = 29, eStartProcess = 71 };
+#define FLAG_SYNTH 256                   /* effFlagsIsSynth */
+
+/* the MIDI an instrument plugin is played with (VstEvents of VstMidiEvent), as the format lays them out */
+typedef struct { int32_t type, byteSize, deltaFrames, flags, noteLength, noteOffset; char midi[4]; char detune, noteOffVel, r1, r2; } VstMidi;
+#define MAXEV 64
+typedef struct { int32_t numEvents; intptr_t reserved; VstMidi *events[MAXEV]; } VstEvents;
 enum { mVersion = 1, mRate = 16, mBlock = 17, mLevel = 23, mVendor = 32, mProduct = 33, mVendorVer = 34 };
 
 typedef AEffect *(*Entry)(Master);
@@ -78,7 +84,7 @@ typedef struct {
 } fx_api_t;
 
 #define BLOCK 128
-#define MAXK 7
+#define MAXK 48
 #define MAXP 128
 
 typedef struct {
@@ -86,12 +92,18 @@ typedef struct {
     AEffect *e;
     int nk, kidx[MAXK];
     char klabel[MAXK][16];
+    int synth;                           /* an INSTRUMENT plugin (plugin.txt: instrument 1, or the plugin says it is a synth): played with MIDI */
+    int nev;                             /* the notes waiting for the next block (on_midi: same thread as render_block) */
+    VstMidi mev[MAXEV];
+    float zero[BLOCK];                   /* its (silent) input, for plugins that insist on one */
     int npre;                            /* presets the plugin lists */
     int prog;                            /* the preset last chosen (set_param) */
     volatile int changed;                /* a preset was chosen (set_param) and has not sounded yet (a log line says how long it took) */
     int pfirst, pcount;                  /* the presets offered: pcount from pfirst (plugin.txt: presets FIRST COUNT); 0 = all */
     float lin[BLOCK], rin[BLOCK], lout[BLOCK], rout[BLOCK];
+    char file[128];                      /* the plugin file named in plugin.txt (for the "not there" message) */
 } inst_t;
+static char missing[128];                /* the plugin file the last failed create() was looking for */
 
 static intptr_t master(AEffect *e, int32_t op, int32_t idx, intptr_t val, void *ptr, float opt)
 {
@@ -157,18 +169,21 @@ static void *create(const char *dir, const char *cfg)
         *eol = 0;
         if (!strncmp(p, "file ", 5)) snprintf(file, sizeof file, "%s", p + 5);
         else if (!strncmp(p, "presets ", 8)) { char *e2; s->pfirst = (int)strtod(p + 8, &e2); s->pcount = (int)strtod(e2, NULL); }
+        else if (!strncmp(p, "instrument ", 11)) s->synth = (int)strtod(p + 11, NULL) != 0;
         else if (!strncmp(p, "knob ", 5) && s->nk < MAXK) {
             char *end;
             int idx = (int)strtod(p + 5, &end);
             while (*end == ' ') end++;
             s->kidx[s->nk] = idx;
-            snprintf(s->klabel[s->nk], sizeof s->klabel[0], "%s", end);
+            snprintf(s->klabel[s->nk], sizeof s->klabel[0], "%s", end);        /* (no label: the plugin's own name for it, below) */
             s->nk++;
         }
         *eol = save;
         p = save ? eol + 1 : eol;
     }
     if (!file[0]) { free(s); return NULL; }
+    snprintf(s->file, sizeof s->file, "%s", file);
+    snprintf(missing, sizeof missing, "%s", file);
     const char *pd = getenv("CONSOLE_PLUGINS");
     s->dl = NULL;
     if (pd && pd[0]) {
@@ -183,8 +198,9 @@ static void *create(const char *dir, const char *cfg)
     Entry entry = (Entry)dlsym(s->dl, "VSTPluginMain");
     if (!entry) entry = (Entry)dlsym(s->dl, "main");
     AEffect *e = entry ? entry(master) : NULL;
+    if (e && (e->flags & FLAG_SYNTH)) s->synth = 1;
     if (!e || e->magic != VST_MAGIC || !e->dispatcher || !(e->flags & FLAG_REPLACING) || !e->processReplacing
-        || e->numInputs < 1 || e->numOutputs < 1) {
+        || (!s->synth && e->numInputs < 1) || e->numOutputs < 1) {
         dlclose(s->dl); free(s); return NULL;
     }
     s->e = e;
@@ -192,6 +208,7 @@ static void *create(const char *dir, const char *cfg)
     e->dispatcher(e, eSetRate, 0, 0, NULL, 44100.0f);
     e->dispatcher(e, eSetBlock, 0, BLOCK, NULL, 0);
     e->dispatcher(e, eMains, 0, 1, NULL, 0);
+    if (s->synth) e->dispatcher(e, eStartProcess, 0, 0, NULL, 0);
     s->npre = e->numPrograms;
     if (s->pfirst < 0 || s->pfirst >= s->npre) s->pfirst = 0;
     if (s->pcount <= 0 || s->pfirst + s->pcount > s->npre) s->pcount = s->npre - s->pfirst;
@@ -205,8 +222,22 @@ static void *create(const char *dir, const char *cfg)
         write(2, m, (unsigned long)n);
     }
      /* the first preset is loaded (a plugin that starts with an empty chain is silent) */
-    for (int k = 0; k < s->nk; k++)
-        if (s->kidx[k] < 0 || s->kidx[k] >= e->numParams) s->kidx[k] = -1;
+    for (int k = 0; k < s->nk; k++) {
+        if (s->kidx[k] < 0 || s->kidx[k] >= e->numParams) { s->kidx[k] = -1; continue; }
+        if (!s->klabel[k][0]) {                                  /* the plugin's own name for the parameter */
+            char nm[64];
+            memset(nm, 0, sizeof nm);
+            e->dispatcher(e, eGetParamName, s->kidx[k], 0, nm, 0);
+            int j = 0;
+            for (int c = 0; nm[c] && j < 14; c++) {
+                char ch = nm[c];
+                if (ch >= 'a' && ch <= 'z') ch = (char)(ch - 32);
+                if (ch != '"' && ch != '\\' && (unsigned char)ch >= 32) s->klabel[k][j++] = ch;
+            }
+            s->klabel[k][j] = 0;
+            if (!j) snprintf(s->klabel[k], sizeof s->klabel[0], "PARAM %d", s->kidx[k]);
+        }
+    }
     return s;
 }
 
@@ -274,9 +305,9 @@ static void set_param(void *h, const char *key, const char *val)
         }
         return;
     }
-    if (key[0] == 'k' && key[1] >= '1' && key[1] <= '7' && !key[2]) {
-        int k = key[1] - '1';
-        if (k < s->nk && s->kidx[k] >= 0) {
+    if (key[0] == 'k' && key[1] >= '0' && key[1] <= '9') {
+        int k = (int)strtod(key + 1, NULL) - 1;
+        if (k >= 0 && k < s->nk && s->kidx[k] >= 0) {
             float v = (float)strtod(val, NULL);
             if (v < 0) v = 0;
             if (v > 1) v = 1;
@@ -288,6 +319,19 @@ static void set_param(void *h, const char *key, const char *val)
 static int get_param(void *h, const char *key, char *buf, int len)
 {
     inst_t *s = h;
+    if (key[0] == 'k' && key[1] >= '0' && key[1] <= '9') {              /* a knob's value now */
+        int k = (int)strtod(key + 1, NULL) - 1;
+        if (k < 0 || k >= s->nk || s->kidx[k] < 0) return -1;
+        float d = s->e->getParameter(s->e, s->kidx[k]);
+        return snprintf(buf, (size_t)len, "%d.%03d", (int)d, (int)((d - (int)d) * 1000));
+    }
+    if (!strcmp(key, "preset")) {                                          /* the preset now, by name */
+        char nm[40];
+        int cur = (int)s->e->dispatcher(s->e, eGetProgram, 0, 0, NULL, 0);
+        if (cur < s->pfirst || cur >= s->pfirst + s->pcount) cur = s->prog;
+        preset_name(s, cur, nm);
+        return snprintf(buf, (size_t)len, "%s", nm);
+    }
     if (strcmp(key, "chain_params")) return -1;
     int n = snprintf(buf, (size_t)len, "[{\"key\":\"preset\",\"name\":\"PRESET\",\"type\":\"enum\",\"default\":0,\"options\":[");
     int cur = (int)s->e->dispatcher(s->e, eGetProgram, 0, 0, NULL, 0);
@@ -297,7 +341,7 @@ static int get_param(void *h, const char *key, char *buf, int len)
         n += snprintf(buf + n, (size_t)(len - n), "%s\"%s\"", i > s->pfirst ? "," : "", nm);
     }
     n += snprintf(buf + n, (size_t)(len - n), "]}");
-    for (int k = 0; k < s->nk && n < len - 120; k++) {
+    for (int k = 0; k < s->nk && n < len - 150; k++) {
         if (s->kidx[k] < 0) continue;
         float d = s->e->getParameter(s->e, s->kidx[k]);
         n += snprintf(buf + n, (size_t)(len - n),
@@ -328,8 +372,45 @@ typedef struct {
     void (*render_block)(void *, int16_t *, int);
 } inst_api_t;
 
+/* an instrument plugin: MIDI in (on_midi, the core's thread), sound out (render_block); no audio input */
+static void synth_midi(void *h, const uint8_t *m, int len, int source)
+{
+    (void)source;
+    inst_t *s = h;
+    if (!s || !s->synth || len < 1 || len > 3 || s->nev >= MAXEV) return;
+    VstMidi *v = &s->mev[s->nev++];
+    memset(v, 0, sizeof *v);
+    v->type = 1; v->byteSize = (int32_t)sizeof(VstMidi);
+    for (int i = 0; i < len; i++) v->midi[i] = (char)m[i];
+}
+
+static void synth_block(inst_t *s, int16_t *out, int frames)
+{
+    AEffect *e = s->e;
+    if (s->nev) {
+        VstEvents evs;
+        memset(&evs, 0, sizeof evs);
+        evs.numEvents = s->nev;
+        for (int i = 0; i < s->nev; i++) evs.events[i] = &s->mev[i];
+        e->dispatcher(e, eProcessEvents, 0, 0, &evs, 0);
+        s->nev = 0;
+    }
+    float *in[2] = { s->zero, s->zero }, *o[2] = { s->lout, s->rout };
+    memset(s->lout, 0, sizeof s->lout);
+    memset(s->rout, 0, sizeof s->rout);
+    e->processReplacing(e, in, o, frames);
+    for (int i = 0; i < frames; i++) {
+        out[2 * i] = clip(s->lout[i]);
+        out[2 * i + 1] = clip(e->numOutputs > 1 ? s->rout[i] : s->lout[i]);
+    }
+}
+
 static void render_block(void *h, int16_t *out, int frames)
 {
+    if (h && ((inst_t *)h)->synth) {
+        if (frames <= BLOCK) synth_block(h, out, frames);
+        return;
+    }
     if (!the_host || !the_host->mapped_memory || frames > BLOCK) return;
     memcpy(out, the_host->mapped_memory + the_host->audio_in_offset, (size_t)frames * 4);
     {   /* A rig built by the plugin's loader thread is put in play by its next parameter call (adopt): ask for a value now and then, */
@@ -375,11 +456,15 @@ static void render_block(void *h, int16_t *out, int frames)
 static int get_error(void *h, char *buf, int len)
 {
     if (h) { if (len > 0) buf[0] = 0; return 0; }          /* a running instance has no error */
-    snprintf(buf, (size_t)len, "STOMPBOX IS NOT THERE: PUT stompbox.so IN ConsoleData/plugins");
+    char nm[128];
+    int j = 0;
+    for (int c = 0; missing[c] && j < 100; c++) nm[j++] = (char)(missing[c] >= 'a' && missing[c] <= 'z' ? missing[c] - 32 : missing[c]);
+    nm[j] = 0;
+    snprintf(buf, (size_t)len, "%s IS NOT THERE: PUT %s IN ConsoleData/plugins", j ? nm : "THE PLUGIN", j ? nm : "IT");
     return 1;
 }
 
-static const inst_api_t inst_api = { 2, create, destroy, NULL, set_param, get_param, get_error, render_block };
+static const inst_api_t inst_api = { 2, create, destroy, synth_midi, set_param, get_param, get_error, render_block };
 
 __attribute__((visibility("default"))) const inst_api_t *move_plugin_init_v2(const host_t *host)
 {

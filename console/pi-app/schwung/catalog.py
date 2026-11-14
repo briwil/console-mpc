@@ -395,7 +395,22 @@ def _add_guitar():
     BY_ID["guitar"] = MODULES[-1]
 
 
+def _add_plugin_synth(mid, title, plugin_file):
+    """A VST2 instrument plug-in (put its .so in ConsoleData/plugins) played through vst2fx.so as a synth."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    plugins = os.environ.get("CONSOLE_PLUGINS", "")
+    folder = os.path.join(here, "modules", mid)
+    if not (plugins and os.path.exists(os.path.join(plugins, plugin_file)) and os.path.exists(os.path.join(folder, "dsp.so"))):
+        return
+    if mid in BY_ID:
+        return
+    MODULES.append({"id": mid, "title": title, "kind": "synth", "license": "see its repo", "repo": "", "commit": "installed",
+                    "json": "module.json", "build": [], "prebuilt": True, "one_copy": True, "hide_on_pages": ["preset"]})
+    BY_ID[mid] = MODULES[-1]
+
+
 _add_guitar()
+_add_plugin_synth("model72", "MODEL-72", "model72.so")
 
 
 def recipe_version(m):

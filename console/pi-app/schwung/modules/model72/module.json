@@ -1,0 +1,7 @@
+{
+  "id": "model72",
+  "name": "Model-72",
+  "description": "A Minimoog-style synth (Model-72 VST plug-in by sd88me)",
+  "dsp": "dsp.so",
+  "component_type": "sound_generator"
+}

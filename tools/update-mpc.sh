@@ -70,7 +70,7 @@ COPYFILE_DISABLE=1 tar --format ustar -cf - -C "$T/pack" console | mpc "cd $DEST
 [ "$LIBS" = 1 ] && cat "$T/libs.tgz" | mpc "cd $DEST/console/pi-app && tar xzf -"
 cat "$T/bridge.tgz" | mpc "cd $DEST/console && tar xzf -"
 mpc "[ -f $DEST/console/mpc/libconsolecore.so ] && cp $DEST/console/mpc/libconsolecore.so $DEST/console/pi-app/core/libconsolecore.so && cp $DEST/console/mpc/libschwunghost.so $DEST/console/pi-app/schwung/libschwunghost.so || true"     # (our sound core and module host)
-mpc "[ -f $DEST/console/mpc/vst2fx.so ] && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/stompbox/vst2fx.so && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/guitar/dsp.so || true"     # (the VST2 effect host for STOMPBOX)
+mpc "[ -f $DEST/console/mpc/vst2fx.so ] && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/stompbox/vst2fx.so && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/guitar/dsp.so && mkdir -p $DEST/console/pi-app/schwung/modules/model72 && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/model72/dsp.so || true"     # (the VST2 effect host for STOMPBOX)
 [ "$PY" = 1 ] && cat "$T/python.tgz" | mpc "cd $DEST/console && rm -rf python && tar xzf -"
 mpc "sync"
 if [ "${NOSTART:-0}" = 1 ]; then

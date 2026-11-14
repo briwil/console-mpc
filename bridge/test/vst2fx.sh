@@ -14,3 +14,7 @@ HOST=$HERE/../../console/pi-app/schwung/host.c
 gcc -O1 -g -fPIC -shared -I"$HERE/../../console/pi-app/schwung" "$HOST" -o "$OUT/libschwunghost.so" -ldl -lpthread
 gcc -O1 -g "$HERE/guitar_test.c" -o "$OUT/guitar_test" -ldl
 "$OUT/guitar_test" "$OUT/libschwunghost.so" "$OUT/plugins" "$OUT/module2" "$OUT"
+# an INSTRUMENT plugin (the Model-72 kind): MIDI in, sound out
+gcc -O1 -g -fPIC -shared "$HERE/fakesynth.c" -o "$OUT/plugins/fakesynth.so"
+gcc -O1 -g "$HERE/synth_test.c" -o "$OUT/synth_test" -ldl
+"$OUT/synth_test" "$OUT/vst2fx.so" "$OUT/plugins" "$OUT/module3"
