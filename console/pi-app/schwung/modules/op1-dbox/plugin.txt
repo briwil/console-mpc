@@ -1,0 +1,15 @@
+file dbox.so
+instrument 1
+knob 3
+knob 2
+knob 1
+knob 0
+knob 7
+knob 6
+knob 5
+knob 4
+knob 11
+knob 10
+knob 9
+knob 8
+knob 12

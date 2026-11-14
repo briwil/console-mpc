@@ -1,0 +1,12 @@
+file pulse.so
+instrument 1
+knob 3
+knob 7
+knob 2
+knob 6
+knob 1
+knob 5
+knob 0
+knob 4
+knob 9
+knob 8

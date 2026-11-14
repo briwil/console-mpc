@@ -1,0 +1,7 @@
+{
+  "id": "op1-cluster",
+  "name": "CLUSTER",
+  "description": "OP-1 inspired instrument by Bombest Audio (VST2 plug-in, GPL-3.0)",
+  "dsp": "dsp.so",
+  "component_type": "sound_generator"
+}

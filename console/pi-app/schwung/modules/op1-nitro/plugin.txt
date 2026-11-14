@@ -1,0 +1,6 @@
+file nitro.so
+knob 3
+knob 2
+knob 1
+knob 0
+knob 5

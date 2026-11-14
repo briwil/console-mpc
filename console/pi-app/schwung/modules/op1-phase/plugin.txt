@@ -1,0 +1,11 @@
+file phase.so
+instrument 1
+knob 3
+knob 2
+knob 1
+knob 0
+knob 7
+knob 6
+knob 5
+knob 4
+knob 8

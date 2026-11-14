@@ -377,7 +377,9 @@ def _add_plugin_fx():
         add_record(mid, {"kind": "fx", "title": title, "dsp": "vst2fx.so", "description": "A VST2 plugin (%s)" % plugin})
 
 
-PLUGIN_FX = [("stompbox", "STOMPBOX", "stompbox.so")]       # (module folder, title, the plugin's file)
+OP1_FX = ["cwo", "delay", "grid", "nitro", "phone", "punch", "spring"]                  # OP-1 Suite (Bombest Audio, GPL-3.0) effects
+OP1_SYNTHS = ["cluster", "dbox", "digital", "dna", "drwave", "dsynth", "fm", "phase", "pulse", "string", "voltage"]
+PLUGIN_FX = [("stompbox", "STOMPBOX", "stompbox.so")] + [("op1-" + n, n.upper(), n + ".so") for n in OP1_FX]       # (module folder, title, the plugin's file)
 _add_plugin_fx()
 
 
@@ -411,6 +413,8 @@ def _add_plugin_synth(mid, title, plugin_file):
 
 _add_guitar()
 _add_plugin_synth("model72", "MODEL-72", "model72.so")
+for _n in OP1_SYNTHS:
+    _add_plugin_synth("op1-" + _n, _n.upper(), _n + ".so")
 
 
 def recipe_version(m):

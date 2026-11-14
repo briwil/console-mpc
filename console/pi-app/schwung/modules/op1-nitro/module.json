@@ -1,0 +1,7 @@
+{
+  "id": "op1-nitro",
+  "name": "NITRO",
+  "description": "OP-1 inspired effect by Bombest Audio (VST2 plug-in, GPL-3.0)",
+  "dsp": "vst2fx.so",
+  "component_type": "audio_fx"
+}
