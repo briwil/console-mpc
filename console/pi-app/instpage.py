@@ -40,6 +40,18 @@ def machines():
     return drums.available_machines()
 
 
+def _trace(msg):
+    """A line in /data/UserData/console/card.log (its own file, written straight away)."""
+    try:
+        with open("/data/UserData/console/card.log", "a") as fh:
+            fh.write("%s %s\n" % (time.strftime("%H:%M:%S"), msg))
+    except OSError:
+        pass
+
+
+_trace("instpage loaded from " + __file__)
+
+
 class InstPage:
     def __init__(self, transport):
         self.t = transport
@@ -366,7 +378,7 @@ class InstPage:
                         label = "SYNTH" if is_synth(nx) else "DRUMS"
                     if getattr(self, "_dbg", None) != (k, label):
                         self._dbg = (k, label)
-                        import sys; print("instpage: card at %d step %s next %r -> %s" % (k, getattr(self, "last_step", 1), nx, label), file=sys.stderr, flush=True)
+                        _trace("card at %d step %s next %r -> %s" % (k, getattr(self, "last_step", 1), nx, label))
                 pygame.draw.rect(surf, (48, 52, 60) if on else (28, 31, 37), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
                 txt = f(13, 600, "sans").render(label, True, white if on else dim)
                 surf.blit(txt, (640 - txt.get_width() // 2, ry + (row_h - 4 - txt.get_height()) // 2))
