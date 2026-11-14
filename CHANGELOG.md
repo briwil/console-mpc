@@ -5,7 +5,7 @@ To update, drag the new `autorun` and `Console` folders from the zip onto the SD
 
 ## 0.0.6
 
-- **VST2 instruments:** Console hosts VST2 synths as well as effects: MODEL-72, PROFIT-5, JN-106, STURM-TP, MONOMODULE, CLEMENTINE, OXZYGEN, the OP-1 Suite (11 instruments, with 8 Console presets each) and 9W9 as a drum machine. Put each plug-in's `.so` (and its data folders) in `ConsoleData/plugins`; they are not included.
+- **VST2 instruments:** Console hosts VST2 synths as well as effects: MODEL-72, PROFIT-5, JN-106, STURM-TP, MONOMODULE, CLEMENTINE, OXZYGEN, the OP-1 Suite (11 instruments, with 8 Console presets each). Put each plug-in's `.so` (and its data folders) in `ConsoleData/plugins`; they are not included.
 - **More inserts:** the OP-1 effects (with their own presets), VHS VIBES and BORIS.
 - Thumbnails for all of them.
 - Plug-in data folders in `ConsoleData/plugins` are copied to the internal drive on start.

@@ -184,26 +184,6 @@ def clementine(name="CLEMENTINE-XT"):
     return p
 
 
-def w9(name="9W9"):
-    p = Pic()
-    p.rect(2, 2, 125, 61)
-    p.rect(6, 5, 61, 16, fill=True)
-    p.text(9, 7, name, 0)
-    for i in range(6):
-        p.circle(72 + i * 9, 10, 3, fill=(i == 2))
-    for i in range(16):                                      # steps
-        p.rect(6 + i * 7, 21, 10 + i * 7, 25, fill=(i % 4 == 0 or i in (6, 10, 14)))
-    for r in range(2):                                       # pads
-        for c in range(6):
-            p.rect(6 + c * 14, 31 + r * 14, 6 + c * 14 + 10, 31 + r * 14 + 10, fill=((r * 6 + c) in (0, 3, 8)))
-    p.rect(92, 31, 121, 59)
-    p.knob(100, 40, 3, .3)
-    p.knob(113, 40, 3, .7)
-    p.knob(100, 52, 3, .6)
-    p.knob(113, 52, 3, .2)
-    return p
-
-
 def oxzygen(name="OXZYGEN"):
     p = Pic()
     p.rect(2, 2, 125, 61)
@@ -261,7 +241,7 @@ OP1_INSTRUMENTS = {"op1-cluster": "CLUSTER", "op1-dbox": "DBOX", "op1-digital": 
 OP1_FX = {"op1-cwo": "CWO", "op1-delay": "DELAY", "op1-grid": "GRID", "op1-nitro": "NITRO", "op1-phone": "PHONE", "op1-punch": "PUNCH",
           "op1-spring": "SPRING"}
 OTHERS = {"instimg": {"profit5": profit5, "jn106": jn106, "sturm": sturm, "monomodule": monomodule, "clementine": clementine,
-                      "w9": w9, "oxzygen": oxzygen},
+                      "oxzygen": oxzygen},
           "fximg": {"vhs-vibes": vhs, "boris": boris}}
 
 

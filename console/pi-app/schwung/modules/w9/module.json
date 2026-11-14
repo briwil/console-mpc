@@ -1,7 +1,0 @@
-{
-  "id": "w9",
-  "name": "9W9",
-  "description": "A TR-9 style drum machine (9W9 VST plug-in, ported from schwung-9W9 by sd88me, GPL-3.0)",
-  "dsp": "dsp.so",
-  "component_type": "sound_generator"
-}

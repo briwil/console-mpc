@@ -113,6 +113,6 @@ Console is released under the GNU General Public License v3.0 (see [LICENSE](LIC
 
 | Plug-in | Author | License |
 |---|---|---|
-| Model-72, JN-106, Clementine-XT, 9W9, Boris Granular, OP-1 Suite | their authors | GPL-3.0 |
+| Model-72, JN-106, Clementine-XT, Boris Granular, OP-1 Suite | their authors | GPL-3.0 |
 | Monomodule One | its author | AGPL-3.0 |
 | VHS Vibes, Profit-5, Sturm-TP, OxZygen | their authors | MIT |

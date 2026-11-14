@@ -416,7 +416,6 @@ _add_plugin_synth("jn106", "JN-106", "kr106.so")
 _add_plugin_synth("sturm", "STURM-TP", "sturm.so")
 _add_plugin_synth("monomodule", "MONOMODULE", "monomodule_one.so")
 _add_plugin_synth("clementine", "CLEMENTINE", "clementine_xt.so")
-_add_plugin_synth("w9", "9W9", "tr9w9.so", list_as="drums")   # (a drum machine: listed with them in the picker)
 _add_plugin_synth("oxzygen", "OXZYGEN", "oxzygen.so")
 for _n in OP1_SYNTHS:
     _add_plugin_synth("op1-" + _n, _n.upper(), _n + ".so")
