@@ -1132,6 +1132,12 @@ def handle(name, T, m, e):
         if isinstance(name, tuple) and name[0] == "KNOB" and name[1] == 9:
             T.song.set_on(name[2] > 0)                     # +: song mode on, -: off
             return
+        if isinstance(name, tuple) and name[0] == "KNOB" and name[1] in (10, 11):
+            T.song.wheel(name[2])                          # the wheel: the white box, or the picked cell (Shift: its punch FX)
+            return
+        if name == "HOME":
+            T.song.push()                                  # push the wheel: pick the cell the box is on / let go
+            return
     if name == "INST_HOME":                           # SAMPLE (the MPC): back to page 1 of the instrument, from its other pages
         if (T.drum_page or T.seq_page) and not (menus or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active):
             T.punch.leave()

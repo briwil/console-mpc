@@ -344,7 +344,7 @@ def draw_song(T, nat):
         c.text_px(6, 19, "NO ROWS", WHITE, 16, -1)
         title_line(c, title)
         c.text_px(8, 124, "PRESS PAD 1 TO ADD A ROW", WHITE, 16, -1)
-        for i, line in enumerate(["EACH ROW: A PATTERN PER", "INSTRUMENT, PLAYED X TIMES", "(KNOB 8). + / - : SONG ON/OFF"]):
+        for i, line in enumerate(["EACH ROW: A PATTERN PER", "INSTRUMENT, PLAYED X TIMES", "(WHEEL). + / - : SONG ON/OFF"]):
             c.text_px(8, 150 + i * 14, line, (0x6E, 0x99, 0x3F), 8, 0)
         LST["key"] = None
         LAST["key"] = None
@@ -352,7 +352,7 @@ def draw_song(T, nat):
     row = sg.rows[sg.pick]
     slots = sg.slots()
     items = []
-    for i in range(7):
+    for i in range(8):
         if i >= len(slots):
             items.append(("", "", 0.0))
             continue
@@ -360,12 +360,11 @@ def draw_song(T, nat):
         v = row.get("punch", {}).get(slot) if shift else row["pats"].get(slot)
         txt = "-" if v is None else ("FX%d" if shift else "P%d") % (v + 1)
         items.append((sg.short(slot), txt, 1.0))
-    items.append(("PLAYS", "X%d" % row["repeat"], 1.0))
-    cur = [it[1] for it in items]
+    cur = [it[1] for it in items] + ["X%d" % row["repeat"]]
     sig = (sg.pick, shift)
     prev = SONG["prev"]
     if prev is not None and prev[0] == sig:
-        for i in range(8):
+        for i in range(9):
             if cur[i] != prev[1][i]:
                 SONG["when"][i] = now
     else:
@@ -380,6 +379,7 @@ def draw_song(T, nat):
                 active, newest = i, w
     if active is not None and not items[active][0]:
         active = None
+    box = min(sg.cur, len(slots))                                   # the white box: an instrument, or PLAYS (after the last)
     items, active = by_pad_rows(items, active)
 
     def head(c):
@@ -395,6 +395,19 @@ def draw_song(T, nat):
                 c.rect(x, y + 12, 16, 2, WHITE)
             if i == sg.pick:
                 c.frame(x, y, 16, 14, WHITE)
+        plays = "PLAYS X%d" % row["repeat"]                         # how many times the row plays: the cell after the last instrument
+        pw = text_width(c.pxfont(16), plays, -1)
+        c.text_px(310 - pw, 19, plays, WHITE, 16, -1)
+        if box == len(slots):
+            c.frame(306 - pw, 3, pw + 8, 20, WHITE)
+            if sg.sel:
+                c.frame(307 - pw, 4, pw + 6, 18, WHITE)
+        elif active is None and box < len(slots):
+            j = box + 4 if box < 4 else box - 4                    # the cell on screen (the pads' rows: the first four are the bottom row)
+            fx, fy = int(COLS[j % 4]) - 22, int(LABEL_BASE[j // 4]) - 11
+            c.frame(fx, fy, 44, 40, WHITE)
+            if sg.sel:
+                c.frame(fx + 1, fy + 1, 42, 38, WHITE)
     msg = T.message if (T.message and now < T.message_until and active is None) else None
     grid(nat, ("song", sg.pick, shift), "", title, items, active, now, msg, head=head)
 

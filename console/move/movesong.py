@@ -3,9 +3,11 @@ times it plays. With song mode on, PLAY starts at row 1 and the rows follow each
 
   step buttons 1-16   the rows (press one past the end: a new row, a copy of the last). Lit: the rows there are;
                       bright: the row picked; blinking: the row playing
-  knobs 1-7           the picked row's pattern for instruments 1-7 (turned all the way down: "-", that instrument plays nothing in the row)
-  Shift + knobs 1-7   the picked row's PUNCH FX pattern for them (the screen shows those while Shift is held)
-  knob 8              how many times the row plays (1-16)
+  knobs 1-8           the picked row's pattern for instruments 1-8 (turned all the way down: "-", that instrument plays nothing in the row)
+  Shift + knobs 1-8   the picked row's PUNCH FX pattern for them (the screen shows those while Shift is held)
+  the wheel           a white box goes from instrument to instrument, then PLAYS (how many times the row plays, 1-16)
+  push the wheel      pick what the box is on: the wheel then changes its pattern (Shift + wheel: its punch FX pattern; PLAYS: the count).
+                      Push again to let go
   + / -               song mode on / off
   Delete + a row      take the row out
 
@@ -19,7 +21,7 @@ import knobgate
 
 PATTERNS = 16
 MAX_ROWS = 16
-REPEAT_KNOB = 8
+MAX_SLOTS = 8
 
 
 class Song:
@@ -35,6 +37,8 @@ class Song:
         self._was_playing = False
         self._song = None
         self._turned = {}
+        self.cur = 0                # the white box: an instrument (its place in slots()), or PLAYS after the last
+        self.sel = False            # the box's cell is picked: the wheel changes it
 
     # ------------------------------------------------------------ saving
 
@@ -77,7 +81,7 @@ class Song:
 
     def slots(self):
         e = self.T.engine
-        return [i for i, m in enumerate(e.slots) if m][:7] if e else []
+        return [i for i, m in enumerate(e.slots) if m][:MAX_SLOTS] if e else []
 
     def seq_of(self, slot):
         e = self.T.engine
@@ -122,18 +126,23 @@ class Song:
         if not self.rows:
             self.T.say("PRESS STEP BUTTON 1 TO ADD A ROW", 2)
             return
-        row = self.rows[self.pick]
         way = knobgate.gate(("song", number), delta, False)   # a few clicks a choice
         if not way:
             return
-        if number == REPEAT_KNOB:
+        slots = self.slots()
+        if number > len(slots):
+            return
+        self.change(number - 1, way, shift)
+
+    def change(self, index, way, shift=False):
+        """The picked row: instrument `index` (its place in slots()) one pattern on, or PLAYS (index == len(slots()))."""
+        row = self.rows[self.pick]
+        slots = self.slots()
+        if index >= len(slots):
             row["repeat"] = max(1, min(16, row["repeat"] + way))
             self.T.say("ROW %d PLAYS %d TIME%s" % (self.pick + 1, row["repeat"], "" if row["repeat"] == 1 else "S"), 2)
         else:
-            slots = self.slots()
-            if number > len(slots):
-                return
-            s = slots[number - 1]
+            s = slots[index]
             key = "punch" if shift else "pats"
             pats = row.setdefault(key, {})
             v = pats.get(s)
@@ -145,6 +154,28 @@ class Song:
         self.save()
         if self.on and not self.T.playing and self.rows:
             self.apply(0, False)                           # stopped: row 1 is what PLAY will play
+
+    def wheel(self, delta):
+        """The wheel: the white box moves (nothing picked), or the picked cell changes."""
+        if not self.rows:
+            self.T.say("PRESS STEP BUTTON 1 TO ADD A ROW", 2)
+            return
+        way = knobgate.gate(("song", "wheel"), delta, False, 1)
+        if not way:
+            return
+        n = len(self.slots()) + 1                          # the instruments, then PLAYS
+        self.cur = max(0, min(n - 1, self.cur))
+        if self.sel:
+            self.change(self.cur, way, self.T.shift_held())
+        else:
+            self.cur = max(0, min(n - 1, self.cur + way))
+
+    def push(self):
+        """Push the wheel: pick the cell the box is on, or let go of it."""
+        if not self.rows:
+            return
+        self.sel = not self.sel
+        self.cur = max(0, min(len(self.slots()), self.cur))
 
     def set_on(self, on):
         if on != self.on:
