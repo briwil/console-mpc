@@ -1,0 +1,7 @@
+{
+  "id": "oxzygen",
+  "name": "OxZygen",
+  "description": "Two sound slots (voices, winds, brass, strings, bells, synth, air) with filter, lo-fi, drive, delay and reverb (OxZygen VST plug-in, MIT)",
+  "dsp": "dsp.so",
+  "component_type": "sound_generator"
+}
