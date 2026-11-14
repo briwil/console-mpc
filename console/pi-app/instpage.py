@@ -85,7 +85,9 @@ class InstPage:
             self.last_step, self.held_at = step, None
             if self.mode == "pick" and self.choices[self.pick][0] is None:       # a DRUMS / SYNTH card names what you are turning into
                 nx = self.choices[(self.pick + step) % len(self.choices)][0]
-                if nx is not None and nx != EDIT:
+                if nx == EDIT:
+                    self.choices[self.pick] = (None, "EDIT")
+                elif nx is not None:
                     self.choices[self.pick] = (None, "SYNTH" if is_synth(nx) else "DRUMS")
                 import sys
                 print("instpage: card %d step %d next %r -> %s" % (self.pick, step, nx, self.choices[self.pick][1]), file=sys.stderr, flush=True)
