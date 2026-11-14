@@ -69,7 +69,12 @@ class InstPage:
                 if self.items[self.pick][0] is not None:
                     break
         elif self.mode:
-            self.pick = (self.pick + step) % max(1, len(self.choices))
+            n = max(1, len(self.choices))
+            for _ in range(n):                                # (in the pick list the DRUMS / SYNTH cards are skipped)
+                self.pick = (self.pick + step) % n
+                c = self.choices[self.pick]
+                if not (self.mode == "pick" and c[0] is None):
+                    break
         else:
             self.row = max(0, min(audio.SLOTS - 1, self.row + step))
 
@@ -155,14 +160,20 @@ class InstPage:
             self.mode = None
             self.t.say("NO DRUM MACHINES ARE BUILT: RUN ~/console/pi-app/setup.sh ONCE", 4)
             return
+        found = self.choices
+        drums_ = [c for c in found if not is_synth(c[0])]
+        synths_ = [c for c in found if is_synth(c[0])]
+        self.choices = ([(None, "DRUMS")] + drums_ if drums_ else []) + ([(None, "SYNTH")] + synths_ if synths_ else [])
         self.choices.append((EDIT, "EDIT"))                     # (always last)
         ids = [m for m, _ in self.choices]
-        self.pick = ids.index(mine) if mine in ids else 0
+        self.pick = ids.index(mine) if mine in ids else next((i for i, c in enumerate(self.choices) if c[0] is not None), 0)
         self.mode = "pick"
 
     def choose_machine(self):
         e = self.e
         mid, title = self.choices[self.pick]
+        if mid is None:
+            return
         if mid == EDIT:
             self.start_edit()
             return
@@ -314,7 +325,8 @@ class InstPage:
     def draw_list(self, surf, f, white, grey, dim, green):
         """The pick list (or the CHANGE / REMOVE menu): 6 rows at a time, scrolling with the pick."""
         if self.mode == "pick":
-            items = [(title, "" if mid == EDIT else "SYNTH" if is_synth(mid) else "DRUMS") for mid, title in self.choices]
+            items = [(title, "#" if mid is None else "" if mid == EDIT else "SYNTH" if is_synth(mid) else "DRUMS")
+                     for mid, title in self.choices]
         else:
             items = [(label, "") for label in self.choices]
         rows = 6
@@ -339,6 +351,11 @@ class InstPage:
             on = k == self.pick
             if on:
                 pygame.draw.rect(surf, (35, 38, 45), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
+            if kind == "#":                                   # (a DRUMS / SYNTH heading card)
+                pygame.draw.rect(surf, (28, 31, 37), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
+                txt = f(13, 600, "sans").render(label, True, dim)
+                surf.blit(txt, (640 - txt.get_width() // 2, ry + (row_h - 4 - txt.get_height()) // 2))
+                continue
             txt = f(22 if on else 20, 600, "sans").render(label, True, green if on else white)
             surf.blit(txt, (640 - txt.get_width() // 2, ry + (row_h - 4 - txt.get_height()) // 2))
             if kind:
