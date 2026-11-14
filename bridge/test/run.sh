@@ -14,3 +14,7 @@ gcc -O1 -g -DRETRIG_TEST "$HERE/shim_test.c" -o "$OUT/retrig_test" -ldl
 "$OUT/shim_test" "$OUT/libjack_mpc_host.so" "$OUT/libconsolecore_host.so"
 "$OUT/retrig_test" "$OUT/libjack_mpc_retrig.so" "$OUT/libconsolecore_host.so"
 python3 "$HERE/countin_test.py"
+if python3 -c "import numpy, PIL" 2>/dev/null; then
+    gcc -O2 -shared -fPIC "$HERE/../../mpcui/drawtext.c" -o "$OUT/libdrawtext.so"
+    CONSOLE_NATIVE="$OUT/native.rgb" python3 "$HERE/drawtext_test.py" "$OUT/libdrawtext.so"
+fi

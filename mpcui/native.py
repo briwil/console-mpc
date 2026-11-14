@@ -111,9 +111,45 @@ def _mask(font, s, track=0):
     return m
 
 
+_masks8 = {}
+_cdraw = None
+
+
+def _load_cdraw():
+    """libdrawtext.so (mpcui/drawtext.c) next to this file: the text drawn in C. None if it isn't there (numpy then)."""
+    global _cdraw
+    if _cdraw is None:
+        _cdraw = False
+        if not os.environ.get("CONSOLE_NO_CDRAW"):
+            try:
+                import ctypes
+                lib = ctypes.CDLL(os.path.join(_HERE, "libdrawtext.so"))
+                lib.dt_blend.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_void_p,
+                                         ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+                lib.dt_blend.restype = None
+                _cdraw = lib.dt_blend
+            except Exception:                                   # noqa: BLE001
+                _cdraw = False
+    return _cdraw
+
+
+def _mask8(font, s, track=0):
+    """_mask() as bytes (0..255), kept with its address for the C drawing: (array, pointer)."""
+    key = (id(font), s, track)
+    m = _masks8.get(key)
+    if m is None:
+        if len(_masks8) > 600:
+            _masks8.clear()
+        a = np.ascontiguousarray((_mask(font, s, track) * 255.0 + 0.5).astype(np.uint8))
+        m = (a, a.ctypes.data)
+        _masks8[key] = m
+    return m
+
+
 class Canvas:
     def __init__(self):
         self.px = np.empty((H, W, 3), np.uint8)
+        self._pxp = self.px.ctypes.data         # (where the pixels are, for the C drawing)
         self.ox = 0                         # the colour pages draw between the side bars: everything is shifted by this
         self.styled = False
         self.clear()
@@ -143,6 +179,13 @@ class Canvas:
         font = _font(scale)
         if font is None:
             return self._pixel_text(x, y, s, c, 1 if scale == 1 else scale - 1)
+        blend = _load_cdraw()
+        if blend:
+            if x < 0:
+                return
+            a, ptr = _mask8(font, s, track)
+            blend(self._pxp, W, H, x, y - font.cap_pad, ptr, a.shape[1], a.shape[0], int(c[0]), int(c[1]), int(c[2]))
+            return
         a = _mask(font, s, track)
         if a is None:
             return
@@ -176,6 +219,12 @@ class Canvas:
         """Text at exactly px pixels, its left edge at x and the bottom of its capitals on the line `baseline` (no ox shift)."""
         font = self.pxfont(px)
         s = str(s).upper()
+        blend = _load_cdraw()
+        if blend:
+            a, ptr = _mask8(font, s, track)
+            blend(self._pxp, W, H, int(x), int(baseline) - font.cap_h - font.cap_pad, ptr, a.shape[1], a.shape[0],
+                  int(c[0]), int(c[1]), int(c[2]))
+            return
         a = _mask(font, s, track)
         y0 = int(baseline) - font.cap_h - font.cap_pad
         x = int(x)

@@ -44,6 +44,14 @@ jobs:
           else
             echo "no aarch64 compiler: the card keeps the sound core and module host from the libs release (no GUITAR input)"
           fi
+      - name: Screen text in C (aarch64)
+        run: |
+          if command -v aarch64-linux-gnu-gcc >/dev/null; then
+            aarch64-linux-gnu-gcc -O2 -shared -fPIC -o bridge/libdrawtext.so mpcui/drawtext.c
+            ls -l bridge/libdrawtext.so
+          else
+            echo "no aarch64 compiler: the screen text stays in numpy"
+          fi
       - name: Host test of the VST2 effect host (a fake plugin)
         run: sh bridge/test/vst2fx.sh
       - name: Host test of the menu (fake hardware)
@@ -60,6 +68,7 @@ jobs:
           mkdir -p pack/mpc
           cp bridge/libjack_mpc.so bridge/bridge_demo bridge/bootmenu bridge/panelsniff.so bridge/vst2fx.so launcher/*.sh launcher/bootanim.bin mpcui/*.py pack/mpc/
           cp bridge/libconsolecore.so bridge/libschwunghost.so pack/mpc/ 2>/dev/null || true
+          cp bridge/libdrawtext.so pack/mpc/ 2>/dev/null || true
           mkdir -p pack/mpc/fonts && cp mpcui/fonts/* pack/mpc/fonts/
           cp mpcui/*.json pack/mpc/ 2>/dev/null || true
           chmod +x pack/mpc/*

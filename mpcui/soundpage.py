@@ -99,8 +99,18 @@ def fit_size(font_of, text, sizes, width, trk):
     return sizes[-1]
 
 
+_widths = {}
+
+
 def text_width(font, s, track):
-    return int(sum(font.getlength(ch) for ch in s) + track * max(0, len(s) - 1) + 0.5)
+    """How wide a word is (kept: the same words are measured many times a frame, and every letter is a call into PIL)."""
+    key = (id(font), s, track)
+    w = _widths.get(key)
+    if w is None:
+        if len(_widths) > 4000:
+            _widths.clear()
+        w = _widths[key] = int(sum(font.getlength(ch) for ch in s) + track * max(0, len(s) - 1) + 0.5)
+    return w
 
 
 def title_line(c, title, y=45):
