@@ -1,0 +1,7 @@
+{
+  "id": "clementine",
+  "name": "Clementine-XT",
+  "description": "A wavetable synth modelled on the Microwave II/XT (Clementine-XT VST plug-in by sd88me, GPL-3.0; needs your own ROM files)",
+  "dsp": "dsp.so",
+  "component_type": "sound_generator"
+}
