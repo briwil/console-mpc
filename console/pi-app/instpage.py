@@ -83,6 +83,12 @@ class InstPage:
         elif self.mode:
             self.pick = (self.pick + step) % max(1, len(self.choices))      # (landing on a DRUMS / SYNTH card: it holds a second, then moves on, see draw_list)
             self.last_step, self.held_at = step, None
+            if self.mode == "pick" and self.choices[self.pick][0] is None:       # a DRUMS / SYNTH card names what you are turning into
+                nx = self.choices[(self.pick + step) % len(self.choices)][0]
+                if nx is not None and nx != EDIT:
+                    self.choices[self.pick] = (None, "SYNTH" if is_synth(nx) else "DRUMS")
+                import sys
+                print("instpage: card %d step %d next %r -> %s" % (self.pick, step, nx, self.choices[self.pick][1]), file=sys.stderr, flush=True)
         else:
             self.row = max(0, min(audio.SLOTS - 1, self.row + step))
 
@@ -372,13 +378,6 @@ class InstPage:
             if on:
                 pygame.draw.rect(surf, (35, 38, 45), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
             if kind == "#":                                   # (a DRUMS / SYNTH heading card)
-                if on:                                        # (it names what you are turning into, either way round)
-                    nx = self.choices[(k + getattr(self, "last_step", 1)) % len(self.choices)][0]
-                    if nx is not None and nx != EDIT:
-                        label = "SYNTH" if is_synth(nx) else "DRUMS"
-                    if getattr(self, "_dbg", None) != (k, label):
-                        self._dbg = (k, label)
-                        _trace("card at %d step %s next %r -> %s" % (k, getattr(self, "last_step", 1), nx, label))
                 pygame.draw.rect(surf, (48, 52, 60) if on else (28, 31, 37), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
                 txt = f(13, 600, "sans").render(label, True, white if on else dim)
                 surf.blit(txt, (640 - txt.get_width() // 2, ry + (row_h - 4 - txt.get_height()) // 2))
