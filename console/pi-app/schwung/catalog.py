@@ -379,7 +379,7 @@ def _add_plugin_fx():
 
 OP1_FX = ["cwo", "delay", "grid", "nitro", "phone", "punch", "spring"]                  # OP-1 Suite (Bombest Audio, GPL-3.0) effects
 OP1_SYNTHS = ["cluster", "dbox", "digital", "dna", "drwave", "dsynth", "fm", "phase", "pulse", "string", "voltage"]
-PLUGIN_FX = [("stompbox", "STOMPBOX", "stompbox.so")] + [("op1-" + n, n.upper(), n + ".so") for n in OP1_FX]       # (module folder, title, the plugin's file)
+PLUGIN_FX = [("stompbox", "STOMPBOX", "stompbox.so")] + [("op1-" + n, n.upper(), n + ".so") for n in OP1_FX] + [("vhs-vibes", "VHS VIBES", "vhs-vibes-arm64.so")]       # (module folder, title, the plugin's file)
 _add_plugin_fx()
 
 

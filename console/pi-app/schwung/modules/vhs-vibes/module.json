@@ -1,0 +1,7 @@
+{
+  "id": "vhs-vibes",
+  "name": "VHS Vibes",
+  "description": "A VHS tape degradation effect: pitch wobble, saturation, hum, hiss, crackle (VHS Vibes by anthonytheinventor, MIT)",
+  "dsp": "vst2fx.so",
+  "component_type": "audio_fx"
+}
