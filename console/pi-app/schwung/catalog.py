@@ -416,6 +416,7 @@ _add_plugin_synth("model72", "MODEL-72", "model72.so")
 _add_plugin_synth("profit5", "PROFIT-5", "profit_5.so")
 _add_plugin_synth("jn106", "JN-106", "kr106.so")
 _add_plugin_synth("sturm", "STURM-TP", "sturm.so")
+_add_plugin_synth("monomodule", "MONOMODULE", "monomodule_one.so")
 for _n in OP1_SYNTHS:
     _add_plugin_synth("op1-" + _n, _n.upper(), _n + ".so")
 

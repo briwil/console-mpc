@@ -1,0 +1,7 @@
+{
+  "id": "monomodule",
+  "name": "Monomodule One",
+  "description": "The Monomachine synth engine (Monomodule One VST plug-in by sd88me, AGPL-3.0; needs your own Monomachine OS file)",
+  "dsp": "dsp.so",
+  "component_type": "sound_generator"
+}
