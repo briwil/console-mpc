@@ -26,7 +26,7 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | CHOP | Splice (Shift + CHOP: splice all) |
 | SAMPLE REC | not used yet |
 | STOP | While playing: stops playback. Otherwise: Back. Shift + STOP: always Back (saves and quits from the top level) |
-| NOTE REPEAT | The arpeggiator page of a synth (the Move's Shift + step 3). Again: back. Shift + NOTE REPEAT = triplets on / off |
+| NOTE REPEAT | The arpeggiator as a pop-up over a synth's sound or sequencer page. While it is up: knobs 1-8 (or KNOB FX + the wheel) set it, SEQ turns the pads into its 16 steps (tap: note, accent, rest), PLUS / MINUS flip ARP / ARP 2, PLAY and STOP work as always, everything else is off. NOTE REPEAT again (or BACK) closes it. Shift + NOTE REPEAT = triplets on / off |
 | ERASE, MUTE, TAP TEMPO, 16 LEVELS | Delete, Mute, Copy, Capture |
 | SHIFT | Shift |
 

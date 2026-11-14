@@ -968,6 +968,27 @@ def menu_tick(m):
             m.restart = True
 
 
+def arp_popup_key(name, T):
+    """While the ARP pop-up is up. True = dealt with (swallowed); False = carry on as usual (PLAY, STOP)."""
+    if not (T.engine and T.synth_shown() and (T.drum_page or T.seq_page)):
+        T.arp_pop = 0                                         # (the instrument or the page changed under it)
+        return False
+    if name in ("PLAY", "STOP"):
+        return False
+    ml = T.mlfo
+    if isinstance(name, tuple):
+        if name[0] == "KNOB" and 1 <= name[1] <= 8:
+            ml.arp_knob(name[1], name[2], name[3])
+        elif name[0] in ("STEP", "LFOSTEP"):                  # a step button (the pads, SEQ on): that step of the arp's rhythm
+            ml.arp_step(name[1], name[2])
+        return True
+    if name in ("LEFT", "RIGHT"):                             # ARP <-> ARP 2
+        T.arp_pop = 2 if name == "RIGHT" else 1
+    elif name in ("BACK", "ARP_JUMP"):
+        T.arp_pop = 0
+    return True
+
+
 def handle(name, T, m, e):
     """One action, the way the Pi app's main loop does it (menus first), plus the Move's own."""
     if isinstance(name, tuple) and name[0] == "VOLUME":
@@ -977,6 +998,9 @@ def handle(name, T, m, e):
         v = knobgate.set_speed(knobgate.SPEED + (1 if name[1] > 0 else -1) * (1 if abs(name[1]) < 3 else 2))
         T.say("KNOB SPEED: %d CLICK%s A STEP" % (v, "" if v == 1 else "S"), 3)
         return
+    if getattr(T, "arp_pop", 0):                                  # the ARP pop-up: only its own controls (and the transport) work
+        if arp_popup_key(name, T):
+            return
     ms = T.mseq
     sb = T.sbrowse
     fp = T.fxpick

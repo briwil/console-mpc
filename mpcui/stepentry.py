@@ -12,12 +12,15 @@ INSTHOME, SETTINGSKEY = 112, 113                                  # SAMPLE (page
 PROJECT, SONGPAGE, GRIDNEXT = 109, 110, 111                     # Shift + pad 16 / 12 / 14 on the tape-style pages (as printed on the pads)
 ERASE = 119                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
 K1 = 71                                                          # Move knob 1 (relative clicks)
+ARPPOP = 114                                                      # NOTE REPEAT: the ARP pop-up (bridge/mapping.h)
 K1_ABS = 115                                                     # K1's absolute position from the bridge (0-127). (Not 112: SAMPLE; not 118: CHOP = SPLICE)
 MAX_LEN = 64
 
 
 def length_page(T):
     """K1 sets a length: a drum lane's, or the synth pattern's (or the picked note's), no steps selected or held."""
+    if getattr(T, "arp_pop", 0):
+        return False
     try:
         mn = getattr(T, "_mpc_menu", None)
         if mn is not None and (mn.open or mn.kits.open):
@@ -270,11 +273,31 @@ def lay(T, p, vel=None):
     ms.page[lane] = cur // 16
 
 
+def arp_popup_toggle(T):
+    """NOTE REPEAT: the ARP as a pop-up over the page you are on (a synth's sound or sequencer pages). Again closes it."""
+    if getattr(T, "arp_pop", 0):
+        T.arp_pop = 0
+        return
+    ok = bool(T.engine and T.synth_shown() and (T.drum_page or T.seq_page)
+              and not (T.fx_page or T.inst_page or T.song_page or T.auto_page or T.punch.active() or T.sbrowse.active))
+    if not ok:
+        T.say("THE ARP IS FOR SYNTHS", 2)
+        return
+    T.arp_pop = 1
+
+
 def install(MoveBoard, pad_velocity=None):
     orig_cc, orig_pad, orig_note = MoveBoard.cc, MoveBoard.pad, MoveBoard.note
 
     def cc(self, num, val):
         T = self.T
+        if num == ARPPOP:                                                       # NOTE REPEAT: the ARP pop-up, on / off
+            if val:
+                arp_popup_toggle(T)
+            return
+        if getattr(T, "arp_pop", 0) and num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO, INSTHOME, SETTINGSKEY, PROJECT,
+                                                SONGPAGE, GRIDNEXT, ERASE, WHEEL, K1_ABS, PUSH):
+            return                                                              # (the pop-up: only the ARP's own controls work)
         if num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO):                    # the bridge's tape-page buttons (see bridge/mapping.h)
             if val:
                 tape_button(self, num)

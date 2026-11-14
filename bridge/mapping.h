@@ -344,10 +344,13 @@ static void mpc_button_event(int note, int down)
         if (down) send3(0xBF, 107, 127);
         return;
     }
-    if ((note == 0x0B && !shift_held) || note == 0x01) {   /* NOTE REPEAT = the arpeggiator page (Shift + step 3), PAD FX = the pads page (Shift + step 2);
-                                                               Shift + NOTE REPEAT is still Undo. Both open on a synth's sound pages; again or Back returns */
+    if (note == 0x0B && !shift_held) {                      /* NOTE REPEAT = the ARP pop-up (Console's CC 114; again closes it) */
+        if (down) { send3(0xBF, 114, 127); send3(0xBF, 114, 0); }
+        return;
+    }
+    if (note == 0x01) {                                     /* PAD FX = the pads page (Shift + step 2); again or Back returns */
         if (down) {
-            int step = note == 0x0B ? 18 : 17;
+            int step = 17;
             send3(0xBF, 49, 127); send3(0x9F, step, 100); send3(0x8F, step, 0); send3(0xBF, 49, 0);
         }
         return;

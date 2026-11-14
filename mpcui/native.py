@@ -285,8 +285,23 @@ def begin():
     canvas.styled = True
 
 
+_popT = None
+
+
+def _arp_pop_up():
+    """True while the ARP pop-up is showing."""
+    T = _popT
+    return bool(T is not None and getattr(T, "arp_pop", 0) and T.engine and T.synth_shown() and (T.drum_page or T.seq_page))
+
+
 def publish():
     global _seq, _last
+    if _arp_pop_up():
+        try:
+            fxpages.draw_arp_popup(_popT, sys.modules[__name__])      # (over the page that was just drawn)
+        except Exception:
+            import traceback
+            print("arp pop-up error:\n" + traceback.format_exc(), flush=True)
     if canvas.styled:
         canvas.ox = 0
         canvas.rect(0, 0, OX, H, SIDE_L)
@@ -310,6 +325,8 @@ _synth = False            # the instrument shown is a synth (set every frame by 
 def set_mode(ch):
     """Tells the bridge which page is up: "A" = the tape recorder page (its own buttons), "T" = the tape-style pages (instruments, song, mixer: the pads are the step buttons), "O" = anything else."""
     global _mode
+    if ch in ("Q", "R", "N", "P", "S") and _arp_pop_up():
+        ch = "S"                               # the ARP pop-up: SEQ turns the pads into its 16 steps (it does not leave the page)
     ch = ch + ("y" if _synth else "")        # y: the instrument is a synth (the bridge lays the note pads out in order)
     if ch == _mode:
         return
@@ -651,6 +668,8 @@ def install(pages):
     state = {"errors": 0}
 
     def draw(f, T, menu=None):
+        global _popT
+        _popT = T
         original(f, T, menu)
         try:
             import metronome

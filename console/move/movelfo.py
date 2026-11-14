@@ -114,6 +114,8 @@ class MoveLFO:
 
     def arp_second(self):
         """True on ARP 2 (glide, bend)."""
+        if getattr(self.T, "arp_pop", 0) == 2:                      # the pop-up's second page
+            return True
         return self.tab is not None and self.arp_tab() is not None and self.tab == self.arp_tab() + 1
 
     def goto_arp(self):
