@@ -60,6 +60,7 @@ static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47,
 static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
 static volatile int page_tapeonly;          /* the tape recorder page itself (not the instrument list, song or mixer): its own button layout */
+static volatile int page_arp;               /* the ARP pop-up is up (page mode "U"): KNOB FX comes on by itself, pads 9-16 play notes (orange) */
 static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
 static volatile int page_retrig;            /* a sound page, or steps selected: knob mode re-plays the drum while a knob is turned (not on song, punch FX, automation, LFO, mixer ...) */
 static volatile int page_sound;             /* the instrument's sound / parameter page that has a sequencer: SEQ goes to it (as B1 does) */
@@ -111,6 +112,7 @@ static void refresh_pads(void)
         if (v == 0) { r = 0; g = 6; b = 14; }                       /* idle: a faint blue so the pads can be found */
         if (knob_mode) {                                            /* pads 1-8 = knobs 1-8; the touched one is bright */
             if (i < 8) { if (pad_knob[i] >= 0) { r = 30; g = 127; b = 110; } else { r = 0; g = 40; b = 48; } }
+            else if (page_arp) { r = 100; g = 42; b = 0; }          /* the ARP pop-up: pads 9-16 play notes */
             else { r = 0; g = 1; b = 2; }
         }
         int key = (r << 16) | (g << 8) | b;
@@ -224,7 +226,7 @@ static void mpc_pad_event(int idx, int vel, int on)
         int cc = idx == 15 ? 109 : idx == 11 ? 110 : (idx == 13 && page_tapeonly) ? 111 : 0;
         if (cc) { send3(0xBF, cc, 127); send3(0xBF, cc, 0); return; }
     }
-    if (on && knob_mode) {
+    if (on && knob_mode && !(page_arp && idx >= 8)) {
         if (idx < 8) {
             pad_knob[idx] = idx;
             knob_stamp[idx] = ++knob_clock;
@@ -260,7 +262,10 @@ static void mpc_pad_event(int idx, int vel, int on)
 static void mapping_tick(void)
 {
     tick_n++;
-    { static int seen; int now = page_tape * 8 + page_tapeonly * 16 + page_param * 2 + page_nostep + page_linear * 32; if (seen != now) { seen = now; if (page_tapeonly && knob_mode) { release_knob_pads(); knob_mode = 0; } refresh_pads(); refresh_buttons(); } }     /* the pads change meaning on the tape page: new lights */
+    { static int seen; int now = page_tape * 8 + page_tapeonly * 16 + page_param * 2 + page_nostep + page_linear * 32 + page_arp * 64; static int was_arp, sv_knob, sv_step; if (seen != now) { seen = now;
+        if (page_arp && !was_arp) { sv_knob = knob_mode; sv_step = step_mode; release_knob_pads(); knob_mode = 1; step_mode = 0; param_mode = 0; }      /* the ARP pop-up: KNOB FX starts on */
+        else if (!page_arp && was_arp) { release_knob_pads(); knob_mode = sv_knob; step_mode = sv_step; }                                                   /* (and is as it was when it closes) */
+        was_arp = page_arp; if (page_tapeonly && knob_mode) { release_knob_pads(); knob_mode = 0; } refresh_pads(); refresh_buttons(); } }     /* the pads change meaning on the tape page: new lights */
 #ifdef NO_RETRIG
     return;
 #endif
@@ -314,6 +319,11 @@ static void mpc_button_event(int note, int down)
         if (down) { send3(0x9F, 16, 100); send3(0x8F, 16, 0); }
         return;
     }
+    if (down && note == MPC_SEQ && page_arp && !shift_held) {           /* the ARP pop-up: SEQ = the pads are its 16 steps (instead of KNOB FX) */
+        step_mode = !step_mode;
+        if (step_mode) { release_knob_pads(); knob_mode = 0; }
+        refresh_pads(); refresh_buttons(); return;
+    }
     if (down && note == MPC_SEQ) {
         if (shift_held) param_mode = !param_mode;                     /* Shift + SEQ: the pads are a step's settings */
         else if (param_mode) { param_mode = 0; step_mode = 1; }       /* SEQ from there: back to the steps */
@@ -321,7 +331,7 @@ static void mpc_button_event(int note, int down)
         refresh_pads(); refresh_buttons(); return;
     }
     if (down && note == MPC_PADBANK) { right_bank = !right_bank; refresh_pads(); refresh_buttons(); return; }
-    if (down && note == MPC_KNOBFX) { release_knob_pads(); knob_mode = !knob_mode; refresh_pads(); refresh_buttons(); return; }
+    if (down && note == MPC_KNOBFX) { release_knob_pads(); knob_mode = !knob_mode; if (page_arp && knob_mode) step_mode = 0; refresh_pads(); refresh_buttons(); return; }
     if (note == MPC_SEQ || note == MPC_PADBANK || note == MPC_KNOBFX) return;
     if ((note == 0x36 || note == 0x37) && page_seq) {          /* a sequencer page: Shift + MINUS = Undo, Shift + PLUS = Redo (as printed on the buttons) */
         static uint8_t sq[2];
