@@ -1,0 +1,7 @@
+{
+  "id": "boris",
+  "name": "Boris Granular",
+  "description": "A real-time granular effect: up to 24 grains, freeze (Boris Granular VST plug-in by sd88me, GPL-3.0)",
+  "dsp": "vst2fx.so",
+  "component_type": "audio_fx"
+}
