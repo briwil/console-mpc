@@ -97,14 +97,42 @@ def draw_lfo(T, nat):
     knob_page(T, nat, ("lfo", ml.tab), "GUITAR" if _guitar(T) else "PAT %d" % (e.seq.current + 1), "LFO %d" % (ml.tab + 1), pairs)
 
 
+POP = {"key": None, "t": 0.0, "state": None}
+POP_COLS = [45.0, 119.0, 193.0, 267.0]               # the panel's four columns
+POP_LABEL = [118.0, 166.0]                            # label baselines of the two rows
+POP_VALUE = [136.0, 184.0]                            # the middle of a 16 px value in each row
+
+
+def _pop_targets(n, active):
+    """The instrument settings page's easing, in the panel: each setting's place; the one being turned grows and pushes the rest aside."""
+    out = []
+    ra, ca = (active // 4, active % 4) if active is not None else (None, None)
+    for i in range(n):
+        r, c = i // 4, i % 4
+        cx = POP_COLS[c]
+        if active is None:
+            out.append(dict(cx=cx, lb=POP_LABEL[r], vm=POP_VALUE[r], ls=8, vs=16, t=1.0))
+        elif i == active:
+            out.append(dict(cx=cx + 12.0, lb=POP_VALUE[r] - 14.0, vm=POP_VALUE[r] + 8.0, ls=16, vs=32, t=1.0))
+        else:
+            if c < ca:
+                cx -= 4.0
+            elif r == ra and c > ca:
+                cx += 26.0
+            elif r != ra and ra == 1 and c >= ca:
+                cx += 40.0
+            out.append(dict(cx=cx, lb=POP_LABEL[r], vm=POP_VALUE[r], ls=8, vs=16, t=0.0))
+    return out
+
+
 def draw_arp_popup(T, nat):
-    """The ARP pop-up: a panel over the page you are on (not a page of its own). The 16 steps of the rhythm on top, the settings
-    below in the pads' order (settings 1-4 in the bottom row, 5-8 above them), so the KNOB FX pads line up with them; the one you
-    are turning grows. Left / Right flip ARP / ARP 2."""
+    """The ARP pop-up: a panel over the page you are on (not a page of its own). The 16 steps of the rhythm on top, the settings below
+    as on an instrument's settings page: in the pads' order (settings 1-4 in the bottom row, 5-8 above), and the one you turn grows."""
     c = nat.canvas
     ml = T.mlfo
     cfg = ml.cfg()
     second = ml.arp_second()
+    now = nat.time.monotonic()
     x0, y0, w, h = 8, 20, 304, 200
     c.rect(x0 - 2, y0 - 2, w + 4, h + 4, WHITE)
     c.rect(x0, y0, w, h, (14, 16, 14))
@@ -122,29 +150,32 @@ def draw_arp_popup(T, nat):
         c.text_px(x + 8 - c_w(c, 8, num) // 2, y0 + 80, num, WHITE if k % 4 == 0 else G[4], 8, 0)
     vals = ml.arp_values()
     active = _active(T, nat, ("arp-pop", second), [str(v[1]) for v in vals])
-    items, active = sp.by_pad_rows([(str(a_), str(b_), 1.0) for a_, b_ in vals], active)
-    cw, ch = 66, 46
-
-    def cell(pos, big):
-        label, shown, _i = items[pos]
+    items, active = sp.by_pad_rows([(str(a_).upper(), str(b_).upper(), 1.0) for a_, b_ in vals], active)
+    n = len(items)
+    goal = _pop_targets(n, active)
+    key = ("arp-pop", second)
+    snap = POP["key"] != key or now - POP["t"] > 0.4 or POP["state"] is None or len(POP["state"]) != n
+    if snap:
+        POP["state"] = [dict() for _ in range(n)]
+    dt = min(0.12, max(0.0, now - POP["t"])) if not snap else 0.0
+    sp.step(POP["state"], goal, dt, snap, active is None)
+    POP["key"], POP["t"] = key, now
+    for i in sorted(range(n), key=lambda i: i == active):                       # the big one last
+        label, value, _idle = items[i]
         if not label:
-            return
-        cx = x0 + 10 + (pos % 4) * (cw + 6)
-        cy = y0 + 92 + (pos // 4) * (ch + 6)
-        g = 5 if big else 0
-        c.rect(cx - g, cy - g, cw + 2 * g, ch + 2 * g, G[3] if big else G[1])
-        if big:
-            c.frame(cx - g, cy - g, cw + 2 * g, ch + 2 * g, WHITE)
-        c.text_px(cx + 5 - g, cy + 12, str(label), WHITE if big else G[5], 8, 0)
-        val = str(shown)
-        px = 16 if text_width(c.pxfont(16), val, -1) <= cw - 8 + 2 * g else 8
-        c.text_px(cx + 5 - g, cy + 36, val, WHITE, px, -1 if px == 16 else 0)
-    for pos in range(8):
-        if pos != active:
-            cell(pos, False)
-    if active is not None:
-        cell(active, True)
-    msg = _msg(T, nat.time.monotonic())
+            continue
+        st = POP["state"][i]
+        col = sp.colour.mix(sp.DARK, WHITE, max(0.0, min(1.0, st["t"])))
+        room = 74 if active == i else 56
+        ls = sp.fit_size(c.pxfont, label, [px for px in (16, 8) if px <= max(8, int(round(st["ls"] / 8.0)) * 8)], room, lambda px: 0)
+        if text_width(c.pxfont(ls), label, 0) > room:
+            label = label[:max(2, room // 6)]
+        vs = sp.fit_size(c.pxfont, value, [px for px in (32, 24, 16, 8) if px <= max(8, int(round(st["vs"] / 8.0)) * 8)], room,
+                         lambda px: -px // 8)
+        c.text_px(int(round(st["cx"] - text_width(c.pxfont(ls), label, 0) / 2.0)), int(round(st["lb"])), label, col, ls, 0)
+        vtr = -(vs // 8)
+        c.text_px(int(round(st["cx"] - text_width(c.pxfont(vs), value, vtr) / 2.0)), int(round(st["vm"] + 0.3125 * vs)), value, col, vs, vtr)
+    msg = _msg(T, now)
     if msg:
         c.text_px(x0 + 10, y0 + 8, msg[:44], nat.ACC, 8, 0)
 
