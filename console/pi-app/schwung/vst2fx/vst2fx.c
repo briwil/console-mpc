@@ -210,6 +210,14 @@ static void *create(const char *dir, const char *cfg)
     e->dispatcher(e, eMains, 0, 1, NULL, 0);
     if (s->synth) e->dispatcher(e, eStartProcess, 0, 0, NULL, 0);
     s->npre = e->numPrograms;
+    if (s->npre <= 0) {                          /* a plugin that lists no programs but still answers for their names (the OP-1 Suite): ask by index */
+        for (int i = 0; i < 64; i++) {
+            char b[64]; memset(b, 0, sizeof b);
+            e->dispatcher(e, eProgramNameIndexed, i, 0, b, 0);
+            if (!b[0]) break;
+            s->npre = i + 1;
+        }
+    }
     if (s->pfirst < 0 || s->pfirst >= s->npre) s->pfirst = 0;
     if (s->pcount <= 0 || s->pfirst + s->pcount > s->npre) s->pcount = s->npre - s->pfirst;
     s->prog = s->pfirst;
