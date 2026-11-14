@@ -69,7 +69,8 @@ class InstPage:
                 if self.items[self.pick][0] is not None:
                     break
         elif self.mode:
-            self.pick = (self.pick + step) % max(1, len(self.choices))      # (the DRUMS / SYNTH cards are stops too)
+            self.pick = (self.pick + step) % max(1, len(self.choices))      # (landing on a DRUMS / SYNTH card: it holds a second, then moves on, see draw_list)
+            self.last_step, self.held_at = step, None
         else:
             self.row = max(0, min(audio.SLOTS - 1, self.row + step))
 
@@ -319,6 +320,14 @@ class InstPage:
 
     def draw_list(self, surf, f, white, grey, dim, green):
         """The pick list (or the CHANGE / REMOVE menu): 6 rows at a time, scrolling with the pick."""
+        if self.mode == "pick" and self.choices[self.pick][0] is None:      # on a DRUMS / SYNTH card: hold 1 s, then go on the way you were going
+            import time
+            now = time.time()
+            if getattr(self, "held_at", None) is None:
+                self.held_at = now
+            elif now - self.held_at > 1.0:
+                self.pick = (self.pick + getattr(self, "last_step", 1)) % len(self.choices)
+                self.held_at = None
         if self.mode == "pick":
             items = [(title, "#" if mid is None else "" if mid == EDIT else "SYNTH" if is_synth(mid) else "DRUMS")
                      for mid, title in self.choices]
