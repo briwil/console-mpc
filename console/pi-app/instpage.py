@@ -85,8 +85,8 @@ class InstPage:
             self.last_step, self.held_at = step, None
             if self.mode == "pick" and self.choices[self.pick][0] is None:       # a DRUMS / SYNTH card names what you are turning into
                 nx = self.choices[(self.pick + step) % len(self.choices)][0]
-                if nx == EDIT:
-                    self.choices[self.pick] = (None, "EDIT")
+                if nx == EDIT:                                  # turning from the first drum machine to EDIT: no card
+                    self.pick = (self.pick + step) % len(self.choices)
                 elif nx is not None:
                     self.choices[self.pick] = (None, "SYNTH" if is_synth(nx) else "DRUMS")
                 import sys
