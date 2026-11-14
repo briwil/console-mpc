@@ -98,7 +98,7 @@ def draw_lfo(T, nat):
 
 
 POP = {"key": None, "t": 0.0, "state": None}
-POP_COLS = [45.0, 119.0, 193.0, 267.0]               # the panel's four columns
+POP_COLS = [38.0, 100.0, 162.0, 224.0]               # the panel's four columns
 POP_LABEL = [118.0, 166.0]                            # label baselines of the two rows
 POP_VALUE = [136.0, 184.0]                            # the middle of a 16 px value in each row
 
@@ -118,7 +118,7 @@ def _pop_targets(n, active):
             if c < ca:
                 cx -= 4.0
             elif r == ra and c > ca:
-                cx += 26.0
+                cx += 22.0
             elif r != ra and ra == 1 and c >= ca:
                 cx += 40.0
             out.append(dict(cx=cx, lb=POP_LABEL[r], vm=POP_VALUE[r], ls=8, vs=16, t=0.0))
@@ -166,7 +166,7 @@ def draw_arp_popup(T, nat):
             continue
         st = POP["state"][i]
         col = sp.colour.mix(sp.DARK, WHITE, max(0.0, min(1.0, st["t"])))
-        room = 74 if active == i else 56
+        room = 78 if active == i else 56
         ls = sp.fit_size(c.pxfont, label, [px for px in (16, 8) if px <= max(8, int(round(st["ls"] / 8.0)) * 8)], room, lambda px: 0)
         if text_width(c.pxfont(ls), label, 0) > room:
             label = label[:max(2, room // 6)]
