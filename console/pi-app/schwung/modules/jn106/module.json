@@ -1,0 +1,7 @@
+{
+  "id": "jn106",
+  "name": "JN-106",
+  "description": "A six-voice Juno-style synth (JN-106 VST plug-in by sd88me, GPL-3.0)",
+  "dsp": "dsp.so",
+  "component_type": "sound_generator"
+}
