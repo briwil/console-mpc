@@ -324,9 +324,18 @@ def install(MoveBoard, pad_velocity=None):
             return
         if num == K1_ABS or num == K1:
             if length_page(T):
+                now = time.monotonic()
                 if num == K1_ABS:
+                    T._k1_abs_at = now
                     set_length(T, val)                          # K1 is a pot: its position IS the length (1-64)
-                return                                          # (and its clicks are not used there)
+                elif val and now - getattr(T, "_k1_abs_at", -9.0) > 0.15:
+                    # clicks with no pot position before them: the wheel in KNOB FX mode (pad 1 held) acting as knob 1
+                    step = val - 128 if val > 63 else val
+                    if T.synth_shown():
+                        T.msyn.knob(1, step, False)
+                    else:
+                        T.mseq.knob(1, step, False)
+                return                                          # (the pot's own clicks are not used there)
             if num == K1_ABS:
                 return
         if num == WHEEL and val and self.shift and on_tape(T):
