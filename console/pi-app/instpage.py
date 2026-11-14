@@ -100,6 +100,14 @@ class InstPage:
             self.row = max(0, min(audio.SLOTS - 1, self.row + step))
 
     def tick(self):
+        """Holding the push on a loaded slot (see mpcui/stepentry.py) opens CHANGE / REMOVE after 0.6 s."""
+        pd = getattr(self, "push_down", None)
+        if pd is not None and not getattr(self, "push_fired", True) and time.monotonic() - pd >= 0.6:
+            self.push_fired = True
+            self.shift_push()
+        self._tick_cards()
+
+    def _tick_cards(self):
         """On a DRUMS / SYNTH card the list holds 1 s, then goes on the way you were turning."""
         if self.mode == "pick" and self.choices and self.choices[self.pick][0] is None:
             now = time.monotonic()

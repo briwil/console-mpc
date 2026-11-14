@@ -283,6 +283,21 @@ def install(MoveBoard, pad_velocity=None):
             if val:
                 self.keys.put("INST_HOME" if num == INSTHOME else "SETTINGS")
             return
+        if num == PUSH and T.inst_page and not T.fx_page and not self.shift:
+            # the INSTRUMENTS page, a loaded slot: a short push opens it as always; holding the push for a moment (instpage.tick)
+            # opens CHANGE / REMOVE, like Shift + push
+            ip, e_ = T.instp, T.engine
+            if val:
+                if ip.mode is None and e_ and e_.drums and e_.slots[ip.row]:
+                    ip.push_down, ip.push_fired = time.monotonic(), False
+                    return
+            elif getattr(ip, "push_down", None) is not None:
+                fired = ip.push_fired
+                ip.push_down = None
+                if not fired:
+                    orig_cc(self, PUSH, 127)                                    # (it was a short push: it happens now)
+                    orig_cc(self, PUSH, 0)
+                return
         if num in (PROJECT, SONGPAGE, GRIDNEXT):                                # Shift + pad 16 / 12 / 14 (bridge/mapping.h)
             if val:
                 self.keys.put("FILE" if num == PROJECT else "SONG" if num == SONGPAGE else ("KNOB", 10, 1, False))
