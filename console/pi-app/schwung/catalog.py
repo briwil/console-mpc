@@ -394,7 +394,7 @@ def _add_guitar():
     BY_ID["guitar"] = MODULES[-1]
 
 
-def _add_plugin_synth(mid, title, plugin_file):
+def _add_plugin_synth(mid, title, plugin_file, list_as="synth"):
     """A VST2 instrument plug-in (put its .so in ConsoleData/plugins) played through vst2fx.so as a synth."""
     here = os.path.dirname(os.path.abspath(__file__))
     plugins = os.environ.get("CONSOLE_PLUGINS", "")
@@ -404,7 +404,8 @@ def _add_plugin_synth(mid, title, plugin_file):
     if mid in BY_ID:
         return
     MODULES.append({"id": mid, "title": title, "kind": "synth", "license": "see its repo", "repo": "", "commit": "installed",
-                    "json": "module.json", "build": [], "prebuilt": True, "one_copy": True, "hide_on_pages": ["preset"]})
+                    "json": "module.json", "build": [], "prebuilt": True, "one_copy": True, "hide_on_pages": ["preset"],
+                    "list_as": list_as})
     BY_ID[mid] = MODULES[-1]
 
 
@@ -415,7 +416,7 @@ _add_plugin_synth("jn106", "JN-106", "kr106.so")
 _add_plugin_synth("sturm", "STURM-TP", "sturm.so")
 _add_plugin_synth("monomodule", "MONOMODULE", "monomodule_one.so")
 _add_plugin_synth("clementine", "CLEMENTINE", "clementine_xt.so")
-_add_plugin_synth("w9", "9W9", "tr9w9.so")
+_add_plugin_synth("w9", "9W9", "tr9w9.so", list_as="drums")   # (a drum machine: listed with them in the picker)
 _add_plugin_synth("oxzygen", "OXZYGEN", "oxzygen.so")
 for _n in OP1_SYNTHS:
     _add_plugin_synth("op1-" + _n, _n.upper(), _n + ".so")

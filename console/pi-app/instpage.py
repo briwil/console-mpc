@@ -32,7 +32,7 @@ def building():
 def is_synth(mid):
     import drums
     sm = drums.schwung_modules
-    return bool(sm and mid in sm.catalog.BY_ID and sm.catalog.BY_ID[mid]["kind"] == "synth")
+    return bool(sm and mid in sm.catalog.BY_ID and sm.catalog.BY_ID[mid]["kind"] == "synth" and sm.catalog.BY_ID[mid].get("list_as") != "drums")  # (the picker's grouping: 9W9 is listed with the drum machines)
 
 
 def machines():
