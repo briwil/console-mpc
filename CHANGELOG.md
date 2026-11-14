@@ -3,6 +3,13 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.6
+
+- **VST2 instruments:** Console hosts VST2 synths as well as effects: MODEL-72 VST, PROFIT-5, JN-106, STURM-TP, MONOMODULE, CLEMENTINE, OXZYGEN, the OP-1 Suite (11 instruments, with 8 Console presets each) and 9W9 as a drum machine. Put each plug-in's `.so` (and its data folders) in `ConsoleData/plugins`; they are not included.
+- **More inserts:** the OP-1 effects (with their own presets), VHS VIBES and BORIS.
+- Thumbnails for all of them.
+- Plug-in data folders in `ConsoleData/plugins` are copied to the internal drive on start.
+
 ## 0.0.5
 
 - **GUITAR instrument:** plays the Sample's audio input (your guitar, in the back jacks) through Stompbox, built in: 40 presets (amps, pedals, cabinet, effects) on the PRESETS page, its settings on the sound page. Pick it as an instrument and play; arm its track on the tape page to record live. No sequencer, automation, PUNCH FX or song pages, and no patterns on it. The input is switched to REAR while GUITAR is loaded and put back afterwards. It needs `stompbox.so` (64-bit ARM, from the plugin's Sample release) in `/data/UserData/console/plugins`.

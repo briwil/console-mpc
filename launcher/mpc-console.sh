@@ -25,6 +25,8 @@ echo "$DATA" > "$C/data-folder.txt"
 export CONSOLE_PLUGINS="$C/plugins"
 mkdir -p "$CONSOLE_PLUGINS" "$DATA/plugins" 2>/dev/null
 for f in "$DATA"/plugins/*.so; do [ -f "$f" ] && cp -f "$f" "$CONSOLE_PLUGINS/" 2>/dev/null; done
+# a plugin's own data folders (SAMPLES, ROMS, ...) are copied once, when not there yet
+for d in "$DATA"/plugins/*/; do [ -d "$d" ] && [ ! -d "$CONSOLE_PLUGINS/$(basename "$d")" ] && cp -r "$d" "$CONSOLE_PLUGINS/" 2>/dev/null; done
 
 restore() { systemctl start ac50.service; }
 trap 'touch "$C/STOP"' INT TERM

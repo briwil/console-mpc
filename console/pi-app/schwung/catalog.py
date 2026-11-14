@@ -412,7 +412,7 @@ def _add_plugin_synth(mid, title, plugin_file):
 
 
 _add_guitar()
-_add_plugin_synth("model72", "MODEL-72", "model72.so")
+_add_plugin_synth("model72", "MODEL-72 VST", "model72.so")
 _add_plugin_synth("profit5", "PROFIT-5", "profit_5.so")
 _add_plugin_synth("jn106", "JN-106", "kr106.so")
 _add_plugin_synth("sturm", "STURM-TP", "sturm.so")

@@ -108,3 +108,11 @@ Console is released under the GNU General Public License v3.0 (see [LICENSE](LIC
 - **Licence unknown, no licence file anywhere:** dissolver, libpo32, mono-voice, omega, palette, setbfree-organ, spectra, structor, superboom, tablor, verglas, work. Ask the author or remove.
 - **Licence taken from Schwung's catalog only; confirm in each upstream repo:** amino, cw78, denis, essaim, fizzik, hush1, je8086, maze, tinypro5, wurl.
 - Also: `noisemaker` is GPL-2.0, `capicola` and `war_bells` are AGPL-3.0 (network-use clause), and `chiptune` is dual MIT/LGPL-2.1.
+
+## VST2 plug-ins (not included; loaded from `plugins` if you add them)
+
+| Plug-in | Author | License |
+|---|---|---|
+| Model-72, JN-106, Clementine-XT, 9W9, Boris Granular, OP-1 Suite | their authors | GPL-3.0 |
+| Monomodule One | its author | AGPL-3.0 |
+| VHS Vibes, Profit-5, Sturm-TP, OxZygen | their authors | MIT |
