@@ -1303,6 +1303,8 @@ class Transport:
 
     def tick(self, seconds):
         t, e = self.tape, self.engine
+        if self.inst_page:
+            self.instp.tick()
         if e:
             e.inst_view = bool(self.inst_page or self.drum_page)   # there every instrument plays, the tape doesn't
             self.update_glide(seconds)

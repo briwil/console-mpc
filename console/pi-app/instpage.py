@@ -74,6 +74,18 @@ class InstPage:
         else:
             self.row = max(0, min(audio.SLOTS - 1, self.row + step))
 
+    def tick(self):
+        """On a DRUMS / SYNTH card the list holds 1 s, then goes on the way you were turning."""
+        if self.mode == "pick" and self.choices and self.choices[self.pick][0] is None:
+            now = time.monotonic()
+            if getattr(self, "held_at", None) is None:
+                self.held_at = now
+            elif now - self.held_at > 1.0:
+                self.pick = (self.pick + getattr(self, "last_step", 1)) % len(self.choices)
+                self.held_at = None
+        else:
+            self.held_at = None
+
     def push(self):
         """Push knob 11 (or the MIDI key): choose in the list, open a loaded slot, or pick for an empty one."""
         e = self.e
@@ -320,14 +332,6 @@ class InstPage:
 
     def draw_list(self, surf, f, white, grey, dim, green):
         """The pick list (or the CHANGE / REMOVE menu): 6 rows at a time, scrolling with the pick."""
-        if self.mode == "pick" and self.choices[self.pick][0] is None:      # on a DRUMS / SYNTH card: hold 1 s, then go on the way you were going
-            import time
-            now = time.time()
-            if getattr(self, "held_at", None) is None:
-                self.held_at = now
-            elif now - self.held_at > 1.0:
-                self.pick = (self.pick + getattr(self, "last_step", 1)) % len(self.choices)
-                self.held_at = None
         if self.mode == "pick":
             items = [(title, "#" if mid is None else "" if mid == EDIT else "SYNTH" if is_synth(mid) else "DRUMS")
                      for mid, title in self.choices]
