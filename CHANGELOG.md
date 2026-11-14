@@ -3,6 +3,13 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.7
+
+- **Instrument picker:** DRUMS and SYNTH cards separate the two groups; each holds for a second, then the list moves on.
+- Hold the wheel push on a loaded instrument for CHANGE / REMOVE (same as Shift + push).
+- Fix: turning K1 on a sequencer no longer jumps back to the sound page (its position and the SAMPLE key shared a controller number). It sets the pattern length again.
+- One MODEL-72 (the Move-only copy that made no sound is gone). 9W9 is removed.
+
 ## 0.0.6
 
 - **VST2 instruments:** Console hosts VST2 synths as well as effects: MODEL-72, PROFIT-5, JN-106, STURM-TP, MONOMODULE, CLEMENTINE, OXZYGEN, the OP-1 Suite (11 instruments, with 8 Console presets each). Put each plug-in's `.so` (and its data folders) in `ConsoleData/plugins`; they are not included.
