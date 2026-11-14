@@ -69,12 +69,7 @@ class InstPage:
                 if self.items[self.pick][0] is not None:
                     break
         elif self.mode:
-            n = max(1, len(self.choices))
-            for _ in range(n):                                # (in the pick list the DRUMS / SYNTH cards are skipped)
-                self.pick = (self.pick + step) % n
-                c = self.choices[self.pick]
-                if not (self.mode == "pick" and c[0] is None):
-                    break
+            self.pick = (self.pick + step) % max(1, len(self.choices))      # (the DRUMS / SYNTH cards are stops too)
         else:
             self.row = max(0, min(audio.SLOTS - 1, self.row + step))
 
@@ -352,8 +347,8 @@ class InstPage:
             if on:
                 pygame.draw.rect(surf, (35, 38, 45), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
             if kind == "#":                                   # (a DRUMS / SYNTH heading card)
-                pygame.draw.rect(surf, (28, 31, 37), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
-                txt = f(13, 600, "sans").render(label, True, dim)
+                pygame.draw.rect(surf, (48, 52, 60) if on else (28, 31, 37), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
+                txt = f(13, 600, "sans").render(label, True, white if on else dim)
                 surf.blit(txt, (640 - txt.get_width() // 2, ry + (row_h - 4 - txt.get_height()) // 2))
                 continue
             txt = f(22 if on else 20, 600, "sans").render(label, True, green if on else white)
