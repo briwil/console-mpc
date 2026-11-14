@@ -169,11 +169,11 @@ static void send3(int st, int a, int b)
 
 /* an absolute knob (0-127) becomes "clicks": CC value 1 = one click right, 127 = one click left */
 /* K1-K3 and FADER are potentiometers (absolute 0-127, a stop at each end), a Move knob is endless. The clicks come from the
-   movement. K1 is also sent as its absolute position (CC 112, 0-127): Console's MPC layer uses it to set a pattern's length directly
+   movement. K1 is also sent as its absolute position (CC 115, 0-127): Console's MPC layer uses it to set a pattern's length directly
    from where the knob is (1-64), which the clicks alone could not do. */
 static void knob_clicks(int slot, int val, int move_cc)
 {
-    if (slot == 0 && page_seq) send3(0xBF, 112, val);                 /* (on the sequencer pages) */
+    if (slot == 0 && page_seq) send3(0xBF, 115, val);                 /* (on the sequencer pages) */
     if (knob_last[slot] < 0) { knob_last[slot] = val; return; }
     int d = val - knob_last[slot];
     knob_last[slot] = val;

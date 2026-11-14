@@ -12,7 +12,7 @@ INSTHOME, SETTINGSKEY = 112, 113                                  # SAMPLE (page
 PROJECT, SONGPAGE, GRIDNEXT = 109, 110, 111                     # Shift + pad 16 / 12 / 14 on the tape-style pages (as printed on the pads)
 ERASE = 119                          # private CCs from the bridge: REDO, set a loop point, arm / disarm the selected track
 K1 = 71                                                          # Move knob 1 (relative clicks)
-K1_ABS = 112                                                     # K1's absolute position from the bridge (0-127). (Not 118: that is CHOP = SPLICE)
+K1_ABS = 115                                                     # K1's absolute position from the bridge (0-127). (Not 112: SAMPLE; not 118: CHOP = SPLICE)
 MAX_LEN = 64
 
 
