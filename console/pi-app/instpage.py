@@ -364,6 +364,9 @@ class InstPage:
                     nx = self.choices[(k + getattr(self, "last_step", 1)) % len(self.choices)][0]
                     if nx is not None and nx != EDIT:
                         label = "SYNTH" if is_synth(nx) else "DRUMS"
+                    if getattr(self, "_dbg", None) != (k, label):
+                        self._dbg = (k, label)
+                        import sys; print("instpage: card at %d step %s next %r -> %s" % (k, getattr(self, "last_step", 1), nx, label), file=sys.stderr, flush=True)
                 pygame.draw.rect(surf, (48, 52, 60) if on else (28, 31, 37), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
                 txt = f(13, 600, "sans").render(label, True, white if on else dim)
                 surf.blit(txt, (640 - txt.get_width() // 2, ry + (row_h - 4 - txt.get_height()) // 2))
