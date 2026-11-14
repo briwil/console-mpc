@@ -25,7 +25,6 @@ class Pic:
         self.font = ImageFont.truetype(FONT, 8)
         self.big = ImageFont.truetype(BIG, 16)
         self.mid = ImageFont.truetype(BIG, 14)
-        self.ui = ImageFont.truetype(FONT, 16)                 # the UI's own text (Silkscreen 16)
 
     def px(self, x, y, v=1):
         if 0 <= x < W and 0 <= y < H:
@@ -50,9 +49,6 @@ class Pic:
 
     def title(self, x, y, s, v=1):
         self.d.text((x, y), s, fill=v, font=self.big)
-
-    def uitext(self, x, y, s, v=1):
-        self.d.text((x, y), s, fill=v, font=self.ui)
 
     def heading(self, x, y, s, v=1):
         self.d.text((x, y), s, fill=v, font=self.mid)
@@ -90,7 +86,7 @@ def op1(name):
     for i in range(15):                                      # keys
         x = 6 + round(i * 7.6)
         p.rect(x, 32, x + 5, 42)
-    p.uitext(3, 44, name)
+    p.title(3, 46, name)
     return p
 
 
