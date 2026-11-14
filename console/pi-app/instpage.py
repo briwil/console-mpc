@@ -360,6 +360,10 @@ class InstPage:
             if on:
                 pygame.draw.rect(surf, (35, 38, 45), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
             if kind == "#":                                   # (a DRUMS / SYNTH heading card)
+                if on:                                        # (it names what you are turning into, either way round)
+                    nx = self.choices[(k + getattr(self, "last_step", 1)) % len(self.choices)][0]
+                    if nx is not None and nx != EDIT:
+                        label = "SYNTH" if is_synth(nx) else "DRUMS"
                 pygame.draw.rect(surf, (48, 52, 60) if on else (28, 31, 37), (x + 12, ry, w - 24, row_h - 4), border_radius=6)
                 txt = f(13, 600, "sans").render(label, True, white if on else dim)
                 surf.blit(txt, (640 - txt.get_width() // 2, ry + (row_h - 4 - txt.get_height()) // 2))
