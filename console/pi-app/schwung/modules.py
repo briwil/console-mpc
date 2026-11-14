@@ -576,7 +576,7 @@ class Module:
             values = values[:-3]
         else:
             self.fx_sends = [0, 0]
-        values = [int(v) for v in list(values)[:self.param_count]]
+        values = [int(v) if v is not None else self.init_values[i] for i, v in enumerate(list(values)[:self.param_count])]    # (null: leave that knob at its start value)
         values += self.init_values[len(values):]
         with self._lock:
             self.values = values
