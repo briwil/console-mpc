@@ -98,40 +98,24 @@ def draw_lfo(T, nat):
 
 
 def draw_arp_popup(T, nat):
-    """The ARP as a panel over the current page: its settings (two rows of four) and the 16-step rhythm. Left / Right flip ARP / ARP 2."""
-    c = nat.canvas
+    """The ARP pop-up: the same layout as an instrument's settings (the 16 steps of the rhythm on top, the settings below in the
+    pads' order, so the KNOB FX pads line up with them). Left / Right flip ARP / ARP 2."""
     ml = T.mlfo
     cfg = ml.cfg()
-    second = getattr(T, "arp_pop", 1) == 2
-    x0, y0, w, h = 8, 20, 304, 196
-    c.rect(x0 - 2, y0 - 2, w + 4, h + 4, WHITE)
-    c.rect(x0, y0, w, h, (14, 16, 14))
-    c.text_px(x0 + 10, y0 + 30, "ARP 2" if second else "ARP", WHITE, 24, -3)
-    c.text_px(x0 + w - 10 - text_width(c.pxfont(16), "ON" if cfg["on"] else "OFF", -1), y0 + 28,
-              "ON" if cfg["on"] else "OFF", WHITE if cfg["on"] else G[3], 16, -1)
-    vals = ml.arp_values()
-    if second:
-        cells = vals
-    else:
-        cells = [v for v in vals if v[0] != "ON"]                              # (ON is the title's)
-    for i, (label, shown) in enumerate(cells[:6]):
-        cx = x0 + 10 + (i % 3) * 96
-        cy = y0 + 52 + (i // 3) * 44
-        c.rect(cx, cy, 90, 38, G[1])
-        c.text_px(cx + 5, cy + 12, label, G[5], 8, 0)
-        c.text_px(cx + 5, cy + 31, str(shown)[:9], WHITE, 16, -1)
-    for k, r in enumerate(cfg["rhythm"][:16]):                                 # the 16 steps: rest dark, note half, accent full
-        x = x0 + 10 + k * 18
-        c.rect(x, y0 + 148, 16, 30, G[1] if (k // 4) % 2 == 0 else G[0])
-        if r == 1:
-            c.rect(x, y0 + 163, 16, 15, G[5])
-        elif r == 2:
-            c.rect(x, y0 + 148, 16, 30, WHITE)
-        num = str(k + 1)
-        c.text_px(x + 8 - c_w(c, 8, num) // 2, y0 + 190, num, WHITE if k % 4 == 0 else G[4], 8, 0)
+
+    def rhythm(c):                                  # the 16 steps: rest dark, note half, accent full
+        for k, r in enumerate(cfg["rhythm"][:16]):
+            x = 8 + k * 19
+            c.rect(x, 32, 17, 40, G[1] if (k // 4) % 2 == 0 else G[0])
+            if r == 1:
+                c.rect(x, 52, 17, 20, G[5])
+            elif r == 2:
+                c.rect(x, 32, 17, 40, WHITE)
+            num = str(k + 1)
+            c.text_px(x + 8 - c_w(c, 8, num) // 2, 86, num, WHITE if k % 4 == 0 else G[4], 8, 0)
     msg = _msg(T, nat.time.monotonic())
-    if msg:
-        c.text_px(x0 + 10, y0 + 8, msg[:44], nat.ACC, 8, 0)
+    _steps_page(T, nat, ("arp-pop", ml.arp_second()), "ARP 2" if ml.arp_second() else "ARP", "ON" if cfg["on"] else "OFF",
+                msg, rhythm, [(a, b) for a, b in ml.arp_values()])
 
 
 def on_fx_page(T, menu):
