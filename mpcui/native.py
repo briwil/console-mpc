@@ -759,7 +759,7 @@ def install(pages):
             if card is None and T.engine and fxpages.on_auto_page(T, menu):
                 fxpages.draw_auto(T, sys.modules[__name__])
                 publish()
-                set_mode("O")
+                set_mode("V")                                        # V: AUTOMATION (as "O", but K1's position is sent: the pop-up's value)
                 return
             if card is None and T.engine and on_sound_page(T, menu):
                 draw_sound(T)

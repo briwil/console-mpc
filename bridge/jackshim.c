@@ -521,7 +521,7 @@ static void pagemode_poll(void)
     char ch = two[0];
     close(fd);
     if (n >= 1) page_linear = (n == 2 && two[1] == 'y');             /* second letter y: a synth (the note pads run in order) */
-    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N' || ch == 'Q' || ch == 'R'); page_sound = (ch == 'Q' || ch == 'R'); page_retrig = (ch == 'Q' || ch == 'P'); page_seq = (ch == 'S' || ch == 'P' || ch == 'U'); page_arp = (ch == 'U'); }
+    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A'); page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N' || ch == 'Q' || ch == 'R'); page_sound = (ch == 'Q' || ch == 'R'); page_retrig = (ch == 'Q' || ch == 'P'); page_seq = (ch == 'S' || ch == 'P' || ch == 'U' || ch == 'V'); page_arp = (ch == 'U'); }
 }
 
 /* ---- the metronome: /tmp/console-metro = "on volume bpm*100 beats-per-bar t0_ns" (Console writes it while recording; t0 = a bar's start on CLOCK_MONOTONIC) ---- */
