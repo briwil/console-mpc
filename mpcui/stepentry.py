@@ -432,6 +432,12 @@ def install(MoveBoard, pad_velocity=None):
 
     def cc(self, num, val):
         T = self.T
+        if val and num in (43, 41, 40):                                         # B1 / B2 / B3: the start-up animation goes away (native.py)
+            try:
+                import native
+                native.intro_dismiss()
+            except Exception:                                                   # noqa: BLE001
+                pass
         if num == 101:                                                          # the song page: SEQ = the instrument's sequencer (bridge/mapping.h)
             if val:
                 self.keys.put("SEQ_PAGE")

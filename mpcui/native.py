@@ -316,8 +316,44 @@ def _pad_label():
     c.text_px(x0 + 18, y0 + h // 2 + f.cap_h // 2, pl[1], WHITE, 16, -1)
 
 
+_intro = {"t0": None, "done": False}
+
+
+def intro_dismiss():
+    """Left button 1, 2 or 3 (B1 / B2 / B3): the start-up animation goes away."""
+    _intro["done"] = True
+
+
+def _intro_draw():
+    """The start-up animation, over the page, from the first frame Console shows; it holds on its last frame until a button is pressed."""
+    if _intro["done"]:
+        return False
+    try:
+        import intro
+        now = time.monotonic()
+        if _intro["t0"] is None:
+            _intro["t0"] = now
+        intro.frame_at(now - _intro["t0"])(canvas)
+        return True
+    except Exception:
+        _intro["done"] = True
+        import traceback
+        print("intro error:\n" + traceback.format_exc(), flush=True)
+        return False
+
+
 def publish():
     global _seq, _last
+    if _intro_draw():
+        data = canvas.px.tobytes()
+        if data != _last or not os.path.exists(PATH):
+            _last = data
+            _seq += 1
+            tmp = PATH + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(b"CNAT" + _seq.to_bytes(4, "little") + data)
+            os.replace(tmp, PATH)
+        return
     try:
         _pad_label()
     except Exception:
