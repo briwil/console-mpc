@@ -95,7 +95,7 @@ def draw(T, nat):
             b = min(x1, xb - (1 if spliced_after else 0))
             if b <= a:
                 continue
-            c.rect(a, top + 11, b - a, rows_n - 22, ink)
+            _wave(c, T, e.levels[ch], a, b, mid, ppb, top, rows_n, ink)
             if spliced_after and x0 <= xb < x1:
                 c.rect(xb, top - 1, 1, rows_n + 2, nat.WHITE)
 
@@ -121,6 +121,24 @@ def draw(T, nat):
             txt = "SONG  " + txt
     px = 16 if text_width(c.pxfont(16), txt, -1) <= room else 8
     c.text_px(20, BASE, txt[:60 if px == 8 else 40], col, px, -1 if px == 16 else 0)
+
+
+def _wave(c, T, lv, a, b, mid, ppb, top, rows_n, ink):
+    """A small waveform of the recorded audio in x a..b: one column a pixel, its height the loudest level there (a thin line through the middle for silence)."""
+    from tape import RES
+    cy = top + rows_n // 2
+    span = max(1, int(RES / ppb))
+    xs = np.arange(a, b)
+    idx = ((xs - mid) / ppb + T.tape.pos) * RES
+    n = len(lv)
+    px = c.px
+    half = max(1, (rows_n - 4) // 2)
+    for x, i in zip(xs.tolist(), idx.astype(int).tolist()):
+        v = 0.0
+        if 0 <= i < n:
+            v = float(lv[i:i + span].max()) if span > 1 else float(lv[i])
+        h = max(1, int(round(T.tape.shape(v) * half))) if v > 0.0003 else 0
+        px[cy - h:cy + h + 1, x] = ink
 
 
 def _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb, y, loop):
