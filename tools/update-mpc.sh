@@ -41,8 +41,17 @@ mkdir -p "$T/src" "$T/pack/console/tools/sim"
 if [ -n "$TOKEN" ]; then AUTH="Authorization: Bearer $TOKEN"; else AUTH="X-No-Key: 1"; fi
 
 say "2/5  Console's code from $CM"
-curl -fsSL -H "$AUTH" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$CM/tarball/main" -o "$T/src.tgz"
+LATEST=$(curl -fsSL -H "$AUTH" -H "Accept: application/vnd.github.sha" "https://api.github.com/repos/$CM/commits/main" 2>/dev/null || true)
+GOT=
+for try in 1 2 3 4; do
+  curl -fsSL -H "$AUTH" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$CM/tarball/${LATEST:-main}" -o "$T/src.tgz"
+  GOT=$(tar tzf "$T/src.tgz" 2>/dev/null | head -n 1 | sed 's|/.*||; s|.*-||')
+  [ -z "$LATEST" ] && break
+  case "$LATEST" in "$GOT"*) break ;; esac
+  say "     got an old copy ($GOT), asking again..."; sleep 15
+done
 tar xzf "$T/src.tgz" -C "$T/src" --strip-components=1
+say "     version $(printf %.7s "$GOT") (GitHub's newest: $(printf %.7s "$LATEST"))"
 cp -R "$T/src/console/pi-app" "$T/src/console/move" "$T/pack/console/"
 cp -R "$T/src/console/tools/sim/stubs" "$T/pack/console/tools/sim/"
 rm -rf "$T/pack/console/move/manual" "$T/pack/console/move/anim"
@@ -72,10 +81,11 @@ cat "$T/bridge.tgz" | mpc "cd $DEST/console && tar xzf -"
 mpc "[ -f $DEST/console/mpc/libconsolecore.so ] && cp $DEST/console/mpc/libconsolecore.so $DEST/console/pi-app/core/libconsolecore.so && cp $DEST/console/mpc/libschwunghost.so $DEST/console/pi-app/schwung/libschwunghost.so || true"     # (our sound core and module host)
 mpc "[ -f $DEST/console/mpc/vst2fx.so ] && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/stompbox/vst2fx.so && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/guitar/dsp.so && mkdir -p $DEST/console/pi-app/schwung/modules/model72 && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/model72/dsp.so && for m in $DEST/console/pi-app/schwung/modules/op1-* $DEST/console/pi-app/schwung/modules/vhs-vibes $DEST/console/pi-app/schwung/modules/profit5 $DEST/console/pi-app/schwung/modules/jn106 $DEST/console/pi-app/schwung/modules/sturm $DEST/console/pi-app/schwung/modules/boris $DEST/console/pi-app/schwung/modules/monomodule-fx $DEST/console/pi-app/schwung/modules/monomodule $DEST/console/pi-app/schwung/modules/clementine $DEST/console/pi-app/schwung/modules/oxzygen; do if grep -q audio_fx \$m/module.json; then cp $DEST/console/mpc/vst2fx.so \$m/vst2fx.so; else cp $DEST/console/mpc/vst2fx.so \$m/dsp.so; fi; done || true"     # (the VST2 effect host for STOMPBOX)
 [ "$PY" = 1 ] && cat "$T/python.tgz" | mpc "cd $DEST/console && rm -rf python && tar xzf -"
+[ -n "$GOT" ] && mpc "echo $(printf %.7s "$GOT") > $DEST/console/INSTALLED"
 mpc "sync"
 if [ "${NOSTART:-0}" = 1 ]; then
   say "5/5  Done. Start Console from the startup menu (PAD 1)."
 else
   mpc "rm -f $DEST/console/STOP; nohup sh $DEST/console/mpc/mpc-console.sh >/dev/null 2>&1 </dev/null &"
-  say "5/5  Done. Console is starting on the MPC."
+  say "5/5  Done. Console is starting on the MPC. Installed: $(printf %.7s "$GOT")"
 fi
