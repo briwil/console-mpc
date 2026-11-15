@@ -117,7 +117,7 @@ def tape_button(board, num):
             seqish = False
         if seqish:                                              # Shift + PLUS on a sequencer page: the pattern's redo
             sp = T.sp()
-            n = sp.seq.redo()
+            n = sp.seq.redo() if hasattr(sp.seq, "redo") else None      # (never crash the app over a redo)
             if n is None:
                 T.say("NOTHING TO REDO", 2)
             else:

@@ -78,6 +78,8 @@ try:
     freshempty.install(audio)            # a brand-new project (first start) has empty instrument slots, not the LXR-02 in slot 1
     import sequencer as _sequencer
     redo.install_seq(_sequencer.Sequencer)   # ... and Shift + PLUS on a sequencer page
+    import notes as _notes
+    redo.install_seq(_notes.NoteSequencer)   # (the synths' sequencer too: it had no redo, and Shift + PLUS crashed the app)
 except Exception:
     import traceback
     print("redo is off:\n" + traceback.format_exc(), flush=True)
