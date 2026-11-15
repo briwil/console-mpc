@@ -774,6 +774,14 @@ def main():
                         "%s %d ms avg %d ms worst (%d)" % (k, 1000 * v[0] / max(1, v[1]), 1000 * v[2], v[1]) for k, v in perf["pg"].items()), flush=True)
                 perf["pg"] = {}
                 try:
+                    _b = e.bridge
+                    if e.playing and getattr(_b, "gap_max", 0.0) > 0.05:
+                        print("perf: the sound core's feed waited up to %d ms between two steps (a step takes up to %d ms); the sequencer is sent 100 ms ahead" % (
+                            1000 * _b.gap_max, 1000 * _b.step_max), flush=True)
+                    _b.gap_max, _b.step_max = 0.0, 0.0
+                except Exception:                             # noqa: BLE001
+                    pass
+                try:
                     _c = e.bridge.core
                     _cyc, _now = int(_c.lib.core_cycles()), int(_c.now())
                 except Exception:                             # noqa: BLE001
@@ -1283,6 +1291,15 @@ def handle(name, T, m, e):
         if name == "HOME":
             T.song.push()                                  # push the wheel: pick the cell the box is on / let go
             return
+    if name in ("INST_HOME", "SEQ_PAGE") and T.song_page and not menus and not (T.seq_page or T.drum_page or T.inst_page or T.fx_page):
+        T.song_page = False                           # the song page: SAMPLE = page 1 of the instrument, SEQ = its sequencer
+        T.key("DRUMS")
+        if name == "SEQ_PAGE" and T.drum_page and not T.seq_page:
+            T.key("DRUMS")
+        T.drum_tab = 0
+        return
+    if name == "SEQ_PAGE":
+        return
     if name == "INST_HOME":                           # SAMPLE (the MPC): back to page 1 of the instrument, from its other pages
         if (T.drum_page or T.seq_page) and not (menus or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active):
             T.punch.leave()

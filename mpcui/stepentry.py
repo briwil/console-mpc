@@ -405,6 +405,10 @@ def install(MoveBoard, pad_velocity=None):
 
     def cc(self, num, val):
         T = self.T
+        if num == 101:                                                          # the song page: SEQ = the instrument's sequencer (bridge/mapping.h)
+            if val:
+                self.keys.put("SEQ_PAGE")
+            return
         if num == 102:                                                          # what the pads are now (bridge/mapping.h): named for a second
             try:
                 if not on_tape(T) and not T.inst_page and not T.song_page:

@@ -106,6 +106,8 @@ class CoreBridge:
                 if self.core is None:
                     self._open()
                 t0 = time.monotonic()
+                if self.last_step:
+                    self.gap_max = max(getattr(self, "gap_max", 0.0), t0 - self.last_step)     # (the longest wait between two steps: the sequencer is sent 100 ms ahead)
                 self._step()
                 self.steps += 1
                 self.last_step = time.monotonic()
