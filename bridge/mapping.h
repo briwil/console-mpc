@@ -61,6 +61,7 @@ static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
 static volatile int page_tapeonly;          /* the tape recorder page itself (not the instrument list, song or mixer): its own button layout */
 static volatile int page_arp;               /* the ARP pop-up is up (page mode "U"): KNOB FX comes on by itself, pads 9-16 play notes (orange) */
+static volatile int page_k1;                /* a sound page (Q): K1 is also sent as its absolute position */
 static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
 static volatile int page_retrig;            /* a sound page, or steps selected: knob mode re-plays the drum while a knob is turned (not on song, punch FX, automation, LFO, mixer ...) */
 static volatile int page_sound;             /* the instrument's sound / parameter page that has a sequencer: SEQ goes to it (as B1 does) */
@@ -175,7 +176,7 @@ static void send3(int st, int a, int b)
    from where the knob is (1-64), which the clicks alone could not do. */
 static void knob_clicks(int slot, int val, int move_cc)
 {
-    if (slot == 0 && page_seq) send3(0xBF, 115, val);                 /* (on the sequencer pages) */
+    if (slot == 0 && (page_seq || page_k1)) send3(0xBF, 115, val);                 /* (on the sequencer pages) */
     if (knob_last[slot] < 0) { knob_last[slot] = val; return; }
     int d = val - knob_last[slot];
     knob_last[slot] = val;

@@ -293,6 +293,50 @@ def auto_value_page(T):
         return False
 
 
+def sound_k1(T):
+    """On a sound page: the first setting on the page (K1's), or None when K1 isn't a number there."""
+    try:
+        if not T.drum_page or T.seq_page or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active or not T.engine:
+            return None
+        if T.punch.active() or T.auto.active() or T.mlfo.active() or T.engine.drums is None:
+            return None
+        if getattr(T, "arp_pop", 0) or getattr(T, "pads_pop", 0):
+            return None
+        mn = getattr(T, "_mpc_menu", None)
+        if mn is not None and (mn.open or mn.kits.open):
+            return None
+        if getattr(T, "presets", None) is not None and T.presets.on_page():
+            return None
+        pages = T.drum_pages()
+        params = pages[min(T.drum_tab, len(pages) - 1)][1]
+        if not params:
+            return None
+        d = T.engine.drums
+        if d.kind(params[0]) in ("menu", "onoff"):
+            return None
+        return params[0]
+    except Exception:                                                            # noqa: BLE001
+        return None
+
+
+def sound_k1_set(T, val):
+    """K1 is a pot: its position (0-127) is the setting's place from its lowest value to its highest."""
+    param = sound_k1(T)
+    if param is None:
+        return False
+    e = T.engine
+    top = e.drums.stepped(param, 0, 100000)
+    e.drums.set_param(param, int(round(val / 127.0 * top)))
+    with e.lock:
+        e.dirty.add(-1)
+    try:
+        import time as _t
+        T.drumpage.edited[1] = _t.monotonic()
+    except Exception:                                                            # noqa: BLE001
+        pass
+    return True
+
+
 def step_setting_end(T, val):
     """Steps selected and a setting picked, knob 1 turning it by clicks: when the pot reaches an end stop the setting goes to its
     lowest (or highest) value, so all the way round always means the end, however the clicks added up. True when it did."""
@@ -419,6 +463,11 @@ def install(MoveBoard, pad_velocity=None):
             finally:
                 self.shift = shift
             return
+        if num == K1_ABS and sound_k1_set(self.T, val):
+            self.T._k1_abs_at = time.monotonic()
+            return                                              # (a sound page: K1's position is the setting, end to end)
+        if num == K1 and val and time.monotonic() - getattr(self.T, "_k1_abs_at", -9.0) < 0.15 and sound_k1(self.T) is not None:
+            return                                              # (its clicks are not used there: the position was)
         if (num == K1_ABS or num == K1) and auto_value_page(T):
             now = time.monotonic()
             if num == K1_ABS:
