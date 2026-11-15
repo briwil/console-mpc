@@ -14,6 +14,7 @@
  * libjack is opened at run time (dlopen), from the path Python gives: on the Move that's RNBO's own copy,
  * which has to match the JACK server it starts.
  */
+#include <time.h>
 #include <dlfcn.h>
 #include <math.h>
 #include <stdatomic.h>
@@ -133,6 +134,7 @@ static int display_next;
 static void *client, *out_l, *out_r, *in_l, *in_r, *ctl_in, *ctl_out, *disp_out;
 static atomic_uint_fast64_t now_frame;         /* frames played since the core started */
 static atomic_uint cycles;
+static atomic_uint slow_cycles, longest_us;      /* cycles that used most of their time (a dropout is near), and the longest one, since Python last asked */
 static jack_nframes_t rate, block;
 
 static void (*rev_process)(void *, const float *, const float *, float *, float *, int);
@@ -518,6 +520,7 @@ static int process(jack_nframes_t n, void *arg) {
     static int fz;
     if (!fz) { flush_denormals(); fz = 1; }
     if (n > MAX_BLOCK) n = MAX_BLOCK;
+    struct timespec ts0; clock_gettime(CLOCK_MONOTONIC, &ts0);
     uint64_t t0 = atomic_load(&now_frame), t1 = t0 + n;
 
     /* the Move's controls -> Python */
@@ -702,6 +705,12 @@ static int process(jack_nframes_t n, void *arg) {
 
     atomic_store(&now_frame, t1);
     atomic_fetch_add(&cycles, 1);
+    { struct timespec ts1; clock_gettime(CLOCK_MONOTONIC, &ts1);
+      long us = (ts1.tv_sec - ts0.tv_sec) * 1000000L + (ts1.tv_nsec - ts0.tv_nsec) / 1000L;
+      if (us < 0) us = 0;
+      if ((unsigned)us > atomic_load(&longest_us)) atomic_store(&longest_us, (unsigned)us);
+      if (rate > 0 && us * rate > 700L * 1000L * (long)n) atomic_fetch_add(&slow_cycles, 1);     /* over 70% of the block's time */
+    }
     return 0;
 }
 
@@ -758,6 +767,8 @@ int core_rate(void) { return (int)rate; }
 int core_block(void) { return (int)block; }
 uint64_t core_now(void) { return atomic_load(&now_frame); }
 unsigned core_cycles(void) { return atomic_load(&cycles); }
+unsigned core_slow_take(void) { return atomic_exchange(&slow_cycles, 0); }
+unsigned core_longest_us_take(void) { return atomic_exchange(&longest_us, 0); }
 /* JACK's own measure of how busy the audio cycle is, 0-100 (all its clients together) */
 float core_load(void) { return (client && J.cpu_load) ? J.cpu_load(client) : -1.0f; }
 

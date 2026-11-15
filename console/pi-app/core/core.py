@@ -100,6 +100,13 @@ class Core:
     def cycles(self):
         return self.lib.core_cycles()
 
+    def slow(self):
+        """(cycles that used over 70% of their time, the longest cycle in microseconds) since last asked; (-1, -1) from an older core."""
+        try:
+            return int(self.lib.core_slow_take()), int(self.lib.core_longest_us_take())
+        except AttributeError:
+            return -1, -1
+
     def load(self):
         """JACK's measure of how busy the audio cycle is, in percent."""
         return self.lib.core_load()
