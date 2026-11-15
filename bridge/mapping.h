@@ -176,7 +176,8 @@ static void send3(int st, int a, int b)
    from where the knob is (1-64), which the clicks alone could not do. */
 static void knob_clicks(int slot, int val, int move_cc)
 {
-    if (slot == 0 && (page_seq || page_k1)) send3(0xBF, 115, val);                 /* (on the sequencer pages) */
+    if (slot == 0 && (page_seq || page_k1)) send3(0xBF, 115, val);
+    if ((slot == 1 || slot == 2) && page_k1) send3(0xBF, 115 + slot, val);   /* K2, K3: 116, 117 (a sound page) */                 /* (on the sequencer pages) */
     if (knob_last[slot] < 0) { knob_last[slot] = val; return; }
     int d = val - knob_last[slot];
     knob_last[slot] = val;

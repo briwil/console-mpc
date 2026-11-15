@@ -293,8 +293,8 @@ def auto_value_page(T):
         return False
 
 
-def sound_k1(T):
-    """On a sound page: the first setting on the page (K1's), or None when K1 isn't a number there."""
+def sound_k1(T, n=1):
+    """On a sound page: the n-th setting on the page (knob n's), or None when that knob isn't a number there."""
     try:
         if not T.drum_page or T.seq_page or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active or not T.engine:
             return None
@@ -309,19 +309,19 @@ def sound_k1(T):
             return None
         pages = T.drum_pages()
         params = pages[min(T.drum_tab, len(pages) - 1)][1]
-        if not params:
+        if len(params) < n:
             return None
         d = T.engine.drums
-        if d.kind(params[0]) in ("menu", "onoff"):
+        if d.kind(params[n - 1]) in ("menu", "onoff"):
             return None
-        return params[0]
+        return params[n - 1]
     except Exception:                                                            # noqa: BLE001
         return None
 
 
-def sound_k1_set(T, val):
-    """K1 is a pot: its position (0-127) is the setting's place from its lowest value to its highest."""
-    param = sound_k1(T)
+def sound_k1_set(T, val, n=1):
+    """K1-K3 are pots: the position (0-127) is the setting's place from its lowest value to its highest."""
+    param = sound_k1(T, n)
     if param is None:
         return False
     e = T.engine
@@ -331,7 +331,7 @@ def sound_k1_set(T, val):
         e.dirty.add(-1)
     try:
         import time as _t
-        T.drumpage.edited[1] = _t.monotonic()
+        T.drumpage.edited[n] = _t.monotonic()
     except Exception:                                                            # noqa: BLE001
         pass
     return True
@@ -463,10 +463,13 @@ def install(MoveBoard, pad_velocity=None):
             finally:
                 self.shift = shift
             return
-        if num == K1_ABS and sound_k1_set(self.T, val):
-            self.T._k1_abs_at = time.monotonic()
-            return                                              # (a sound page: K1's position is the setting, end to end)
-        if num == K1 and val and time.monotonic() - getattr(self.T, "_k1_abs_at", -9.0) < 0.15 and sound_k1(self.T) is not None:
+        if num in (K1_ABS, 116, 117) and sound_k1_set(self.T, val, {K1_ABS: 1, 116: 2, 117: 3}[num]):
+            self.T._pot_abs_at = getattr(self.T, "_pot_abs_at", {})
+            self.T._pot_abs_at[{K1_ABS: 71, 116: 72, 117: 73}[num]] = time.monotonic()
+            self.T._k1_abs_at = time.monotonic() if num == K1_ABS else getattr(self.T, "_k1_abs_at", -9.0)
+            return                                              # (a sound page: a pot's position is the setting, end to end)
+        if num in (71, 72, 73) and val and time.monotonic() - getattr(self.T, "_pot_abs_at", {}).get(num, -9.0) < 0.15 \
+                and sound_k1(self.T, num - 70) is not None:
             return                                              # (its clicks are not used there: the position was)
         if (num == K1_ABS or num == K1) and auto_value_page(T):
             now = time.monotonic()
