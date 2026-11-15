@@ -195,7 +195,7 @@ class Auto:
             elif self.add(i, key):
                 popup.show(self.T, "STEP %d" % (i + 1), self.label(key), self.value_text(i, key), "ADDED")
             else:
-                self.T.say("STEP %d: NO NOTE THERE" % (i + 1), 2)
+                self.T.say("STEP %d: %s NEEDS A NOTE ON THE STEP" % (i + 1, self.label(key)[:14]), 3)
 
     def targets(self):
         """The steps knob 1 changes: the picked ones, else the one held, else the white box's."""
@@ -615,7 +615,7 @@ class Auto:
             self.held, self._tap = i, False
             popup.show(self.T, "STEP %d" % (i + 1), self.label(key), self.value_text(i, key), "ADDED")
         else:
-            self.T.say("STEP %d: NO NOTE THERE" % (i + 1), 2)
+            self.T.say("STEP %d: %s NEEDS A NOTE ON THE STEP" % (i + 1, self.label(key)[:14]), 3)
 
     def clear(self):
         """Shift + Delete: asks first; again (within a few seconds): this setting off every step."""
