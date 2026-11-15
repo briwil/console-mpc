@@ -405,8 +405,6 @@ def draw_song(T, nat):
             c.rect(x, y, 16, 14, colour.GREENS[3] if have else colour.GREENS[0])
             num = str(i + 1)
             c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 10, num, WHITE if have else colour.GREENS[2], 8, 0)
-            if i == sg.playing_row:
-                c.rect(x, y + 12, 16, 2, WHITE)
             if i == sg.pick:
                 c.frame(x, y, 16, 14, WHITE)
         plays = "PLAYS X%d" % row["repeat"]                         # how many times the row plays: the cell after the last instrument

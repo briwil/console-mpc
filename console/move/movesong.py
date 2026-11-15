@@ -264,6 +264,10 @@ class Song:
             return
         self._ready = False
         self._was_playing = True
+        if self.playing_row != getattr(self, "_shown_row", None) and self.playing_row is not None:
+            self.pick = min(self.playing_row, len(self.rows) - 1)     # the white box and the cells follow the row that is playing
+            self.sel = False
+        self._shown_row = self.playing_row
         m = self.master()
         if m is None:
             return
