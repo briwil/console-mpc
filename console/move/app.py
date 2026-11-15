@@ -1047,7 +1047,13 @@ def arp_popup_key(name, T):
     ml = T.mlfo
     if isinstance(name, tuple):
         if name[0] == "KNOB" and 1 <= name[1] <= 8:
-            ml.arp_knob(name[1], name[2], name[3])
+            n, d = name[1], name[2]
+            numeric = (n in (1, 2)) if ml.arp_second() else n == 5          # glide, bend / gate: numbers, one a click (the rest pick from a list)
+            if numeric:
+                d = knobgate.numeric(("arp-pop", n), d)                      # (the 4 clicks of a wheel notch count as one: this runs before the global gate)
+                if not d:
+                    return True
+            ml.arp_knob(n, d, name[3])
         elif name[0] in ("STEP", "LFOSTEP"):                  # a step button (the pads, SEQ on): that step of the arp's rhythm
             ml.arp_step(name[1], name[2])
         return True
@@ -1074,7 +1080,7 @@ def _count_in(name, T, m, e):
 def handle(name, T, m, e):
     """One action, the way the Pi app's main loop does it (menus first), plus the Move's own."""
     if isinstance(name, tuple) and name[0] == "VOLUME":
-        T.phones_volume(name[1] * 0.02)
+        T.phones_volume(name[1] * 0.01)
         return
     if isinstance(name, tuple) and name[0] == "SENS":        # Shift + the volume knob: how many clicks a step takes
         v = knobgate.set_speed(knobgate.SPEED + (1 if name[1] > 0 else -1) * (1 if abs(name[1]) < 3 else 2))

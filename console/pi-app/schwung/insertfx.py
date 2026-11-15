@@ -50,7 +50,7 @@ def _params(folder, jsonname):
         lo, hi = float(p.get("min", 0)), float(p.get("max", 1))
         if opts:
             lo, hi = 0.0, float(len(opts) - 1)
-        step = float(p.get("step", 1 if t in ("int", "enum", "bool") else 0.05)) or 0.05
+        step = float(p.get("step", 1 if t in ("int", "enum", "bool") else 0.01)) or 0.01
         if "step" not in p and t == "float" and not opts and hi - lo > 1.0:
             raw = (hi - lo) / 100.0                       # a wide range (4K EQ: -15..15 dB): about 100 clicks end to end
             mag = 10 ** math.floor(math.log10(raw))

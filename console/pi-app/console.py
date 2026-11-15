@@ -719,16 +719,16 @@ class Transport:
             self.box_edit(what, steps * 0.5 if what == "gain" else steps)
         elif number <= 8:
             if shift:
-                self.pan(number, delta * 0.05)          # SHIFT + a track knob: pan
+                self.pan(number, delta * 0.01)          # SHIFT + a track knob: pan
             else:
-                self.volume(number, delta * 0.02)
+                self.volume(number, delta * 0.01)
         elif number == 9 and shift:
             self.sweep(delta)                     # SHIFT + knob 9: in and out points, a bar a click
         elif number == 9:
             for _ in range(abs(delta)):
                 t.zoom_in() if delta > 0 else t.zoom_out()
         elif number == 10 and shift:
-            self.phones_volume(delta * 0.02)       # SHIFT + knob 10: headphone volume
+            self.phones_volume(delta * 0.01)       # SHIFT + knob 10: headphone volume
         elif number == 10:
             for _ in range(abs(delta)):
                 t.grid = (t.grid + (1 if delta > 0 else -1)) % len(tape.GRIDS)
@@ -935,10 +935,10 @@ class Transport:
         if self.fx_page == "mixer":                              # the MIXER: knobs 1-8 the instruments in slots 1-8
             if number <= 8 and e and e.slots[number - 1]:
                 if shift:                                        # Shift + knob: its pan
-                    v = e.change_inst_pan(number - 1, delta * 0.04)
+                    v = e.change_inst_pan(number - 1, delta * 0.01)
                     self.say("INSTRUMENT %d PAN: %s" % (number, mix_pan_text(v)), 2)
                 else:
-                    v = e.change_inst_level(number - 1, delta * 0.02)
+                    v = e.change_inst_level(number - 1, delta * 0.01)
                     self.say("INSTRUMENT %d VOLUME: %d%%" % (number, round(v * 100)), 2)
             return
         if self.fx_page in ("insert", "insert2"):
@@ -955,13 +955,13 @@ class Transport:
         if getattr(self, "inst_sends", False):          # the Move: 1-3 the effect (each instrument's send is on its SENDS page)
             if number <= len(self.FX_KNOBS[self.fx_page]):
                 key = self.FX_KNOBS[self.fx_page][number - 1][0]
-                e.change_fx(key, delta if key == "dly_time" else delta * 0.02)
+                e.change_fx(key, delta if key == "dly_time" else delta * 0.01)
             return
         if number <= 8:
-            e.change_send(self.fx_page, number, delta * 0.02)
+            e.change_send(self.fx_page, number, delta * 0.01)
         else:
             key = self.FX_KNOBS[self.fx_page][number - 9][0]
-            e.change_fx(key, delta if key == "dly_time" else delta * 0.02)
+            e.change_fx(key, delta if key == "dly_time" else delta * 0.01)
 
     def fx_value_text(self, key):
         v = self.engine.fx[key]

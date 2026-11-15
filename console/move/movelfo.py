@@ -85,10 +85,14 @@ class MoveLFO:
                 return
             number += 2
         seq = T.engine.seq
-        way = knobgate.gate(("pads", number), delta, shift)
+        if number == 4:                                  # a fixed velocity: a number, one a click (the others pick from a list)
+            way = knobgate.numeric(("padvel",), delta)
+            one = way
+        else:
+            way = knobgate.gate(("pads", number), delta, shift)
+            one = 1 if way > 0 else -1
         if not way:
             return
-        one = 1 if way > 0 else -1
         if number == 1:
             seq.set_scale(root=seq.root + one)
         elif number == 2:
@@ -97,7 +101,7 @@ class MoveLFO:
             T.octave = max(-4, min(4, getattr(T, "octave", 0) + one))
         elif number == 4:                                # TOUCH (as you hit them) or a fixed velocity
             v = getattr(T, "pad_vel", 0)
-            v = 100 if (v == 0 and one > 0) else v + 5 * one
+            v = 100 if (v == 0 and one > 0) else v + one
             T.pad_vel = 0 if v < 10 else min(127, v)
             T.engine.remember("pad_vel", T.pad_vel)
         elif number == 5:
@@ -146,7 +150,7 @@ class MoveLFO:
         T, e = self.T, self.T.engine
         if number in (1, 2):
             kind = "reverb" if number == 1 else "delay"
-            v = e.change_inst_sends(kind, delta * 0.02)
+            v = e.change_inst_sends(kind, delta * 0.01)
             T.say("%s SEND  %s" % (kind.upper(), "%d%%" % round(v * 100) if v is not None else "OWN FX"), 2)
         elif number in (3, 4) and self._inserts():
             sf = T.songfx(number - 3)
@@ -154,7 +158,7 @@ class MoveLFO:
                 T.say("SONG INSERT %d IS EMPTY (LEFT BUTTON 3)" % (number - 2), 2)
                 return
             slot = e.slot if e.slot is not None else 0
-            v = sf.set_amount(slot, sf.amount(slot) + 2 * delta)
+            v = sf.set_amount(slot, sf.amount(slot) + delta)
             T._insfx_save()
             T.say("SONG INSERT %d  %d%%" % (number - 2, v), 2)
 
@@ -176,9 +180,9 @@ class MoveLFO:
         k = number - 1
         if self.arp_second():
             if k == 0:
-                c["glide"] = max(0, min(100, c["glide"] + 5 * delta))
+                c["glide"] = max(0, min(100, c["glide"] + delta))
             elif k == 1:
-                c["bend"] = max(-100, min(100, c["bend"] + 5 * delta))
+                c["bend"] = max(-100, min(100, c["bend"] + delta))
             else:
                 return
             self.T.engine.seq_changed()
@@ -202,7 +206,7 @@ class MoveLFO:
             else:
                 c["style"] = max(0, min(len(arp.STYLES) - 1, c["style"] + one))
         elif k == 4:
-            c["gate"] = max(10, min(200, c["gate"] + 5 * delta))
+            c["gate"] = max(10, min(200, c["gate"] + delta))
         else:
             return
         self.T.engine.seq_changed()
