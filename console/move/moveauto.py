@@ -132,6 +132,10 @@ class Auto:
             self.mode = "list"
             return
         k = self.items[max(0, min(len(self.items) - 1, self.prow))][0]
+        if not isinstance(k, str) and ("rec", k) in self.rows():
+            k = ("rec", k)
+        elif not isinstance(k, str) and k not in self.rows():
+            k = ("rec", k)                                     # a sound setting is a lane: every step can have a value, notes or not
         if k not in self.rows():
             self.extra.append(k)
         self.row = self.rows().index(k)
@@ -224,7 +228,9 @@ class Auto:
         seq = self.seq
         if self.rec(key):
             ln = self.rec_lane(key)
-            return ln.length if ln else 16
+            if ln:
+                return ln.length
+            return seq.pattern.length if self.synth() else seq.lane(self.T.seqp.lane).length      # (a new one starts as long as the pattern)
         return seq.pattern.length if self.synth() else seq.lane(self.T.seqp.lane).length
 
     def units(self, i):
@@ -414,8 +420,24 @@ class Auto:
     def _first(self, i, key):
         """The first step of a setting (just chosen from the picker): its starting value."""
         d = self.T.engine.drums
-        if self.rec(key):
-            return False
+        if self.rec(key):                                      # a lane: any step, the sound's value as it is now
+            self.seq.snapshot()
+            with self.seq.lock:
+                pat = self.seq.pattern
+                a = autom.lanes(pat)
+                ln = a.get(key[1])
+                if ln is None:
+                    if self.synth():
+                        length, rate = pat.length, pat.rate
+                    else:
+                        lane = self.seq.lane(self.T.seqp.lane)
+                        length, rate = lane.length, lane.rate
+                    ln = a[key[1]] = autom.Lane(length, rate)
+                if i < ln.length:
+                    ln.steps[i] = int(d.get_param(key[1]))
+            self._snapped = (i, key)
+            self.T.engine.seq_changed()
+            return True
         with self.seq.lock:
             us = [u for u in self.units(i) if self.synth() or getattr(u, "on", False)]
         if not us:
