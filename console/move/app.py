@@ -972,6 +972,26 @@ def menu_tick(m):
             m.restart = True
 
 
+def pads_popup_key(name, T):
+    """While the PADS pop-up (PAD FX) is up: knobs 1-5 are its settings, PLUS / MINUS the octave. True = dealt with."""
+    if not (T.engine and (T.drum_page or T.seq_page) and not (T.fx_page or T.inst_page or T.song_page or T.auto_page)):
+        T.pads_pop = 0                                        # (the instrument or the page changed under it)
+        return False
+    if name in ("PLAY", "STOP"):
+        return False
+    if isinstance(name, tuple):
+        if name[0] == "KNOB" and 1 <= name[1] <= 5:
+            T.mlfo.pads_knob(name[1], name[2], name[3])
+        return True
+    if name in ("LEFT", "RIGHT"):                             # PLUS / MINUS: the octave
+        T.octave = max(-4, min(4, getattr(T, "octave", 0) + (1 if name == "RIGHT" else -1)))
+        T.engine.seq_changed()
+        T.say("OCTAVE %s" % ("%+d" % T.octave if T.octave else "0"), 2)
+    elif name in ("BACK", "PADS_JUMP"):
+        T.pads_pop = 0
+    return True
+
+
 def arp_popup_key(name, T):
     """While the ARP pop-up is up. True = dealt with (swallowed); False = carry on as usual (PLAY, STOP)."""
     if not (T.engine and T.synth_shown() and (T.drum_page or T.seq_page)):
@@ -1021,6 +1041,9 @@ def handle(name, T, m, e):
                 return
         except Exception as ex:                                   # noqa: BLE001  (never let a count-in take the app down)
             print("count-in:", ex, flush=True)
+    if getattr(T, "pads_pop", 0):                                 # the PADS pop-up: only its own controls (and the transport) work
+        if pads_popup_key(name, T):
+            return
     if getattr(T, "arp_pop", 0):                                  # the ARP pop-up: only its own controls (and the transport) work
         if arp_popup_key(name, T):
             return

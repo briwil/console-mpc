@@ -294,8 +294,20 @@ def _arp_pop_up():
     return bool(T is not None and getattr(T, "arp_pop", 0) and T.engine and T.synth_shown() and (T.drum_page or T.seq_page))
 
 
+def _pads_pop_up():
+    """True while the PADS pop-up (PAD FX) is showing."""
+    T = _popT
+    return bool(T is not None and getattr(T, "pads_pop", 0) and T.engine and (T.drum_page or T.seq_page))
+
+
 def publish():
     global _seq, _last
+    if _pads_pop_up():
+        try:
+            fxpages.draw_pads_popup(_popT, sys.modules[__name__])
+        except Exception:
+            import traceback
+            print("pads pop-up error:\n" + traceback.format_exc(), flush=True)
     if _arp_pop_up():
         try:
             fxpages.draw_arp_popup(_popT, sys.modules[__name__])      # (over the page that was just drawn)

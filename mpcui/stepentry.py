@@ -19,7 +19,7 @@ MAX_LEN = 64
 
 def length_page(T):
     """K1 sets a length: a drum lane's, or the synth pattern's (or the picked note's), no steps selected or held."""
-    if getattr(T, "arp_pop", 0):
+    if getattr(T, "arp_pop", 0) or getattr(T, "pads_pop", 0):
         return False
     try:
         mn = getattr(T, "_mpc_menu", None)
@@ -286,16 +286,29 @@ def arp_popup_toggle(T):
     T.arp_pop = 1
 
 
+def pads_popup_toggle(T):
+    """PAD FX: the PADS settings (key, scale, octave, velocity, curve) as a pop-up over the page you are on. Again closes it."""
+    if getattr(T, "pads_pop", 0):
+        T.pads_pop = 0
+        return
+    ok = bool(T.engine and T.engine.drums and T.engine.slot is not None and (T.drum_page or T.seq_page)
+              and not (T.fx_page or T.inst_page or T.song_page or T.auto_page or T.punch.active() or T.sbrowse.active))
+    if ok:
+        T.pads_pop = 1
+
+
 def install(MoveBoard, pad_velocity=None):
     orig_cc, orig_pad, orig_note = MoveBoard.cc, MoveBoard.pad, MoveBoard.note
 
     def cc(self, num, val):
         T = self.T
+        if num == ARPPOP and getattr(T, "pads_pop", 0):
+            return                                                              # (the PADS pop-up is up: close it first)
         if num == ARPPOP:                                                       # NOTE REPEAT: the ARP pop-up, on / off
             if val:
                 arp_popup_toggle(T)
             return
-        if getattr(T, "arp_pop", 0) and num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO, INSTHOME, SETTINGSKEY, PROJECT,
+        if (getattr(T, "arp_pop", 0) or getattr(T, "pads_pop", 0)) and num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO, INSTHOME, SETTINGSKEY, PROJECT,
                                                 SONGPAGE, GRIDNEXT, ERASE, WHEEL, K1_ABS, PUSH):
             return                                                              # (the pop-up: only the ARP's own controls work)
         if num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO):                    # the bridge's tape-page buttons (see bridge/mapping.h)
@@ -390,6 +403,10 @@ def install(MoveBoard, pad_velocity=None):
 
     def note(self, num, val):
         T = self.T
+        if num == 17 and val and self.shift and not getattr(T, "arp_pop", 0) and not T.inst_page and not T.fx_page:
+            pads_popup_toggle(T)                                 # PAD FX (Shift + step 2): the PADS pop-up
+            if getattr(T, "pads_pop", 0) or T.drum_page or T.seq_page:
+                return
         if (num in (17, 18) and val and self.shift and T.seq_page and T.drum_page
                 and not (T.punch.active() or T.auto.active() or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active)
                 and (T.synth_shown() or num == 17)):

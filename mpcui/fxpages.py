@@ -125,6 +125,52 @@ def _pop_targets(n, active):
     return out
 
 
+def _pop_settings(T, nat, key, vals):
+    """The settings of a pop-up, as on an instrument's settings page: in the pads' order, and the one you turn grows."""
+    c = nat.canvas
+    now = nat.time.monotonic()
+    active = _active(T, nat, key, [str(v[1]) for v in vals])
+    items, active = sp.by_pad_rows([(str(a_).upper(), str(b_).upper(), 1.0) for a_, b_ in vals], active)
+    n = len(items)
+    goal = _pop_targets(n, active)
+    snap = POP["key"] != key or now - POP["t"] > 0.4 or POP["state"] is None or len(POP["state"]) != n
+    if snap:
+        POP["state"] = [dict() for _ in range(n)]
+    dt = min(0.12, max(0.0, now - POP["t"])) if not snap else 0.0
+    sp.step(POP["state"], goal, dt, snap, active is None)
+    POP["key"], POP["t"] = key, now
+    for i in sorted(range(n), key=lambda i: i == active):                       # the big one last
+        label, value, _idle = items[i]
+        if not label:
+            continue
+        st = POP["state"][i]
+        col = sp.colour.mix(sp.DARK, WHITE, max(0.0, min(1.0, st["t"])))
+        room = 78 if active == i else 56
+        ls = sp.fit_size(c.pxfont, label, [px for px in (16, 8) if px <= max(8, int(round(st["ls"] / 8.0)) * 8)], room, lambda px: 0)
+        if text_width(c.pxfont(ls), label, 0) > room:
+            label = label[:max(2, room // 6)]
+        vs = sp.fit_size(c.pxfont, value, [px for px in (32, 24, 16, 8) if px <= max(8, int(round(st["vs"] / 8.0)) * 8)], room,
+                         lambda px: -px // 8)
+        c.text_px(int(round(st["cx"] - text_width(c.pxfont(ls), label, 0) / 2.0)), int(round(st["lb"])), label, col, ls, 0)
+        vtr = -(vs // 8)
+        c.text_px(int(round(st["cx"] - text_width(c.pxfont(vs), value, vtr) / 2.0)), int(round(st["vm"] + 0.3125 * vs)), value, col, vs, vtr)
+
+
+def draw_pads_popup(T, nat):
+    """The PADS pop-up (PAD FX): a small panel over the page you are on, with the pads' settings (a synth: key, scale, octave, velocity,
+    curve; a drum machine: octave, velocity, curve). PLUS / MINUS and knob 3 change the octave."""
+    c = nat.canvas
+    ml = T.mlfo
+    x0, y0, w, h = 8, 68, 304, 152
+    c.rect(x0 - 2, y0 - 2, w + 4, h + 4, WHITE)
+    c.rect(x0, y0, w, h, (14, 16, 14))
+    c.text_px(x0 + 10, y0 + 28, "PADS", WHITE, 24, -3)
+    _pop_settings(T, nat, ("pads-pop", ml.has_arp()), ml.pads_values())
+    msg = _msg(T, nat.time.monotonic())
+    if msg:
+        c.text_px(x0 + 10, y0 + 8, msg[:44], nat.ACC, 8, 0)
+
+
 def draw_arp_popup(T, nat):
     """The ARP pop-up: a panel over the page you are on (not a page of its own). The 16 steps of the rhythm on top, the settings below
     as on an instrument's settings page: in the pads' order (settings 1-4 in the bottom row, 5-8 above), and the one you turn grows."""
@@ -148,33 +194,7 @@ def draw_arp_popup(T, nat):
             c.rect(x, y0 + 38, 16, 30, WHITE)
         num = str(k + 1)
         c.text_px(x + 8 - c_w(c, 8, num) // 2, y0 + 80, num, WHITE if k % 4 == 0 else G[4], 8, 0)
-    vals = ml.arp_values()
-    active = _active(T, nat, ("arp-pop", second), [str(v[1]) for v in vals])
-    items, active = sp.by_pad_rows([(str(a_).upper(), str(b_).upper(), 1.0) for a_, b_ in vals], active)
-    n = len(items)
-    goal = _pop_targets(n, active)
-    key = ("arp-pop", second)
-    snap = POP["key"] != key or now - POP["t"] > 0.4 or POP["state"] is None or len(POP["state"]) != n
-    if snap:
-        POP["state"] = [dict() for _ in range(n)]
-    dt = min(0.12, max(0.0, now - POP["t"])) if not snap else 0.0
-    sp.step(POP["state"], goal, dt, snap, active is None)
-    POP["key"], POP["t"] = key, now
-    for i in sorted(range(n), key=lambda i: i == active):                       # the big one last
-        label, value, _idle = items[i]
-        if not label:
-            continue
-        st = POP["state"][i]
-        col = sp.colour.mix(sp.DARK, WHITE, max(0.0, min(1.0, st["t"])))
-        room = 78 if active == i else 56
-        ls = sp.fit_size(c.pxfont, label, [px for px in (16, 8) if px <= max(8, int(round(st["ls"] / 8.0)) * 8)], room, lambda px: 0)
-        if text_width(c.pxfont(ls), label, 0) > room:
-            label = label[:max(2, room // 6)]
-        vs = sp.fit_size(c.pxfont, value, [px for px in (32, 24, 16, 8) if px <= max(8, int(round(st["vs"] / 8.0)) * 8)], room,
-                         lambda px: -px // 8)
-        c.text_px(int(round(st["cx"] - text_width(c.pxfont(ls), label, 0) / 2.0)), int(round(st["lb"])), label, col, ls, 0)
-        vtr = -(vs // 8)
-        c.text_px(int(round(st["cx"] - text_width(c.pxfont(vs), value, vtr) / 2.0)), int(round(st["vm"] + 0.3125 * vs)), value, col, vs, vtr)
+    _pop_settings(T, nat, ("arp-pop", second), ml.arp_values())
     msg = _msg(T, now)
     if msg:
         c.text_px(x0 + 10, y0 + 8, msg[:44], nat.ACC, 8, 0)

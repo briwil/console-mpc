@@ -7,7 +7,7 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | B1 | Instruments; again goes round an instrument's pages: sound, sequencer, automation, punch FX, then SONG, then back |
 | B2 | Mixer (again: reverb, delay, ...; Back leaves) |
 | B3 | Tape recorder (again: the selected track zoomed) |
-| PAD FX | The pads page of a synth (key, scale, octave, pad velocity and curve): the Move's Shift + step 2. Again: back |
+| PAD FX | The PADS settings as a pop-up over the sound or sequencer page you are on: a synth's key, scale, octave, velocity and curve (a drum machine: octave, velocity, curve). While it is up: knobs 1-5 are the settings, PLUS / MINUS change the octave, the pads still play, PLAY and STOP work as always, everything else is off. PAD FX again (or BACK) closes it |
 | Song mode on / off | on the SONG page: PLUS / MINUS (Shift + them too) |
 | Pads 1-16 | The left 4x4 pads (the drums) |
 | PAD BANK (latching) | Pads become the right 4x4 (chromatic) |

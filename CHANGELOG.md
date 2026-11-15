@@ -7,6 +7,9 @@ To update, drag the new `autorun` and `Console` folders from the zip onto the SD
 
 - **Per-note sequencer:** a note is always picked (the lowest pad at first). Tapping it again no longer jumps to an "all notes" lane, so the steps always belong to the note shown.
 - Fix: the version label on the card no longer shows a stray `\n`.
+- **PAD FX is a pop-up** over the page you are on (like the ARP): knobs 1-5 are the pads' settings, PLUS / MINUS change the octave, the pads keep playing. PAD FX again or BACK closes it.
+- **Live pattern recording:** COUNT IN clicks before PLAY starts the recording; a pass is one undo step; pads are recorded at the time you pressed them (the app's reading delay is taken off), and a pad at the very start lands on step 1.
+- Fix: Shift + PLUS (redo) on a synth sequencer page crashed the app.
 
 ## 0.0.8
 
