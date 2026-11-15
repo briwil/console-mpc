@@ -112,7 +112,7 @@ class Auto:
                 for p in params:
                     if p not in seen and d.lockable(p):
                         seen.add(p)
-                        items.append((p, d.label(p)))
+                        items.append((("rec", p), d.label(p)))      # (a sound setting: a lane of its own, any step, not only where a note starts)
         except Exception:                                      # noqa: BLE001
             pass
         self.items, self.prow = items, 0
