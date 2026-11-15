@@ -3,6 +3,11 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.9
+
+- **Per-note sequencer:** a note is always picked (the lowest pad at first). Tapping it again no longer jumps to an "all notes" lane, so the steps always belong to the note shown.
+- Fix: the version label on the card no longer shows a stray `\n`.
+
 ## 0.0.8
 
 - **ARP pop-up:** NOTE REPEAT opens the arp as a panel over the sound or sequencer page you are on, instead of its own page. KNOB FX comes on by itself (pads 1-8 are the settings, which grow as you turn them), pads 9-16 are orange and play notes, SEQ turns the pads into the arp's 16 steps (tap: note, accent, rest), PLUS / MINUS flip ARP / ARP 2, and PLAY and STOP work as always. NOTE REPEAT or BACK closes it.
