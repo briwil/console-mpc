@@ -49,6 +49,7 @@ try:
     inputsrc.install_menu(_menu2)                                    # SETTINGS > INPUT: REAR / MIC / USB
     import nobigscreen
     nobigscreen.install(_menu2)                                      # no extended screen (web page) and no EXTERNAL SCREEN row
+    sys.path.insert(0, os.path.join(C, "pi-app", "schwung"))        # (the insert effects live there; drums.py adds it too, but later)
     import insertfx as _insfx_mod
     import insertsafe
     insertsafe.install(_insfx_mod)                                   # closing an insert effect waits for the sound core (no heap damage under load)
