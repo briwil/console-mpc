@@ -10,7 +10,7 @@ SAVE = os.path.join(os.environ.get("CONSOLE_HOME", "/data/UserData/console"), "m
 STATE = {"on": False, "vol": 60, "sent": 0.0, "was": False, "count": 0}
 COUNTS = [0, 1, 2, 4]                       # COUNT IN: OFF, or this many bars of clicks before a recording starts
 BEAT = {"n": 0, "est": None, "bpm": 0, "bar": 0}      # the click grid: a steady bar start, and a heartbeat the bridge watches
-LEAD = 0.25            # seconds before a pattern count-in's first click
+LEAD = 0.04            # seconds between PLAY and a pattern count-in's first click
 CI = {"active": False, "end": 0.0, "start_ns": 0, "e": None, "last": -1, "patched": False, "then": None}
 
 
@@ -92,6 +92,8 @@ def count_in_then(T, fn):
     now = time.monotonic()
     CI.update(active=True, e=e, last=-1, start_ns=time.monotonic_ns() + int(LEAD * 1e9), then=fn,          # (the first click is a moment ahead:
               end=now + LEAD + bars * max(1, int(round(e.bar_beats()))) * 60.0 / e.bpm)                  #  a beat already gone would be skipped)
+    STATE["sent"], STATE["was"] = now, True
+    _send(max(STATE["vol"], 40), e.bpm, max(1, int(round(e.bar_beats()))), CI["start_ns"])      # (told at once, not at the next screen frame)
     return True
 
 
