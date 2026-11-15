@@ -762,8 +762,18 @@ def main():
                     _ld = float(e.bridge.core.load())            # the sound core's CPU load (JACK's): over about 80 the audio starts to break up
                 except Exception:                                 # noqa: BLE001
                     _ld = -1.0
-                if _ld >= 50:
-                    print("perf: sound core load %.0f%%" % _ld, flush=True)
+                try:
+                    _c = e.bridge.core
+                    _cyc, _now = int(_c.lib.core_cycles()), int(_c.now())
+                except Exception:                             # noqa: BLE001
+                    _cyc, _now = -1, -1
+                _pl = bool(getattr(e, "playing", False))
+                _was = perf.get("core")
+                perf["core"] = (_cyc, _now)
+                if _ld >= 50 or (_pl and _was and _cyc == _was[0]):      # busy, or the core did not run a single cycle in 5 s while playing
+                    print("perf: sound core load %.0f%%, %d cycles in 5 s, its clock moved %d frames, playing %s, sequencer sent %s" % (
+                        _ld, _cyc - (_was[0] if _was else 0), _now - (_was[1] if _was else 0), _pl,
+                        getattr(getattr(e.bridge, "sched", None), "sent", "?")), flush=True)
                 if PROF.get("pn"):
                     try:
                         _fc = e.bridge.core
