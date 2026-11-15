@@ -80,6 +80,12 @@ try:
     redo.install_seq(_sequencer.Sequencer)   # ... and Shift + PLUS on a sequencer page
     import notes as _notes
     redo.install_seq(_notes.NoteSequencer)   # (the synths' sequencer too: it had no redo, and Shift + PLUS crashed the app)
+    import knobgate as _kg
+    # The bridge already sends 4 clicks for each notch of the wheel, which is exactly one step at the default
+    # speed. A saved sensitivity (Shift + volume) made it 2, 3... a notch, so the Sample always uses 4.
+    _kg.SPEED = 4
+    _kg.load = lambda path: None
+    _kg.set_speed = lambda value: _kg.SPEED
 except Exception:
     import traceback
     print("redo is off:\n" + traceback.format_exc(), flush=True)
