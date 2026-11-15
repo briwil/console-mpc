@@ -545,6 +545,71 @@ class Auto:
         popup.show(self.T, "STEP %d" % (i + 1) if len(targets) == 1 else "%d STEPS" % len(targets), self.label(key),
                    self.value_text(i, key))
 
+    def _top(self, param):
+        """The highest value a sound setting takes (127, a menu's last choice, a plug-in's own range)."""
+        try:
+            return max(1, int(self.T.engine.drums.stepped(param, 0, 100000)))
+        except Exception:                                      # noqa: BLE001
+            return 127
+
+    def set_value(self, i, key, f):
+        """Put step i's value at f (0 lowest .. 1 highest) of the setting's range."""
+        f = max(0.0, min(1.0, f))
+        if self.rec(key):
+            with self.seq.lock:
+                ln = self.rec_lane(key)
+                if ln and i in ln.steps:
+                    ln.steps[i] = int(round(f * self._top(key[1])))
+            return
+        with self.seq.lock:
+            for u in self.units(i):
+                if not self.has(u, key):
+                    continue
+                if key == "vel":
+                    u.vel = max(1, int(round(f * 127)))
+                elif key == "chance":
+                    u.chance = int(round(f * (len(sequencer.CHANCES) - 1)))
+                elif key == "ratchet":
+                    u.ratchet = RATCHETS[int(round(f * (len(RATCHETS) - 1)))]
+                elif key == "nudge" and "nudge" not in u.comp and hasattr(u, "nudge"):
+                    u.nudge = (int(round(f * 10)) - 5) * 10 or 10
+                elif isinstance(key, str):
+                    u.comp[key] = int(round(f * (len(sequencer.COMPONENTS[key]) - 1)))
+                else:
+                    u.locks[key] = int(round(f * self._top(key)))
+
+    def abs_knob(self, val):
+        """K1 is a pot: its position (0-127) is the value, so all the way round is the lowest / highest, halfway is halfway."""
+        key = self.key()
+        if self.mode != "edit" or key is None:
+            return
+        f = val / 127.0
+        d = self.T.engine.drums
+        if self.rec(key) and not self.selected and self.held is None and self.live_ready():
+            param = key[1]
+            if not d.lockable(param):
+                return
+            if param not in self._orig:
+                self._orig[param] = d.get_param(param)
+            d.set_param(param, int(round(f * self._top(param))))
+            record(self.T, param)
+            popup.show(self.T, self.label(key), "RECORDING", d.value_text(param))
+            return
+        on = self.steps_with(key)
+        for i in self.selected:
+            if i not in on and i < self.length(key):
+                self.add(i, key)
+        targets = self.targets()
+        if not targets:
+            return
+        self._keep(tuple(targets), key)
+        for i in targets:
+            self.set_value(i, key, f)
+        self.T.engine.seq_changed()
+        i = targets[0]
+        popup.show(self.T, "STEP %d" % (i + 1) if len(targets) == 1 else "%d STEPS" % len(targets), self.label(key),
+                   self.value_text(i, key))
+
     def live_ready(self):
         T, e = self.T, self.T.engine
         return bool(getattr(T, "live_rec", False) and e and e.playing and e.drums)
@@ -605,7 +670,7 @@ class Auto:
         self.T.engine.seq_changed()
         popup.show(self.T, self.label(key)[:12], "LENGTH", "%d STEPS" % n)
 
-    def step(self, n, down, deleting, shift=False):
+    def step(self, n, down, deleting, shift=False, vel=0):
         if self.mode != "edit":
             return
         i = self.page * 16 + n - 1
@@ -640,6 +705,9 @@ class Auto:
             self.held, self._tap = i, True
             popup.show(self.T, "STEP %d" % (i + 1), self.label(key), self.value_text(i, key))
         elif self.add(i, key):                            # an unlit step: it gets the setting (hold it: knob 1)
+            if vel:
+                self.set_value(i, key, vel / 127.0)       # (the pad's velocity is the value: hit hard = high)
+                self.T.engine.seq_changed()
             self.held, self._tap = i, False
             popup.show(self.T, "STEP %d" % (i + 1), self.label(key), self.value_text(i, key), "ADDED")
         else:

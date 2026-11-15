@@ -286,6 +286,13 @@ def arp_popup_toggle(T):
     T.arp_pop = 1
 
 
+def auto_value_page(T):
+    try:
+        return bool(T.auto.active() and T.auto.mode == "edit" and not getattr(T, "arp_pop", 0) and not getattr(T, "pads_pop", 0))
+    except Exception:                                          # noqa: BLE001
+        return False
+
+
 def step_setting_end(T, val):
     """Steps selected and a setting picked, knob 1 turning it by clicks: when the pot reaches an end stop the setting goes to its
     lowest (or highest) value, so all the way round always means the end, however the clicks added up. True when it did."""
@@ -411,6 +418,14 @@ def install(MoveBoard, pad_velocity=None):
                 orig_cc(self, track, val)
             finally:
                 self.shift = shift
+            return
+        if (num == K1_ABS or num == K1) and auto_value_page(T):
+            now = time.monotonic()
+            if num == K1_ABS:
+                T._k1_abs_at = now
+                T.auto.abs_knob(val)                           # AUTOMATION pop-up: K1 is a pot, its position is the value
+            elif val and now - getattr(T, "_k1_abs_at", -9.0) > 0.15:
+                T.auto.knob(1, val - 128 if val > 63 else val, False)     # (clicks with no pot before them: the wheel in KNOB FX as knob 1)
             return
         if num == K1_ABS and step_setting_end(T, val):
             return                                              # (the pot at an end stop: the selected step setting goes to its end)

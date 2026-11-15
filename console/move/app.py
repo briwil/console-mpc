@@ -201,7 +201,7 @@ class MoveBoard:
                 k.put(("PUNCHSTEP", n, bool(val), self.shift, "CUT" in self.held))
                 return
             if T.seq_page and T.auto.active():
-                k.put(("AUTOSTEP", n, bool(val), "CUT" in self.held, self.shift))   # hold: its value; Delete + step: off
+                k.put(("AUTOSTEP", n, bool(val), "CUT" in self.held, self.shift, val))   # hold: its value; Delete + step: off (val: how hard the pad was hit)
                 return
             if T.seq_page:
                 k.put(("STEP", n, bool(val), self.shift))  # tap: on / off; Shift + taps: select to set
@@ -1183,7 +1183,7 @@ def handle(name, T, m, e):
             name = ("KNOB", name[1], way, True)          # one choice (as with Shift: no speeding up)
     if isinstance(name, tuple) and name[0] == "AUTOSTEP":
         if T.auto.active():
-            T.auto.step(name[1], name[2], name[3], name[4] if len(name) > 4 else False)
+            T.auto.step(name[1], name[2], name[3], name[4] if len(name) > 4 else False, name[5] if len(name) > 5 else 0)
         return
     if name == "AUTO_CLEAR":
         if T.auto.active():

@@ -340,7 +340,7 @@ def _strip(c, first, length, on, at, held, dark, tails=(), long_=(), x0=8, pitch
             continue
         c.rect(x, y, wd, hh, G[1] if (k // 4) % 2 == 0 else G[0])
         if i in on and fracs is not None:                       # a bar as high as the step's value
-            bh = max(3, int(round((hh - 4) * max(0.0, min(1.0, fracs.get(i, 1.0))))))
+            bh = max(3, int(round(hh * max(0.0, min(1.0, fracs.get(i, 1.0))))))
             c.rect(x, y + hh - bh, wd, bh, WHITE if i in hl else G[5])
         elif i in on:
             c.rect(x, y + 6, wd, hh - 6, WHITE if i in hl else G[5])
