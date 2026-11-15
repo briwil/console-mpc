@@ -464,11 +464,14 @@ def draw_punch(T, nat):
     if pu.confirming():
         msg = "CLEAR PUNCH PATTERN %d?  SHIFT + DELETE AGAIN" % (st.current + 1)
     trip = pu.trip()
-    pairs = [("LENGTH", str(ln.length)), ("RATE", str(pu.rate_name()))] + [("", "")] * 5 + [("SCALE", "X%d" % punch.SCALES[st.pattern.scale])]
+    ca = pu.chance_all(ln)
+    chance = ("CHANCE", str(sequencer.CHANCES[ca]) if ca is not None else ("MIXED" if ln.steps else "-"))
+    pairs = [("LENGTH", str(ln.length)), ("RATE", str(pu.rate_name())), chance] + [("", "")] * 4 + [("SCALE", "X%d" % punch.SCALES[st.pattern.scale])]
     if pu.held is not None and pu.held in ln.steps:
         L = ln.lens.get(pu.held, 1)
         pairs[0] = ("CHANCE", str(sequencer.CHANCES[ln.steps[pu.held]]))
         pairs[1] = ("STEP %d" % (pu.held + 1), "%d LONG" % L if L > 1 else "1 STEP")
+        pairs[2] = ("", "")
     args = dict(first=pu.page * 16, length=ln.length, on=set(ln.steps), at=pu.playing_step(), held=pu.held,
                 dark=lambda i: sequencer.dark(i, trip), tails=punch.covered(ln, trip),
                 long_={i for i in ln.steps if ln.lens.get(i, 1) > 1})

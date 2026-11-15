@@ -253,6 +253,19 @@ class Punch:
                 ln.rate = sequencer.next_straight_rate(ln.rate, one)
             e.seq_changed()
             popup.show(self.T, punch.name(self.lane + 1), "RATE", self.rate_name(ln))
+        elif number == 3:                                # CHANCE: every step of this effect's lane at once (hold a step + knob 1 for one)
+            one = knobgate.gate(("punch-chance-all",), delta, shift)
+            if not one or not ln.steps:
+                return
+            self._snapshot(("chance", self.lane, -1))
+            with self.seq.lock:
+                first = ln.steps[min(ln.steps)]
+                base = self.chance_all(ln)
+                v = max(0, min(len(sequencer.CHANCES) - 1, (first if base is None else base) + one))
+                for i in ln.steps:
+                    ln.steps[i] = v
+            e.seq_changed()
+            popup.show(self.T, punch.name(self.lane + 1), "CHANCE", sequencer.CHANCES[v])
         elif number == SCALE_KNOB:                       # TIME SCALE: the whole punch pattern
             one = knobgate.gate(("punch-scale",), delta, shift)
             if not one:
@@ -262,6 +275,12 @@ class Punch:
                 pat.scale = max(0, min(len(punch.SCALES) - 1, pat.scale + one))
             e.seq_changed()
             popup.show(self.T, "PUNCH PATTERN %d" % (self.st().current + 1), "TIME SCALE", "x%d" % punch.SCALES[pat.scale])
+
+    @staticmethod
+    def chance_all(ln):
+        """The chance every step of the lane has, or None when they differ (or there are none)."""
+        vals = set(ln.steps.values())
+        return next(iter(vals)) if len(vals) == 1 else None
 
     def clear(self):
         """Shift + Delete: asks first; again (within a few seconds): every lane of the punch pattern cleared."""
