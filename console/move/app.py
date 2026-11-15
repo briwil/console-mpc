@@ -758,6 +758,12 @@ def main():
                     print("perf: a trip round the loop takes %d ms on average, %d ms at worst; the screen draw %d ms on average, %d ms at worst (%d draws in %.0f s)" % (
                         1000 * perf["sum"] / perf["n"], 1000 * perf["max"], 1000 * perf["dsum"] / max(1, perf["dn"]), 1000 * perf["dmax"],
                         perf["dn"], _t - perf["rep"]), flush=True)
+                try:
+                    _ld = float(e.bridge.core.load())            # the sound core's CPU load (JACK's): over about 80 the audio starts to break up
+                except Exception:                                 # noqa: BLE001
+                    _ld = -1.0
+                if _ld >= 50:
+                    print("perf: sound core load %.0f%%" % _ld, flush=True)
                 if PROF.get("pn"):
                     try:
                         _fc = e.bridge.core
