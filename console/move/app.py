@@ -732,6 +732,13 @@ def main():
             PROF["dd"] = 0.85 * PROF.get("dd", dd) + 0.15 * dd          # (a steady figure: the playhead mustn't jump about)
             e.screen_lead = int((0.7 * PROF["dd"] + 0.05) * 44100)     # (what the playhead under the steps is moved on by: the draw, and the way to the screen)
             perf["dmax"], perf["dsum"], perf["dn"] = max(perf["dmax"], dd), perf["dsum"] + dd, perf["dn"] + 1
+            try:                                                  # the draw time by page (app.log): which page costs the most
+                _pg = ("fx" if T.fx_page else "inst" if T.inst_page else "song" if T.song_page else "seq" if T.seq_page
+                       else "sound" if T.drum_page else "tape")
+                _g = perf.setdefault("pg", {}).setdefault(_pg, [0.0, 0, 0.0])
+                _g[0], _g[1], _g[2] = _g[0] + dd, _g[1] + 1, max(_g[2], dd)
+            except Exception:                                     # noqa: BLE001
+                pass
             draw_busy.clear()
 
     def draw_worker():
@@ -762,6 +769,10 @@ def main():
                     _ld = float(e.bridge.core.load())            # the sound core's CPU load (JACK's): over about 80 the audio starts to break up
                 except Exception:                                 # noqa: BLE001
                     _ld = -1.0
+                if e.playing and perf.get("pg"):
+                    print("perf: playing, the screen draw by page: " + ", ".join(
+                        "%s %d ms avg %d ms worst (%d)" % (k, 1000 * v[0] / max(1, v[1]), 1000 * v[2], v[1]) for k, v in perf["pg"].items()), flush=True)
+                perf["pg"] = {}
                 try:
                     _c = e.bridge.core
                     _cyc, _now = int(_c.lib.core_cycles()), int(_c.now())
