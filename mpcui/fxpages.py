@@ -443,16 +443,11 @@ def draw_auto(T, nat):
            x0=x0 + 10, pitch=18, wd=16, y=y0 + 40, hh=32, bar_y=y0 + 96, bar_x=x0 + 10, bar_w=w - 20,
            fracs={i: a.fraction(i, key) for i in on})
     targets = a.targets()
-    if targets:
-        i = targets[0]
-        head = "STEP %d" % (i + 1) if len(targets) == 1 else "%d STEPS" % len(targets)
-        value = str(a.value_text(i, key)).upper()
-        c.text_px(x0 + w // 2 - text_width(c.pxfont(16), head, -1) // 2, y0 + 138, head, G[5], 16, -1)
-        vs = 32 if text_width(c.pxfont(32), value, -4) <= w - 30 else 16
-        c.text_px(x0 + w // 2 - text_width(c.pxfont(vs), value, -(vs // 8)) // 2, y0 + 138 + 14 + int(0.625 * vs), value, WHITE, vs, -(vs // 8))
-    else:
-        t = "NO STEP PICKED"
-        c.text_px(x0 + w // 2 - text_width(c.pxfont(16), t, -1) // 2, y0 + 172, t, G[3], 16, -1)
+    value = str(a.value_text(targets[0], key)).upper() if targets else "-"
+    if len(targets) > 1:
+        value = value + " (%d)" % len(targets)
+    lane = "%d" % length if a.rec(key) else "-"
+    _pop_settings(T, nat, ("auto-pop", key), [("VALUE", value), ("LENGTH", lane)])          # pad 1 and pad 2, as in the other pop-ups
     if msg:
         c.text_px(x0 + 10, y0 + 8, msg[:44], nat.ACC, 8, 0)
 
