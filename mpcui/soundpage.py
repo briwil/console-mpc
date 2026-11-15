@@ -599,7 +599,11 @@ def draw_synth_seq(T, nat):
             on = (ms.lane in here) if per_note else bool(here)
             is_sel = i in sel
             if on:
-                h = 40 if per_note else min(40, 16 + 8 * (len(here) - 1))   # a chord stands taller than one note
+                if per_note:
+                    h = max(4, int(40 * min(127, here[ms.lane].vel or 100) / 127.0))      # the height is the note's velocity
+                else:                                                                     # a chord stands taller than one note
+                    top = max((nt.vel or 100) for nt in here.values())
+                    h = max(4, min(40, int(40 * min(127, top) / 127.0) + 8 * (len(here) - 1)))
                 c.rect(x, y + 40 - h, 17, h, WHITE if is_sel else colour.GREENS[5])
             if is_sel and blink:
                 c.rect(x, y, 17, 40, WHITE)
