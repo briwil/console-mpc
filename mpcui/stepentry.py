@@ -438,10 +438,15 @@ def install(MoveBoard, pad_velocity=None):
                 elif val and now - getattr(T, "_k1_abs_at", -9.0) > 0.15:
                     # clicks with no pot position before them: the wheel in KNOB FX mode (pad 1 held) acting as knob 1
                     step = val - 128 if val > 63 else val
+                    step = 1 if step > 0 else -1
+                    last_t, last_way = getattr(T, "_len_wheel", (-9.0, 0))
+                    if now - last_t < 0.02 and step == last_way:
+                        return                                  # (the bridge sends a notch of the wheel as 4 clicks: a length moves one a notch)
+                    T._len_wheel = (now, step)
                     if T.synth_shown():
                         T.msyn.knob(1, step, False)
                     else:
-                        T.mseq.knob(1, step, False)
+                        T.mseq.knob(1, step, True)              # (True: no speeding up, one a notch)
                 return                                          # (the pot's own clicks are not used there)
             if num == K1_ABS:
                 return
