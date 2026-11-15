@@ -272,10 +272,10 @@ class Auto:
 
     def label(self, key):
         if self.rec(key):
-            return self.T.engine.drums.label(key[1]) + " REC"
+            return self.T.engine.drums.label(key[1])
         if isinstance(key, str):
             return STEP_LABELS.get(key, key.upper())
-        return self.T.engine.drums.label(key)
+        return self.T.engine.drums.label(key) + " (NOTES)"         # (a sound setting locked on notes: only where a note starts)
 
     def steps_with(self, key):
         if key is None:
@@ -585,7 +585,7 @@ class Auto:
         key = self.key()
         if not self.rec(key):
             if key is not None:
-                self.T.say("KNOB 2 SETS A RECORDED SETTING'S LENGTH", 2)
+                self.T.say("THIS ONE FOLLOWS THE PATTERN'S LENGTH (ONLY A LANE HAS ITS OWN)", 3)
             return
         one = knobgate.gate(("auto-length",), delta, shift, 2)
         if not one:
