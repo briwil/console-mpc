@@ -99,6 +99,7 @@ def fit_size(font_of, text, sizes, width, trk):
     return sizes[-1]
 
 
+PLAYS = {"s": 16.0, "t": 0.0}
 _widths = {}
 
 
@@ -411,10 +412,15 @@ def draw_song(T, nat):
         plays = "PLAYS X%d" % row["repeat"]                         # how many times the row plays: the cell after the last instrument
         pw = text_width(c.pxfont(16), plays, -1)
         GREY = (64, 64, 64)
-        if getattr(T, "plays_held", 0.0) > now:                     # pad 12 held (KNOB FX): the cell grows, down and to the left
-            bw = text_width(c.pxfont(32), plays, -3)
-            c.rect(306 - bw, 3, bw + 8, 40, GREY)
-            c.text_px(310 - bw, 3 + 33, plays, WHITE, 32, -3)
+        held = getattr(T, "plays_held", 0.0) > now                  # pad 12 held (KNOB FX): the cell scales up, down and to the left, eased like the others
+        dt = min(0.12, max(0.0, now - PLAYS["t"]))
+        PLAYS["t"] = now
+        goal = 24.0 if held else 16.0
+        PLAYS["s"] += (goal - PLAYS["s"]) * (1.0 - math.exp(-dt / (TAU if held else TAU_BACK)))
+        ps = 24 if PLAYS["s"] >= 20.0 else 16
+        if ps != 16:
+            bw = text_width(c.pxfont(ps), plays, -2)
+            c.text_px(310 - bw, 19 + (ps - 16), plays, WHITE, ps, -2)
         elif box == len(slots):
             c.rect(306 - pw, 3, pw + 8, 20, GREY)
             c.text_px(310 - pw, 19, plays, WHITE, 16, -1)

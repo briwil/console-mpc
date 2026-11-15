@@ -608,7 +608,7 @@ static int process(jack_nframes_t n, void *arg) {
             pos = at;
         }
         if (e->kind == EV_PURGE) {                    /* Stop: the notes and hits already sent ahead for source a never sound */
-            int src = (int)e->a;
+            int src = e->src;
             for (int k = 0; k < waiting_n; ) {
                 Event *w = &waiting[k];
                 if (w->src == src && w->frame >= e->frame && (w->kind == EV_TRIGGER || (w->kind == EV_MIDI && (w->a & 0xF0) == 0x90 && w->c > 0))) {
