@@ -386,7 +386,7 @@ class Auto:
         False when nothing plays on the step (a lock only counts where a note plays)."""
         lit = sorted(self.steps_with(key))
         if not lit:
-            return False
+            return self._first(i, key)                    # nothing set yet: this step is the first, with a starting value
         before = [k for k in lit if k < i]
         src_i = before[-1] if before else lit[-1]
         if self.rec(key):                                 # recorded: any step can have it
@@ -407,6 +407,34 @@ class Auto:
             src = next(u for u in self.units(src_i) if self.has(u, key))
             for u in [u for u in self.units(i) if self.synth() or getattr(u, "on", False)]:
                 self._copy(src, u, key)
+        self._snapped = (i, key)
+        self.T.engine.seq_changed()
+        return True
+
+    def _first(self, i, key):
+        """The first step of a setting (just chosen from the picker): its starting value."""
+        d = self.T.engine.drums
+        if self.rec(key):
+            return False
+        with self.seq.lock:
+            us = [u for u in self.units(i) if self.synth() or getattr(u, "on", False)]
+        if not us:
+            return False
+        self.seq.snapshot()
+        with self.seq.lock:
+            for u in us:
+                if key == "vel":
+                    u.vel = max(1, sequencer.DEFAULT_VELOCITY - 10)
+                elif key == "chance":
+                    u.chance = 1
+                elif key == "ratchet":
+                    u.ratchet = 2
+                elif key == "nudge" and "nudge" not in u.comp and hasattr(u, "nudge") and not isinstance(u.nudge, dict):
+                    u.nudge = 10
+                elif isinstance(key, str):
+                    u.comp[key] = 0
+                else:
+                    u.locks[key] = d.get_param(key)
         self._snapped = (i, key)
         self.T.engine.seq_changed()
         return True
