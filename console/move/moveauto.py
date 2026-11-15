@@ -134,10 +134,6 @@ class Auto:
             self.mode = "list"
             return
         k = self.items[max(0, min(len(self.items) - 1, self.prow))][0]
-        if not isinstance(k, str) and ("rec", k) in self.rows():
-            k = ("rec", k)
-        elif not isinstance(k, str) and k not in self.rows():
-            k = ("rec", k)                                     # a sound setting is a lane: every step can have a value, notes or not
         if k not in self.rows():
             self.extra.append(k)
         self.row = self.rows().index(k)
