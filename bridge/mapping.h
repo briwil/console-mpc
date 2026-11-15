@@ -264,6 +264,11 @@ static void mpc_pad_event(int idx, int vel, int on)
 static void mapping_tick(void)
 {
     tick_n++;
+#ifndef HOST_TEST
+    { static int told = -1;                              /* what the pads are now: 1 pads, 2 KNOB FX, 3 SEQ (the steps), 4 a step's settings: CC 102, so the app can name it for a moment */
+      int m = param_mode ? 4 : knob_mode ? 2 : step_mode ? 3 : 1;
+      if (told != m) { if (told >= 0) send3(0xBF, 102, m); told = m; } }
+#endif
     { static int seen; int now = page_tape * 8 + page_tapeonly * 16 + page_param * 2 + page_nostep + page_linear * 32 + page_arp * 64; static int was_arp, sv_knob, sv_step; if (seen != now) { seen = now;
         if (page_arp && !was_arp) { sv_knob = knob_mode; sv_step = step_mode; release_knob_pads(); knob_mode = 1; step_mode = 0; param_mode = 0; }      /* the ARP pop-up: KNOB FX starts on */
         else if (!page_arp && was_arp) { release_knob_pads(); knob_mode = sv_knob; step_mode = sv_step; }                                                   /* (and is as it was when it closes) */

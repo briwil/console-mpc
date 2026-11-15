@@ -405,6 +405,13 @@ def install(MoveBoard, pad_velocity=None):
 
     def cc(self, num, val):
         T = self.T
+        if num == 102:                                                          # what the pads are now (bridge/mapping.h): named for a second
+            try:
+                if not on_tape(T) and not T.inst_page and not T.song_page:
+                    T.say({1: "PADS", 2: "KNOB FX", 3: "SEQ", 4: "STEP SETTINGS"}.get(val, ""), 1)
+            except Exception:                                                   # noqa: BLE001
+                pass
+            return
         if num == ARPPOP and getattr(T, "pads_pop", 0):
             return                                                              # (the PADS pop-up is up: close it first)
         if num == ARPPOP:                                                       # NOTE REPEAT: the ARP pop-up, on / off
