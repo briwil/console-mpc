@@ -254,6 +254,7 @@ class Song:
                 self.apply(0, False)                       # row 1 as it is now (it may have been changed since it was last set up)
             self.playing_row, self._loops, self._cycle, self._queued, self._end = 0, 0, None, False, False
             e.end_limit = None
+            self.pick = 0
         elif not playing:
             if self._was_playing or not getattr(self, "_ready", False):
                 self.apply(0, False)                       # stopped: ready at row 1
@@ -287,6 +288,7 @@ class Song:
                 return
             if self._queued:                               # the next row has started
                 self.playing_row = (self.playing_row + 1) % len(self.rows)
+                self.pick = self.playing_row                # the page follows the song: the row playing now
                 self._loops, self._queued = 0, False
             else:
                 self._loops += 1
