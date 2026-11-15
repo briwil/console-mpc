@@ -993,6 +993,19 @@ def arp_popup_key(name, T):
     return True
 
 
+def _count_in(name, T, m, e):
+    """PLAY / STOP and the count-in of a pattern recording. True = dealt with."""
+    import metronome
+    if metronome.count_cancel():                                  # PLAY / STOP during a count-in: cancelled
+        T.say("COUNT IN CANCELLED", 2)
+        return True
+    if name == "PLAY" and getattr(T, "_count_done", False):
+        T._count_done = False                                     # (the count has finished: this is the PLAY it was holding back)
+        return False
+    return bool(name == "PLAY" and T.live_rec and not T.playing and (T.seq_page or T.drum_page)
+                and metronome.count_in_then(T, lambda: (setattr(T, "_count_done", True), handle("PLAY", T, m, e))))
+
+
 def handle(name, T, m, e):
     """One action, the way the Pi app's main loop does it (menus first), plus the Move's own."""
     if isinstance(name, tuple) and name[0] == "VOLUME":
@@ -1003,15 +1016,11 @@ def handle(name, T, m, e):
         T.say("KNOB SPEED: %d CLICK%s A STEP" % (v, "" if v == 1 else "S"), 3)
         return
     if name in ("PLAY", "STOP"):
-        import metronome
-        if metronome.count_cancel():                              # PLAY / STOP during a count-in: cancelled
-            T.say("COUNT IN CANCELLED", 2)
-            return
-        if name == "PLAY" and getattr(T, "_count_done", False):
-            T._count_done = False                                 # (the count has finished: this is the PLAY it was holding back)
-        elif (name == "PLAY" and T.live_rec and not T.playing and (T.seq_page or T.drum_page)
-                and metronome.count_in_then(T, lambda: (setattr(T, "_count_done", True), handle("PLAY", T, m, e)))):
-            return                                                # recording into a pattern: the count-in first
+        try:
+            if _count_in(name, T, m, e):
+                return
+        except Exception as ex:                                   # noqa: BLE001  (never let a count-in take the app down)
+            print("count-in:", ex, flush=True)
     if getattr(T, "arp_pop", 0):                                  # the ARP pop-up: only its own controls (and the transport) work
         if arp_popup_key(name, T):
             return
