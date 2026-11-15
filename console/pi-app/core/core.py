@@ -107,6 +107,13 @@ class Core:
         except AttributeError:
             return -1, -1
 
+    def xruns(self):
+        """JACK's count of audio dropouts since last asked (-1 from an older core)."""
+        try:
+            return int(self.lib.core_xruns_take())
+        except AttributeError:
+            return -1
+
     def load(self):
         """JACK's measure of how busy the audio cycle is, in percent."""
         return self.lib.core_load()

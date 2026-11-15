@@ -774,6 +774,9 @@ def main():
                         "%s %d ms avg %d ms worst (%d)" % (k, 1000 * v[0] / max(1, v[1]), 1000 * v[2], v[1]) for k, v in perf["pg"].items()), flush=True)
                 perf["pg"] = {}
                 try:
+                    _xr = e.bridge.core.xruns()
+                    if _xr > 0:
+                        print("perf: JACK reported %d audio dropouts (xruns) in 5 s%s" % (_xr, "" if e.playing else " (not playing)"), flush=True)
                     _sl, _us = e.bridge.core.slow()
                     if e.playing and _sl > 0:
                         print("perf: the sound core had %d audio blocks that used over 70%% of their time in 5 s; the longest took %.1f ms (a block has 2.9 ms)" % (_sl, _us / 1000.0), flush=True)

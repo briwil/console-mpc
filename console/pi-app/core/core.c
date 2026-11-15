@@ -41,6 +41,7 @@ static struct {
     void *(*port_register)(void *, const char *, const char *, unsigned long, unsigned long);
     void *(*port_get_buffer)(void *, jack_nframes_t);
     int (*set_process_callback)(void *, JackProcess, void *);
+    int (*set_xrun_callback)(void *, int (*)(void *), void *);
     int (*connect)(void *, const char *, const char *);
     jack_nframes_t (*get_sample_rate)(void *);
     jack_nframes_t (*get_buffer_size)(void *);
@@ -134,6 +135,7 @@ static int display_next;
 static void *client, *out_l, *out_r, *in_l, *in_r, *ctl_in, *ctl_out, *disp_out;
 static atomic_uint_fast64_t now_frame;         /* frames played since the core started */
 static atomic_uint cycles;
+static atomic_uint xruns;                          /* JACK's own count of audio dropouts (the server could not get a block in time)
 static atomic_uint slow_cycles, longest_us;      /* cycles that used most of their time (a dropout is near), and the longest one, since Python last asked */
 static jack_nframes_t rate, block;
 
@@ -515,6 +517,8 @@ static void apply(const Event *e) {
     }
 }
 
+static int on_xrun(void *arg) { (void)arg; atomic_fetch_add(&xruns, 1); return 0; }
+
 static int process(jack_nframes_t n, void *arg) {
     (void)arg;
     static int fz;
@@ -744,6 +748,8 @@ int core_open(const char *libjack, const char *name) {
     for (int c = 0; c < CHANNELS; c++) { rec_lo[c] = rec_hi[c] = -1; }
     for (int t = 0; t < TRACKS; t++) { t_vol[t] = 0.8f; t_audible[t] = 1; t_src[t][0] = t_src[t][1] = -1; }
     J.set_process_callback(client, process, NULL);
+    J.set_xrun_callback = dlsym(lib, "jack_set_xrun_callback");
+    if (J.set_xrun_callback) J.set_xrun_callback(client, on_xrun, NULL);
     if (J.activate(client)) return -5;
     char me[300];
     const char *pairs[][2] = {{"out_L", "system:playback_1"}, {"out_R", "system:playback_2"}};
@@ -767,6 +773,7 @@ int core_rate(void) { return (int)rate; }
 int core_block(void) { return (int)block; }
 uint64_t core_now(void) { return atomic_load(&now_frame); }
 unsigned core_cycles(void) { return atomic_load(&cycles); }
+unsigned core_xruns_take(void) { return atomic_exchange(&xruns, 0); }
 unsigned core_slow_take(void) { return atomic_exchange(&slow_cycles, 0); }
 unsigned core_longest_us_take(void) { return atomic_exchange(&longest_us, 0); }
 /* JACK's own measure of how busy the audio cycle is, 0-100 (all its clients together) */
