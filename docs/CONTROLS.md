@@ -20,8 +20,8 @@ The bridge (bridge/mapping.h) makes MPC controls look like the Move's. Every row
 | Encoder turn / push | Jog wheel turn / press |
 | Sample Select (0x24) | Menu (Shift + Menu: export) |
 | LOOP | Loop (the tape's loop in / out) |
-| PLUS / MINUS | Right / left arrow (settings pages, lane steps 17-32...) |
-| Shift + PLUS / MINUS | Move + / - (octave on a sound page, pattern +/-) |
+| PLUS / MINUS | Right / left arrow (settings pages). On a sequencer page: Redo / Undo |
+| Shift + PLUS / MINUS | Move + / - (octave on a sound page, pattern +/-). On a sequencer page: the next / previous 16 steps |
 | PLAY, SEQ REC | Play, Record |
 | CHOP | Splice (Shift + CHOP: splice all) |
 | SAMPLE REC | not used yet |

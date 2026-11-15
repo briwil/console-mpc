@@ -201,7 +201,7 @@ class MoveBoard:
                 k.put(("PUNCHSTEP", n, bool(val), self.shift, "CUT" in self.held))
                 return
             if T.seq_page and T.auto.active():
-                k.put(("AUTOSTEP", n, bool(val), "CUT" in self.held))   # hold: its value; Delete + step: off
+                k.put(("AUTOSTEP", n, bool(val), "CUT" in self.held, self.shift))   # hold: its value; Delete + step: off
                 return
             if T.seq_page:
                 k.put(("STEP", n, bool(val), self.shift))  # tap: on / off; Shift + taps: select to set
@@ -1181,7 +1181,7 @@ def handle(name, T, m, e):
             name = ("KNOB", name[1], way, True)          # one choice (as with Shift: no speeding up)
     if isinstance(name, tuple) and name[0] == "AUTOSTEP":
         if T.auto.active():
-            T.auto.step(name[1], name[2], name[3])
+            T.auto.step(name[1], name[2], name[3], name[4] if len(name) > 4 else False)
         return
     if name == "AUTO_CLEAR":
         if T.auto.active():
@@ -1305,16 +1305,20 @@ def handle(name, T, m, e):
             T.punch.arrows(-1 if name == "LEFT" else 1)
             return
     if T.auto.active() and not (m.open or m.kits.open) and T.fx_page is None:
+        A = T.auto
+        if name == "BACK" and A.back():                          # the pop-up / the picker: back to the list
+            return
         if isinstance(name, tuple) and name[0] == "KNOB" and name[1] <= 8:
-            T.auto.knob(name[1], name[2], name[3])
+            A.knob(name[1], name[2], name[3])
             return
         if isinstance(name, tuple) and name[0] == "KNOB" and name[1] == 11:
-            way = knobgate.gate(("wheel-pages",), name[2], False, 1)
-            if way:
-                T.auto.arrows(way)
+            A.wheel(name[2], name[3])                            # the list, the picker, or the white box along the steps
+            return
+        if name == "HOME":
+            A.push()
             return
         if name in ("LEFT", "RIGHT"):
-            T.auto.arrows(-1 if name == "LEFT" else 1)
+            A.arrows(-1 if name == "LEFT" else 1)
             return
     seqm = T.msyn if T.msyn.active() else ms if ms.active() else None
     if seqm is not None and seqm.selected and not (m.open or m.kits.open) and T.fx_page is None:

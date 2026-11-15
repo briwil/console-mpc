@@ -330,31 +330,32 @@ def on_presets_page(T, menu):
 
 # ------------------------------------------------------------------ steps (AUTOMATION, PUNCH FX)
 
-def _strip(c, first, length, on, at, held, dark, tails=(), long_=()):
-    y = 32
+def _strip(c, first, length, on, at, held, dark, tails=(), long_=(), x0=8, pitch=19, wd=17, y=32, hh=40, bar_y=91, bar_x=8, bar_w=None):
+    hl = set(held) if isinstance(held, (set, list, tuple)) else {held}
     for k in range(16):
         i = first + k
-        x = 8 + k * 19
+        x = x0 + k * pitch
         if i >= length or dark(i):
-            c.rect(x + 7, y + 20, 3, 3, G[2])
+            c.rect(x + wd // 2 - 1, y + hh // 2, 3, 3, G[2])
             continue
-        c.rect(x, y, 17, 40, G[1] if (k // 4) % 2 == 0 else G[0])
+        c.rect(x, y, wd, hh, G[1] if (k // 4) % 2 == 0 else G[0])
         if i in on:
-            c.rect(x, y + 6, 17, 34, WHITE if i == held else G[5])
+            c.rect(x, y + 6, wd, hh - 6, WHITE if i in hl else G[5])
             if i in long_:
-                c.rect(x + 17, y + 18, 2, 8, G[5])
+                c.rect(x + wd, y + hh // 2 - 2, 2, 8, G[5])
         elif i in tails:
-            c.rect(x - 2, y + 18, 21, 8, G[3])
-        if i == held:
-            c.frame(x - 1, y - 1, 19, 42, WHITE)
+            c.rect(x - 2, y + hh // 2 - 2, wd + 4, 8, G[3])
+        if i in hl:
+            c.frame(x - 1, y - 1, wd + 2, hh + 2, WHITE)
         if at is not None and i == at:
-            c.rect(x, y + 42, 17, 3, WHITE)
+            c.rect(x, y + hh + 2, wd, 3, WHITE)
         num = str(i + 1)
-        c.text_px(x + 8 - c_w(c, 8, num) // 2, y + 54, num, WHITE if k % 4 == 0 else G[4], 8, 0)
+        c.text_px(x + wd // 2 - c_w(c, 8, num) // 2, y + hh + 14, num, WHITE if k % 4 == 0 else G[4], 8, 0)
     npages = max(1, (length + 15) // 16)
-    seg = (sp.W - 16 - 4 * (npages - 1)) // npages
+    bar_w = bar_w or (sp.W - 16)
+    seg = (bar_w - 4 * (npages - 1)) // npages
     for p in range(npages):
-        c.rect(8 + p * (seg + 4), 91, seg, 3, WHITE if p == first // 16 else G[1])
+        c.rect(bar_x + p * (seg + 4), bar_y, seg, 3, WHITE if p == first // 16 else G[1])
 
 
 def _steps_page(T, nat, key, left, right, msg, strip_args, pairs):
@@ -380,35 +381,74 @@ def _steps_page(T, nat, key, left, right, msg, strip_args, pairs):
     sp.grid(nat, key, "", "", items, active, now, None, head=head, band_dy=sp.SEQ_DY)
 
 
+def _auto_list(T, nat, a, key, view, focus, first, title, msg):
+    sp.listview(nat, key, "", title, view, focus, nat.time.monotonic(), msg, first)
+
+
 def draw_auto(T, nat):
-    a, e = T.auto, T.engine
-    if T.synth_shown():
-        name = (e.slots[e.slot] or "").upper() if e.slot is not None else ""
-    else:
-        names = getattr(e.drums, "lane_names", None) or []
-        lane = T.seqp.lane
-        name = names[lane] if lane < len(names) else "LANE %d" % (lane + 1)
-        if name == "EMPTY":
-            name = "DRUM %d" % (lane + 1)
-    name = str(name).upper()[:10]
-    key = a.key()
-    msg = _msg(T, nat.time.monotonic())
-    if key is None:
-        _steps_page(T, nat, ("auto-none",), "NO AUTOMATION", name,
-                    msg or "RECORD + KNOBS WHILE PLAYING, OR SHIFT + STEPS", None, [])
-        return
+    """AUTOMATION: a list of the settings that have steps (8 rows to start: EMPTY ones open a picker of everything that can be set); a
+    setting opens as a pop-up with its steps and the value to change."""
     import sequencer
-    on = a.steps_with(key)
+    a = T.auto
+    now = nat.time.monotonic()
+    msg = _msg(T, now)
+    if a.mode == "pick":
+        n = len(a.items)
+        first = max(0, min(a.prow - 3, n - 8))
+        view = [(str(lbl).upper(), "", 0.6) for _k, lbl in a.items[first:first + 8]]
+        _auto_list(T, nat, a, "auto-pick", view, a.prow - first, first, "PICK A SETTING", msg)
+        return
+    rows = a.rows()
+    shown = a.shown()
+    first = max(0, min(a.row - 3, shown - 8))
+    view = []
+    for idx in range(first, min(shown, first + 8)):
+        if idx < len(rows):
+            k = rows[idx]
+            view.append((str(a.label(k)).upper(), "%d STEPS" % len(a.steps_with(k)), 0.6))
+        else:
+            view.append(("EMPTY", "", 0.3))
+    if a.mode == "list":
+        title = "AUTOMATION"
+        if a.confirming():
+            msg = "TAKE IT OFF EVERY STEP?  SHIFT + DELETE AGAIN"
+        _auto_list(T, nat, a, "auto-list", view, a.row - first, first, title, msg)
+        return
+    _auto_list(T, nat, a, "auto-list", view, a.row - first, first, "AUTOMATION", None)      # (the list stays under the pop-up)
+    c = nat.canvas
+    key = a.key()
+    if key is None:
+        return
+    x0, y0, w, h = 8, 20, 304, 200
+    c.rect(x0 - 2, y0 - 2, w + 4, h + 4, WHITE)
+    c.rect(x0, y0, w, h, (14, 16, 14))
+    label = str(a.label(key)).upper()
+    px = 24 if text_width(c.pxfont(24), label, -3) <= 200 else 16
+    c.text_px(x0 + 10, y0 + 28, label, WHITE, px, -3 if px == 24 else -1)
     length = a.length(key)
-    first = a.page * 16
-    if a.confirming():
-        msg = "TAKE %s OFF %d STEPS?  SHIFT + DELETE AGAIN" % (a.label(key)[:10].upper(), len(on))
-    pairs = [("SETTING", a.label(key).upper()[:12]), ("LENGTH", str(length))]
-    if a.held is not None and a.held in on:
-        pairs[0] = ("STEP %d" % (a.held + 1), a.value_text(a.held, key))
-    args = dict(first=first, length=length, on=on, at=a.playing_step(), held=a.held,
-                dark=lambda i: sequencer.dark(i, sequencer.TRIPLETS))
-    _steps_page(T, nat, ("auto", key), a.label(key).upper()[:14], "%d/%d" % (a.pick + 1, len(a.keys())), msg, args, pairs)
+    on = a.steps_with(key)
+    pg = "%d/%d" % (a.page + 1, max(1, (length + 15) // 16))
+    c.text_px(x0 + w - 10 - text_width(c.pxfont(16), pg, -1), y0 + 26, pg, G[5], 16, -1)
+    hl = set(a.selected)
+    if a.held is not None:
+        hl.add(a.held)
+    if a.cur is not None:
+        hl.add(a.cur)
+    _strip(c, a.page * 16, length, on, a.playing_step(), hl, lambda i: sequencer.dark(i, sequencer.TRIPLETS),
+           x0=x0 + 10, pitch=18, wd=16, y=y0 + 40, hh=32, bar_y=y0 + 96, bar_x=x0 + 10, bar_w=w - 20)
+    targets = a.targets()
+    if targets:
+        i = targets[0]
+        head = "STEP %d" % (i + 1) if len(targets) == 1 else "%d STEPS" % len(targets)
+        value = str(a.value_text(i, key)).upper()
+        c.text_px(x0 + w // 2 - text_width(c.pxfont(16), head, -1) // 2, y0 + 138, head, G[5], 16, -1)
+        vs = 32 if text_width(c.pxfont(32), value, -4) <= w - 30 else 16
+        c.text_px(x0 + w // 2 - text_width(c.pxfont(vs), value, -(vs // 8)) // 2, y0 + 138 + 14 + int(0.625 * vs), value, WHITE, vs, -(vs // 8))
+    else:
+        t = "NO STEP PICKED"
+        c.text_px(x0 + w // 2 - text_width(c.pxfont(16), t, -1) // 2, y0 + 172, t, G[3], 16, -1)
+    if msg:
+        c.text_px(x0 + 10, y0 + 8, msg[:44], nat.ACC, 8, 0)
 
 
 def draw_punch(T, nat):

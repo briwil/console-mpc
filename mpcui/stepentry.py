@@ -286,6 +286,37 @@ def arp_popup_toggle(T):
     T.arp_pop = 1
 
 
+def swap_plus_minus(board, num, val, orig_cc):
+    """On a sequencer page: MINUS / PLUS = Undo / Redo, and Shift + MINUS / PLUS = the steps' previous / next page (the bridge sends them the
+    other way round: its arrows plain, undo / redo with Shift). Not in the pop-ups (they use PLUS / MINUS themselves)."""
+    T = board.T
+    try:
+        if not T.seq_page or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active:
+            return False
+        if getattr(T, "arp_pop", 0) or getattr(T, "pads_pop", 0):
+            return False
+        mn = getattr(T, "_mpc_menu", None)
+        if mn is not None and (mn.open or mn.kits.open):
+            return False
+    except Exception:                                                            # noqa: BLE001
+        return False
+    if num in (62, 63) and not board.shift:                                      # MINUS / PLUS plain: Undo / Redo
+        if val:
+            if num == 62:
+                board.keys.put("UNDO")
+            else:
+                tape_button(board, REDO)
+        return True
+    if num in (56, REDO) and board.shift:                                        # Shift + MINUS / PLUS (the bridge's undo / redo): the page of steps
+        sh, board.shift = board.shift, False
+        try:
+            orig_cc(board, 62 if num == 56 else 63, val)
+        finally:
+            board.shift = sh
+        return True
+    return False
+
+
 def pads_popup_toggle(T):
     """PAD FX: the PADS settings (key, scale, octave, velocity, curve) as a pop-up over the page you are on. Again closes it."""
     if getattr(T, "pads_pop", 0):
@@ -311,6 +342,8 @@ def install(MoveBoard, pad_velocity=None):
         if (getattr(T, "arp_pop", 0) or getattr(T, "pads_pop", 0)) and num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO, INSTHOME, SETTINGSKEY, PROJECT,
                                                 SONGPAGE, GRIDNEXT, ERASE, WHEEL, K1_ABS, PUSH):
             return                                                              # (the pop-up: only the ARP's own controls work)
+        if swap_plus_minus(self, num, val, orig_cc):
+            return
         if num in (REDO, LOOPMARK, ARMSEL, TRIPLETS, METRO):                    # the bridge's tape-page buttons (see bridge/mapping.h)
             if val:
                 tape_button(self, num)

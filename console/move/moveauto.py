@@ -63,11 +63,148 @@ class Auto:
         self._snapped = None          # (step, key) the held step's undo was kept for
         self._down_at = 0.0           # when the held step went down
         self._tap = False             # the held step could still be a tap (lit when pressed, knob 1 not turned)
+        self.mode = "list"            # list (the settings with steps) -> pick (choose a setting) / edit (its steps, in a pop-up)
+        self.edit_key = None          # the setting the pop-up is on
+        self.extra = []               # settings chosen this visit that have no steps yet (they go when you leave)
+        self.row = 0                  # the list's cursor
+        self.items, self.prow = [], 0 # the picker: [(key, label)], its cursor
+        self.selected = []            # steps picked with Shift (the white boxes): knob 1 sets them all
+        self.cur = None               # the white box the wheel moves over the steps
+        self._on = False
 
     # ------------------------------------------------------------ what's shown
     def active(self):
         T = self.T
-        return bool(T.seq_page and not T.fx_page and getattr(T, "auto_page", False) is True and T.engine and T.engine.drums)
+        on = bool(T.seq_page and not T.fx_page and getattr(T, "auto_page", False) is True and T.engine and T.engine.drums)
+        if self._on and not on:
+            self._left()                                      # (left the page: it opens on the list again)
+        self._on = on
+        return on
+
+    def _left(self):
+        self.mode, self.edit_key, self.extra, self.row = "list", None, [], 0
+        self.held = self.cur = None
+        self.selected, self.page, self.confirm_until, self._snapped = [], 0, 0.0, None
+
+    # ------------------------------------------------------------ the list and the picker
+    def rows(self):
+        ks = self.keys()
+        return ks + [k for k in self.extra if k not in ks]
+
+    def shown(self):
+        """List rows on screen: 8 to start, one more empty row once they are all used."""
+        return max(8, len(self.rows()) + 1)
+
+    def row_key(self):
+        rs = self.rows()
+        return rs[self.row] if 0 <= self.row < len(rs) else None
+
+    def build_items(self):
+        d = self.T.engine.drums
+        items = [(k, l) for k, l in STEP_KEYS]
+        try:
+            voice = 0
+            if not self.synth():
+                lane = self.T.seqp.lane
+                voice = d.lane_voice[lane] if lane < len(getattr(d, "lane_voice", [])) else 0
+            seen = set()
+            for _name, params in d.pages(voice):
+                for p in params:
+                    if p not in seen and d.lockable(p):
+                        seen.add(p)
+                        items.append((p, d.label(p)))
+        except Exception:                                      # noqa: BLE001
+            pass
+        self.items, self.prow = items, 0
+
+    def open_row(self):
+        k = self.row_key()
+        if k is None:
+            self.build_items()
+            self.mode = "pick"
+            return
+        self.mode, self.edit_key, self.page = "edit", k, 0
+        self.held = self.cur = None
+        self.selected = []
+
+    def pick_push(self):
+        if not self.items:
+            self.mode = "list"
+            return
+        k = self.items[max(0, min(len(self.items) - 1, self.prow))][0]
+        if k not in self.rows():
+            self.extra.append(k)
+        self.row = self.rows().index(k)
+        self.mode, self.edit_key, self.page = "edit", k, 0
+        self.held = self.cur = None
+        self.selected = []
+
+    def back(self):
+        """Back from the pop-up or the picker: to the list. False on the list (the page's own Back)."""
+        if self.mode == "list":
+            return False
+        k = self.edit_key
+        if self.mode == "edit" and k in self.extra and not self.steps_with(k):
+            self.extra.remove(k)                               # (nothing set on it: it is not kept)
+        self.mode, self.edit_key = "list", None
+        self.held = self.cur = None
+        self.selected, self._snapped = [], None
+        self.row = max(0, min(self.row, self.shown() - 1))
+        return True
+
+    def wheel(self, delta, shift):
+        """The big wheel: down the list / the picker; in the pop-up the white box along the steps."""
+        if self.mode == "list":
+            way = knobgate.gate(("auto-pick",), delta, shift)
+            if way:
+                self.row = max(0, min(self.shown() - 1, self.row + (1 if way > 0 else -1)))
+                self.confirm_until = 0.0
+        elif self.mode == "pick":
+            way = knobgate.gate(("auto-pick",), delta, shift)
+            if way and self.items:
+                self.prow = (self.prow + (1 if way > 0 else -1)) % len(self.items)
+        else:
+            way = knobgate.gate(("auto-cur",), delta, shift, 1)
+            if not way:
+                return
+            n = self.length(self.edit_key)
+            at = self.cur if self.cur is not None else self.page * 16 - (1 if way > 0 else 0)
+            self.cur = max(0, min(n - 1, at + (1 if way > 0 else -1)))
+            self.page = self.cur // 16
+
+    def push(self):
+        """Push the wheel: open the row / choose the setting; in the pop-up the white box's step goes on or off (or the picked steps are done)."""
+        if self.mode == "list":
+            self.open_row()
+        elif self.mode == "pick":
+            self.pick_push()
+        else:
+            key = self.edit_key
+            if self.selected:
+                self.selected = []
+                return
+            i = self.cur
+            if i is None or i >= self.length(key):
+                return
+            if i in self.steps_with(key):
+                self.remove(i, key)
+                popup.show(self.T, "STEP %d" % (i + 1), self.label(key), "OFF")
+            elif self.add(i, key):
+                popup.show(self.T, "STEP %d" % (i + 1), self.label(key), self.value_text(i, key), "ADDED")
+            else:
+                self.T.say("STEP %d: NO NOTE THERE" % (i + 1), 2)
+
+    def targets(self):
+        """The steps knob 1 changes: the picked ones, else the one held, else the white box's."""
+        key = self.edit_key
+        on = self.steps_with(key)
+        if self.selected:
+            return sorted(i for i in self.selected if i < self.length(key))
+        if self.held is not None and self.held in on:
+            return [self.held]
+        if self.cur is not None and self.cur in on:
+            return [self.cur]
+        return []
 
     @property
     def seq(self):
@@ -126,11 +263,7 @@ class Auto:
         return steps + sorted(k for k in found if not isinstance(k, str)) + recs
 
     def key(self):
-        ks = self.keys()
-        if not ks:
-            return None
-        self.pick = max(0, min(len(ks) - 1, self.pick))
-        return ks[self.pick]
+        return self.edit_key if self.mode == "edit" else None
 
     def label(self, key):
         if self.rec(key):
@@ -174,9 +307,10 @@ class Auto:
             self.seq.snapshot()
             self._snapped = (i, key)
 
-    def change(self, i, key, clicks, one):
+    def change(self, i, key, clicks, one, keep=True):
         d = self.T.engine.drums
-        self._keep(i, key)
+        if keep:
+            self._keep(i, key)
         if self.rec(key):
             with self.seq.lock:
                 ln = self.rec_lane(key)
@@ -294,35 +428,42 @@ class Auto:
 
     # ------------------------------------------------------------ controls
     def knob(self, number, delta, shift):
+        if self.mode != "edit":
+            if number == 1:
+                self.wheel(delta, shift)                          # (knob 1 scrolls the list too)
+            return
         if number == 2:
             self.set_length(delta, shift)
             return
         if number != 1:
             return
         key = self.key()
-        if self.held is not None and key is not None and self.held in self.steps_with(key):
-            d = self.T.engine.drums
-            clicks = self.T.knob_clicks(1, delta, shift)
-            if isinstance(key, str) and key != "vel":
-                one = knobgate.gate(("comp", key), delta, shift)
-                if not one:
-                    return
-                delta = one
-            elif not isinstance(key, str) and knobgate.is_choice(d, key):
-                clicks = knobgate.gate(("step", key), delta, shift)
-                if not clicks:
-                    return
-            self._tap = False
-            self.change(self.held, key, clicks, 1 if delta > 0 else -1)
-            popup.show(self.T, "STEP %d" % (self.held + 1), self.label(key), self.value_text(self.held, key))
+        d = self.T.engine.drums
+        on = self.steps_with(key)
+        for i in self.selected:                                    # picked steps that have nothing yet get the setting first
+            if i not in on and i < self.length(key):
+                self.add(i, key)
+        targets = self.targets()
+        if not targets:
+            self.T.say("PICK A STEP: A STEP BUTTON, SHIFT + STEPS, OR THE WHEEL", 2)
             return
-        way = knobgate.gate(("auto-pick",), delta, shift)          # (a list: a few clicks each)
-        if not way:
-            return
-        n = len(self.keys())
-        if n:
-            self.pick = (self.pick + (1 if way > 0 else -1)) % n
-        self.confirm_until = 0.0
+        clicks = self.T.knob_clicks(1, delta, shift)
+        if isinstance(key, str) and key != "vel":
+            one = knobgate.gate(("comp", key), delta, shift)
+            if not one:
+                return
+            delta = one
+        elif not isinstance(key, str) and not self.rec(key) and knobgate.is_choice(d, key):
+            clicks = knobgate.gate(("step", key), delta, shift)
+            if not clicks:
+                return
+        self._tap = False
+        self._keep(tuple(targets), key)                           # one undo for all the steps
+        for i in targets:
+            self.change(i, key, clicks, 1 if delta > 0 else -1, keep=False)
+        i = targets[0]
+        popup.show(self.T, "STEP %d" % (i + 1) if len(targets) == 1 else "%d STEPS" % len(targets), self.label(key),
+                   self.value_text(i, key))
 
     def set_length(self, delta, shift):
         """Knob 2: a recorded setting's own length (its steps are kept when it's shortened)."""
@@ -349,8 +490,16 @@ class Auto:
         self.T.engine.seq_changed()
         popup.show(self.T, self.label(key)[:12], "LENGTH", "%d STEPS" % n)
 
-    def step(self, n, down, deleting):
+    def step(self, n, down, deleting, shift=False):
+        if self.mode != "edit":
+            return
         i = self.page * 16 + n - 1
+        if shift and down:                                         # Shift + a step: a white box on it (or off); knob 1 sets them all
+            if i < self.length(self.key()):
+                self.selected = [j for j in self.selected if j != i] if i in self.selected else self.selected + [i]
+                self.cur = i
+                self.T.say("%d STEP%s PICKED" % (len(self.selected), "" if len(self.selected) == 1 else "S") if self.selected else "NO STEPS PICKED", 2)
+            return
         if not down:
             if self.held == i:
                 key = self.key()
@@ -371,6 +520,7 @@ class Auto:
                 self.T.say("STEP %d: %s TAKEN OFF" % (i + 1, self.label(key)), 2)
             return
         self._down_at = time.monotonic()
+        self.cur = i
         if i in self.steps_with(key):
             self.held, self._tap = i, True
             popup.show(self.T, "STEP %d" % (i + 1), self.label(key), self.value_text(i, key))
@@ -382,14 +532,16 @@ class Auto:
 
     def clear(self):
         """Shift + Delete: asks first; again (within a few seconds): this setting off every step."""
-        key = self.key()
+        key = self.key() or (self.row_key() if self.mode == "list" else None)
         if key is None:
             return
         if time.monotonic() < self.confirm_until:
             n = len(self.steps_with(key))
             self.clear_key(key)
+            if key in self.extra:
+                self.extra.remove(key)
             self.confirm_until = 0.0
-            self.pick = 0
+            self.mode, self.edit_key, self.selected, self.cur = "list", None, [], None
             self.T.say("%s TAKEN OFF %d STEP%s" % (self.label(key), n, "" if n == 1 else "S"), 2)
         else:
             self.confirm_until = time.monotonic() + CONFIRM_SECONDS
@@ -398,11 +550,13 @@ class Auto:
         return time.monotonic() < self.confirm_until
 
     def arrows(self, way):
+        if self.mode != "edit":
+            return
         pages = max(1, (self.length(self.key()) + 15) // 16)
         self.page = max(0, min(pages - 1, self.page + way))
 
     def lane_changed(self):
-        self.pick, self.held, self.page, self.confirm_until = 0, None, 0, 0.0
+        self._left()                                               # (another drum: its own list)
 
     # ------------------------------------------------------------ lights
     def playing_step(self):
@@ -421,10 +575,12 @@ class Auto:
 
     def colour(self):
         """Each setting knob 1 goes to has its own colour, so you can see you've switched."""
-        return COLOURS[self.pick % len(COLOURS)]
+        return COLOURS[self.row % len(COLOURS)]
 
     def step_lights(self):
         key = self.key()
+        if key is None:
+            return [0] * 16
         on = self.steps_with(key)
         length, now = self.length(key), self.playing_step()
         colour = self.colour()
@@ -433,8 +589,8 @@ class Auto:
             i = self.page * 16 + k
             if i >= length or sequencer.dark(i, sequencer.TRIPLETS):
                 out.append(0)
-            elif i == self.held:
-                out.append(120)                                   # held: white
+            elif i == self.held or i in self.selected or i == self.cur:
+                out.append(120)                                   # held, picked or under the white box: white
             elif i == now:
                 out.append(120 if i in on else 118)               # the playhead passing
             else:
