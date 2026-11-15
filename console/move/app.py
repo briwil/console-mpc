@@ -1314,8 +1314,18 @@ def handle(name, T, m, e):
     if name in ("INST_HOME", "SEQ_PAGE") and T.song_page and not menus and not (T.seq_page or T.drum_page or T.inst_page or T.fx_page):
         T.song_page = False                           # the song page: SAMPLE = page 1 of the instrument, SEQ = its sequencer
         T.key("DRUMS")
+        if T.inst_page and not T.drum_page:           # (the MIDI key lands on the instruments list: open the instrument the white box is on)
+            try:
+                sl = T.song.slots()
+                if sl:
+                    T.instp.row = sl[max(0, min(T.song.cur, len(sl) - 1))]
+            except Exception:                         # noqa: BLE001
+                pass
+            if not T.instp.mode:
+                T.instp.push()
         if name == "SEQ_PAGE" and T.drum_page and not T.seq_page:
-            T.key("DRUMS")
+            T.key("DRUMS")                            # the sound page -> its sequencer
+            return
         T.drum_tab = 0
         return
     if name == "SEQ_PAGE":
