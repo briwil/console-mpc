@@ -716,7 +716,9 @@ class SynthModule(Module):
         self.lane_names = [self.title] * self.lanes
         self.lane_short = [str(i + 1) for i in range(self.lanes)]
         self._param_voice = lambda lane: 0
-        self._held = []                      # [frames left, note]: the sequencer's notes still sounding
+        self._held = []                      # [frames left, note, id]: the sequencer's notes still sounding
+        self._sounding = {}                  # note -> the id of the play of it that is sounding (a newer play of the same note owns it)
+        self._play_id = 0
         self._live_on = set()                # notes held by hand
         for p in self.params:
             p["voice"] = None
@@ -796,9 +798,10 @@ class SynthModule(Module):
             elif t[0] == "refresh":
                 refresh = True
             elif t[0] == "all_off":
-                for _, note in self._held:
+                for note in list(self._sounding):
                     self._seq.midi(0x80, note, 0)
                 self._held = []
+                self._sounding.clear()
                 for note in list(self._live_on):
                     self._live.midi(0x80, note, 0)
                 self._live_on.clear()
@@ -806,33 +809,41 @@ class SynthModule(Module):
             self._refresh()
         # what happens in this block, in order: notes let go (0) before notes played (1) at the same time
         acts, keep = [], []
-        for left, note in self._held:
+        for left, note, pid in self._held:
             if left < frames:
-                acts.append((max(0, int(left)), 0, note, 0, None))
+                acts.append((max(0, int(left)), 0, note, 0, None, pid))
             else:
-                keep.append([left - frames, note])
+                keep.append([left - frames, note, pid])
         self._held = keep
         for offset, note, vel, locks in events:
             if not 0 <= note <= 127:
                 continue
             locks = dict(locks)
             gate = max(1, int(locks.pop("gate", 4410)))
-            acts.append((offset, 1, note, vel, locks))
+            self._play_id += 1
+            pid = self._play_id
+            acts.append((offset, 1, note, vel, locks, pid))
             if offset + gate < frames:
-                acts.append((offset + gate, 0, note, 0, None))
+                acts.append((offset + gate, 0, note, 0, None, pid))
             else:
-                self._held.append([offset + gate - frames, note])
+                self._held.append([offset + gate - frames, note, pid])
         acts.sort(key=lambda a: (a[0], a[1]))
         buf = np.zeros((frames, 2), np.float32)
         pos = 0
-        for offset, kind, note, vel, locks in acts:
+        for offset, kind, note, vel, locks, pid in acts:
             offset = max(pos, min(frames, offset))
             if offset > pos:
                 self._seq.render(buf[pos:offset])
                 pos = offset
             if kind == 0:
-                self._seq.midi(0x80, note, 0)
+                # the same note played again before this one ended: the newer play owns it, this late release is dropped
+                # (it would cut the new note short: the stutter of short per-note lanes)
+                if self._sounding.get(note) == pid:
+                    self._seq.midi(0x80, note, 0)
+                    del self._sounding[note]
                 continue
+            if note in self._sounding:
+                self._seq.midi(0x80, note, 0)            # (still sounding from before: let go first, then play it again)
             for p in self._locked[0] - set(locks):
                 self._apply(self._seq, p, self.values[p])
             for p, v in locks.items():
@@ -840,6 +851,7 @@ class SynthModule(Module):
                     self._apply(self._seq, p, v)
             self._locked[0] = set(p for p in locks if isinstance(p, int) and 0 <= p < self.param_count)
             self._seq.midi(0x90, note, max(1, min(127, vel)))
+            self._sounding[note] = pid
         if pos < frames and seq_awake(self, frames, bool(acts or self._held)):     # notes still held: awake
             self._seq.render(buf[pos:])
         seq = np.zeros((frames, 2), np.float32)

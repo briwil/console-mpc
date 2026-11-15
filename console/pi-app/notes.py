@@ -453,10 +453,29 @@ class NoteSequencer:
                         if self._decided[key]:
                             # a ratchet's notes share the note's length; the last one holds to its end
                             gate = each * 0.9 if r < nh - 1 else n.length * step_frames - r * each - 1
+                            if r == nh - 1 and n.length > 1:
+                                gap = self._next_gap(p, pitch, k, per_note, int(math.ceil(n.length)))
+                                if gap is not None:      # the same note starts again before this one ends: end it just before
+                                    gate = min(gate, gap * step_frames - r * each - 64)
                             locks = dict(n.locks)
                             locks["gate"] = max(1, int(gate))
                             out.append((int(t - block_start), out_pitch, n.vel, locks))
         return out
+
+    def _next_gap(self, p, pitch, k, per_note, most):
+        """Steps from slot k until the same note starts again in its row (at most `most`), or None. A note that held on past
+        that would be let go by its own late release in the middle of the new one: chopped, half the notes missing."""
+        trip = self.trip
+        own = per_note or pitch in p.lane_len or pitch in p.lane_rate
+        L = p.lane_length(pitch) if own else p.length
+        if per_note and any(p.at(i).get(pitch) is not None and p.at(i)[pitch].comp.keys() & {"pulse", "hold", "jump"}
+                            for i in range(L)):
+            return None                                          # (pulse / hold / jump: its own order, not worked out here)
+        n = sequencer.live_len(L, trip) or 1
+        for d in range(1, most + 1):
+            if p.at(sequencer.phys((k + d) % n, trip)).get(pitch) is not None:
+                return d
+        return None
 
     def position(self, tape_frame, frames_per_beat):
         """The step playing (one per pattern: [step], like the drum sequencer's per-lane list)."""
