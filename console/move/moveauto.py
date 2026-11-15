@@ -71,6 +71,7 @@ class Auto:
         self.selected = []            # steps picked with Shift (the white boxes): knob 1 sets them all
         self.cur = None               # the white box the wheel moves over the steps
         self._on = False
+        self._orig = {}               # live recording: the setting's value before you turned it (it goes back to it when recording ends)
 
     # ------------------------------------------------------------ what's shown
     def active(self):
@@ -82,6 +83,7 @@ class Auto:
         return on
 
     def _left(self):
+        self.restore()
         self.mode, self.edit_key, self.extra, self.row = "list", None, [], 0
         self.held = self.cur = None
         self.selected, self.page, self.confirm_until, self._snapped = [], 0, 0.0, None
@@ -147,6 +149,7 @@ class Auto:
         """Back from the pop-up or the picker: to the list. False on the list (the page's own Back)."""
         if self.mode == "list":
             return False
+        self.restore()
         k = self.edit_key
         if self.mode == "edit" and k in self.extra and not self.steps_with(k):
             self.extra.remove(k)                               # (nothing set on it: it is not kept)
@@ -489,6 +492,9 @@ class Auto:
             return
         key = self.key()
         d = self.T.engine.drums
+        if self.rec(key) and not self.selected and self.held is None and self.live_ready():
+            self.live_knob(key, delta, shift)                     # recording and playing: the knob is played live and laid on the steps
+            return
         on = self.steps_with(key)
         for i in self.selected:                                    # picked steps that have nothing yet get the setting first
             if i not in on and i < self.length(key):
@@ -514,6 +520,41 @@ class Auto:
         i = targets[0]
         popup.show(self.T, "STEP %d" % (i + 1) if len(targets) == 1 else "%d STEPS" % len(targets), self.label(key),
                    self.value_text(i, key))
+
+    def live_ready(self):
+        T, e = self.T, self.T.engine
+        return bool(getattr(T, "live_rec", False) and e and e.playing and e.drums)
+
+    def live_knob(self, key, delta, shift):
+        """Recording into the pattern, playing: knob 1 turns the setting (you hear it) and puts its value on the step playing."""
+        T, d, param = self.T, self.T.engine.drums, key[1]
+        if not d.lockable(param):
+            return
+        v = d.get_param(param)
+        if param not in self._orig:
+            self._orig[param] = v                                 # (what it goes back to)
+        clicks = T.knob_clicks(1, delta, shift)
+        if knobgate.is_choice(d, param):
+            clicks = knobgate.gate(("step", param), delta, shift)
+            if not clicks:
+                return
+        nv = int(d.stepped(param, v, clicks)) if hasattr(d, "stepped") else max(0, min(127, v + clicks))
+        d.set_param(param, nv)
+        record(T, param)
+        popup.show(T, self.label(key), "RECORDING", d.value_text(param))
+
+    def restore(self):
+        """Recording ended: the settings turned live go back to what they were."""
+        if not self._orig:
+            return
+        d = self.T.engine.drums if self.T.engine else None
+        for param, v in list(self._orig.items()):
+            try:
+                if d is not None:
+                    d.set_param(param, v)
+            except Exception:                                      # noqa: BLE001
+                pass
+        self._orig.clear()
 
     def set_length(self, delta, shift):
         """Knob 2: a recorded setting's own length (its steps are kept when it's shortened)."""

@@ -863,6 +863,8 @@ def main():
                     T._live_snap = False
                     T.say("PATTERN RECORDING OFF", 2)
                 T._rec_was_playing = bool(e.playing)
+                if T.auto._orig and not (T.live_rec and e.playing):
+                    T.auto.restore()                          # AUTOMATION: a setting turned live while recording goes back when it ends
                 if T.sbrowse.active and (T.seq_page or T.fx_page or T.inst_page or T.song_page or not T.drum_page):
                     T.sbrowse.close(False)                # (went to another page: the sample browser closes, the old sample stays)
                 T.pagefx.update(T, m)
