@@ -436,6 +436,12 @@ def install(MoveBoard, pad_velocity=None):
             if val:
                 self.keys.put("SEQ_PAGE")
             return
+        if num == 103:                                                          # the song page, pad 12 held: the wheel's clicks = PLAYS
+            self.keys.put(("PLAYS", 1 if val < 64 else -1))
+            return
+        if num == 120:                                                          # pad 12 held / let go
+            T.plays_held = time.monotonic() + 3600 if val else 0.0
+            return
         if num == 102:                                                          # what the pads are now (bridge/mapping.h): named for a second
             try:
                 if not on_tape(T) and not T.inst_page and not T.song_page:

@@ -377,8 +377,11 @@ class Scheduler:
         self.sent = 0
         self.playing = True
 
+    limit = None
+
     def stop(self):
         self.playing = False
+        self.limit = None
 
     def seq_frame(self):
         """Where the sequencer is now, in its own frames."""
@@ -390,6 +393,8 @@ class Scheduler:
         if not self.playing:
             return
         want = self.core.now() + self.LOOKAHEAD - self.start_frame
+        if self.limit is not None:
+            want = min(want, self.limit)                 # the song ends here: nothing is sent past it
         if want <= self.sent:
             return
         n = int(want - self.sent)

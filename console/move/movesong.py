@@ -250,6 +250,7 @@ class Song:
             if not self._was_playing:
                 self.apply(0, False)                       # row 1 as it is now (it may have been changed since it was last set up)
             self.playing_row, self._loops, self._cycle, self._queued, self._end = 0, 0, None, False, False
+            e.end_limit = None
         elif not playing:
             if self._was_playing or not getattr(self, "_ready", False):
                 self.apply(0, False)                       # stopped: ready at row 1
@@ -279,6 +280,7 @@ class Song:
             if self._end:                                  # loop off: the last row has played its last time, the song ends
                 self._end = self._queued = False
                 T.stop()
+                e.end_limit = None
                 return
             if self._queued:                               # the next row has started
                 self.playing_row = (self.playing_row + 1) % len(self.rows)
@@ -292,6 +294,7 @@ class Song:
         if not self._queued and self._loops >= row["repeat"] - 1:
             if self.playing_row + 1 >= len(self.rows) and not self.loop:
                 self._end = self._queued = True            # the last row's last time: stop at its end
+                e.end_limit = int(m.anchor + (cycle[1] + 1) * length)    # (nothing is sent to sound past this: core/bridge.py)
                 return
             self.apply((self.playing_row + 1) % len(self.rows), True)
             self._queued = True
@@ -300,6 +303,8 @@ class Song:
         self.loop = not self.loop
         if self.loop and self._end:                        # turned on during the last row: go round again
             self._end = self._queued = False
+            if self.T.engine:
+                self.T.engine.end_limit = None
         self.save()
         self.T.say("SONG LOOP " + ("ON" if self.loop else "OFF"), 1)
 

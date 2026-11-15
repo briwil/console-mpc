@@ -116,7 +116,7 @@ static void refresh_pads(void)
         if (knob_mode) {                                            /* pads 1-8 = knobs 1-8; the touched one is bright */
             if (i < 8) { if (page_song && i >= page_song_n) { r = 0; g = 1; b = 2; } else if (pad_knob[i] >= 0) { r = 30; g = 127; b = 110; } else { r = 0; g = 40; b = 48; } }
             else if (page_arp) { r = 100; g = 42; b = 0; }          /* the ARP pop-up: pads 9-16 play notes */
-            else if (page_song && i == 11) { if (pad_knob[11] >= 0) { r = 127; g = 70; b = 0; } else { r = 100; g = 42; b = 0; } }     /* the song page: pad 12 (orange) = PLAYS of the picked row, with the wheel */
+            else if (page_song && i == 11) { if (pad_knob[11] >= 0) { r = 127; g = 40; b = 0; } else { r = 100; g = 28; b = 0; } }     /* the song page: pad 12 (orange) = PLAYS of the picked row, with the wheel */
             else { r = 0; g = 1; b = 2; }
         }
         int key = (r << 16) | (g << 8) | b;
@@ -234,6 +234,7 @@ static void mpc_pad_event(int idx, int vel, int on)
     if (on && knob_mode && page_song && idx == 11) {                /* the song page, KNOB FX: pad 12 held = the wheel changes PLAYS (knob 8 for Console) */
         pad_knob[11] = 7;
         knob_stamp[11] = ++knob_clock;
+        send3(0xBF, 120, 127);                                      /* held (the PLAYS cell grows on screen) */
         refresh_pads();
         return;
     }
@@ -249,6 +250,7 @@ static void mpc_pad_event(int idx, int vel, int on)
     }
     if (!on && idx == 11 && pad_knob[11] == 7 && page_song) {       /* (pad 12's touch was never sent) */
         pad_knob[11] = -1;
+        send3(0xBF, 120, 0);
         refresh_pads();
         return;
     }
@@ -416,8 +418,9 @@ static void mpc_cc_event(int cc, int val)
         int notches = val >= 64 ? 128 - val : val;
         if (notches < 1) notches = 1;
         if (notches > 8) notches = 8;
+        int plays = page_song && pad_knob[11] == 7 && k == 7;         /* the song page's pad 12: its own CC (7 is also pad 8's knob) */
         for (int i = 0; i < notches * (k >= 0 ? KNOB_STEP : 1); i++)   /* the MPC encoder is slow next to a Move knob: several clicks per notch */
-            send3(0xBF, k >= 0 ? 71 + k : 14, dir);
+            send3(0xBF, plays ? 103 : k >= 0 ? 71 + k : 14, dir);
         break;
     }
     }

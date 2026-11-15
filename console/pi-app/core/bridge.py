@@ -163,6 +163,14 @@ class CoreBridge:
         if self.sched.playing:
             sent = self.sched.sent
             plays = self._plays()
+            lim = getattr(e, "end_limit", None)            # the song's last row is on its last time: nothing sounds past its end
+            self.sched.limit = lim
+            if lim is not None and getattr(self, "_purged_at", None) != lim:
+                self._purged_at = lim
+                for _mid, _slot in self.slots.values():
+                    self.core.purge(_slot.seq, at=self.sched.start_frame + lim)
+            elif lim is None:
+                self._purged_at = None
             self.sched.tick(plays, e.frames_per_beat(), on_events=self._hits)
             self._punch_steps(plays, sent, self.sched.sent - sent, e.frames_per_beat())
             e.seq_clock = int(self.sched.seq_frame())
@@ -485,6 +493,10 @@ class CoreBridge:
             seq = e.seqs.get(mid)
             if seq is not None:
                 seq.stop()
+            try:
+                self.core.purge(_slot.seq)               # what was sent ahead (an arp'd long note is a whole run of them) never sounds
+            except Exception:                            # noqa: BLE001
+                pass
             try:
                 _slot.auto_reset()                       # (recorded automation: the settings back to the knobs)
             except Exception:                            # noqa: BLE001

@@ -1305,8 +1305,8 @@ def handle(name, T, m, e):
         if name == "HOME":
             T.song.push()                                  # push the wheel: pick the cell the box is on / let go
             return
-        if isinstance(name, tuple) and name[0] == "KNOB" and name[1] == 8:
-            T.song.plays(name[2])                          # KNOB FX, pad 12 held (the orange one): PLAYS of the picked row
+        if isinstance(name, tuple) and name[0] == "PLAYS":
+            T.song.plays(name[1])                          # KNOB FX, pad 12 held (the orange one): PLAYS of the picked row
             return
         if name == "LOOP":
             T.song.toggle_loop()                           # LOOP: the song goes round (off: it stops after the last row)

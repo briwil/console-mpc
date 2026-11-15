@@ -87,7 +87,7 @@ static Source sources[MAX_SOURCES];
 
 /* ------------------------------------------------------------------ queues */
 
-enum { EV_TRIGGER = 1, EV_MIDI = 2, EV_CALL = 3, EV_TRANSPORT = 4 };
+enum { EV_TRIGGER = 1, EV_MIDI = 2, EV_CALL = 3, EV_TRANSPORT = 4, EV_PURGE = 5 };
 enum { T_PLAY = 1, T_STOP = 2, T_LOCATE = 3, T_RECORD = 4, T_RECORD_OFF = 5 };
 
 typedef struct {
@@ -606,6 +606,21 @@ static int process(jack_nframes_t n, void *arg) {
             for (int s = 0; s < MAX_SOURCES; s++)
                 if (sources[s].kind && sources[s].on) render_source(&sources[s], pos, at);
             pos = at;
+        }
+        if (e->kind == EV_PURGE) {                    /* Stop: the notes and hits already sent ahead for source a never sound */
+            int src = (int)e->a;
+            for (int k = 0; k < waiting_n; ) {
+                Event *w = &waiting[k];
+                if (w->src == src && w->frame >= e->frame && (w->kind == EV_TRIGGER || (w->kind == EV_MIDI && (w->a & 0xF0) == 0x90 && w->c > 0))) {
+                    waiting_n--; waiting[k] = waiting[waiting_n]; waiting_order[k] = waiting_order[waiting_n];
+                } else k++;
+            }
+            for (int k = i + 1; k < due_n; k++) {
+                Event *w = &due[k];
+                if (w->src == src && w->frame >= e->frame && (w->kind == EV_TRIGGER || (w->kind == EV_MIDI && (w->a & 0xF0) == 0x90 && w->c > 0)))
+                    w->kind = 0;                      /* (nothing: apply() ignores it) */
+            }
+            continue;
         }
         apply(e);
     }

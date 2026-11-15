@@ -113,10 +113,11 @@ def text_width(font, s, track):
     return w
 
 
-def title_line(c, title, y=45):
-    """The page's name as large as fits (48 px, then 32, 24, 16), its capitals centred on y."""
+def title_line(c, title, y=45, fit=None):
+    """The page's name as large as fits (48 px, then 32, 24, 16), its capitals centred on y.
+    fit: the longest text it can become, so the size stays put while the text changes."""
     for px, tr in ((48, -6), (32, -4), (24, -3), (16, -2)):
-        if text_width(c.pxfont(px), title, tr) <= W - 6 or px == 16:
+        if text_width(c.pxfont(px), fit or title, tr) <= W - 6 or px == 16:
             cap = c.pxfont(px).cap_h
             c.text_px(3, y + cap // 2, title, WHITE, px, tr)
             return
@@ -352,7 +353,7 @@ def draw_song(T, nat):
         c.clear((0, 0, 0))
         c.px[:] = bands()
         c.text_px(6, 19, "NO ROWS", WHITE, 16, -1)
-        title_line(c, title)
+        title_line(c, title, fit="SONG OFF   LOOP OFF")
         c.text_px(8, 124, "PRESS PAD 1 TO ADD A ROW", WHITE, 16, -1)
         for i, line in enumerate(["EACH ROW: A PATTERN PER", "INSTRUMENT, PLAYED X TIMES", "(WHEEL). + / - : SONG ON/OFF"]):
             c.text_px(8, 150 + i * 14, line, (0x6E, 0x99, 0x3F), 8, 0)
@@ -396,7 +397,7 @@ def draw_song(T, nat):
 
     def head(c):
         c.text_px(6, 19, "PUNCH FX PATTERNS" if shift else "ROW %d/%d" % (sg.pick + 1, len(sg.rows)), WHITE if not shift else nat.ACC, 16, -1)
-        title_line(c, title)
+        title_line(c, title, fit="SONG OFF   LOOP OFF")
         for i in range(16):                                         # the rows: 16 chips, as the 16 pads
             x, y = 1 + i * 17, 97
             have = i < len(sg.rows)
@@ -409,14 +410,19 @@ def draw_song(T, nat):
                 c.frame(x, y, 16, 14, WHITE)
         plays = "PLAYS X%d" % row["repeat"]                         # how many times the row plays: the cell after the last instrument
         pw = text_width(c.pxfont(16), plays, -1)
-        c.text_px(310 - pw, 19, plays, WHITE, 16, -1)
         GREY = (64, 64, 64)
-        if box == len(slots):
+        if getattr(T, "plays_held", 0.0) > now:                     # pad 12 held (KNOB FX): the cell grows, down and to the left
+            bw = text_width(c.pxfont(32), plays, -3)
+            c.rect(306 - bw, 3, bw + 8, 40, GREY)
+            c.text_px(310 - bw, 3 + 33, plays, WHITE, 32, -3)
+        elif box == len(slots):
             c.rect(306 - pw, 3, pw + 8, 20, GREY)
             c.text_px(310 - pw, 19, plays, WHITE, 16, -1)
             if sg.sel:
                 c.frame(306 - pw, 3, pw + 8, 20, WHITE)
-        elif active is None and box < len(slots):
+        else:
+            c.text_px(310 - pw, 19, plays, WHITE, 16, -1)
+        if box < len(slots) and active is None:
             j = box + 4 if box < 4 else box - 4                    # the cell on screen (the pads' rows: the first four are the bottom row)
             fx, fy = int(COLS[j % 4]) - 22, int(LABEL_BASE[j // 4]) - 9
             c.rect(fx, fy, 44, 40, GREY)

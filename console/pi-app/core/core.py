@@ -220,6 +220,10 @@ class Core:
     def trigger(self, s, voice, velocity, at=0):
         return self._push(at, EV_TRIGGER, s, voice, velocity)
 
+    def purge(self, s, at=0):
+        """Stop: the notes and hits already sent ahead for source s are dropped (the arp's whole run of a long note is one)."""
+        return self._push(at, 5, s)
+
     def midi(self, s, b0, b1, b2, at=0):
         return self._push(at, EV_MIDI, s, b0, b1, b2)
 
