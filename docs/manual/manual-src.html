@@ -347,12 +347,15 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
 <section id="automation">
 <h2>LFOs, automation, punch FX</h2>
 <h3>Automation</h3>
-<p class="intro">B1 after the sequencer: what is locked on this pattern's steps, one setting at a time. Recorded knob moves show here (name + REC), and so do step locks and step settings. A recorded setting has its own length (knob 2) and loops at that length whatever the notes do. Between steps with different values it glides.</p>
+<p class="intro">B1 after the sequencer: a list of the settings that have steps on this pattern (8 rows to start, more as you add them). Turn the wheel to pick a row and push it to open the setting as a pop-up. An EMPTY row opens a picker of everything that can be automated: the step settings (velocity, chance, multiply...) and the instrument's sound settings. Back closes the pop-up or the picker.</p>
+<p class="intro">A sound setting gets a lane of its own: any step can have a value, with or without a note (a held note can be swept), it glides between steps, and it has its own LENGTH. Step settings stay on the notes, so they only go on steps where a note starts. A sound setting locked on notes (from older projects) shows (NOTES) after its name.</p>
 <dl class="rows">
-  <div class="r"><dt>Knob 1</dt><dd>Go through the settings that are set on some step: step settings first, then the sound's. Each has its own colour on the pads.</dd></div>
-  <div class="r"><dt>Steps</dt><dd>Lit: that setting is on the step. Tap a lit step: it comes off. Tap an unlit step that plays a note: it gets the setting, with the value of the lit step before it. Hold a step: its value shows, and knob 1 changes it.</dd></div>
-  <div class="r"><dt>ERASE + step</dt><dd>Take that setting off the step. <kbd>Shift</kbd> + ERASE: off every step (it asks first).</dd></div>
-  <div class="r"><dt>Undo</dt><dd>Puts back what you took off or changed.</dd></div>
+  <div class="r"><dt>Pop-up</dt><dd>The steps on top, each bar as high as its value; VALUE (pad 1) and LENGTH (pad 2) below. PLUS / MINUS: Redo / Undo; Shift + PLUS / MINUS: the next / previous 16 steps.</dd></div>
+  <div class="r"><dt>Steps (SEQ)</dt><dd>Tap an unlit step: it gets the setting, its value set by how hard you hit. Tap a lit step: it comes off. Hold a step: K1 changes it. Shift + steps: white boxes on several, K1 sets them all.</dd></div>
+  <div class="r"><dt>Wheel</dt><dd>Moves a white box along the steps; push: that step on / off.</dd></div>
+  <div class="r"><dt>K1</dt><dd>Its position is the value: all the way left the lowest, all the way right the highest. Knob 2: a lane's LENGTH.</dd></div>
+  <div class="r"><dt>Recording</dt><dd>Record on and playing, nothing held or picked: K1 plays the setting live and lays it on the steps as they go by; it goes back to its value when recording ends.</dd></div>
+  <div class="r"><dt>ERASE on a row</dt><dd>Takes the setting off every step (press <kbd>Shift</kbd> + ERASE again to confirm). Undo puts it back.</dd></div>
 </dl>
 <h3>Punch FX</h3>
 <p class="intro">B1 after automation: a sequencer of OP-XY style punch-in effects on the instrument you're on, one lane per effect, each with its own length and rate. Each instrument has 16 punch patterns, apart from its note patterns, and song mode picks them per row. Pads 1-16 are the effects:</p>
@@ -368,7 +371,7 @@ footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);f
   <div class="r"><dt>Pad 15 ECHO THROW</dt><dd>Everything into the delay while it's on; the echoes ring on after.</dd></div>
   <div class="r"><dt>Pad 16 KILL</dt><dd>Silence.</dd></div>
   <div class="r"><dt>Tap / hold a pad</dt><dd>Tap: its lane (the steps show its steps). Hold pads: they play while held (several: stacked). Recording while it plays puts them on their lanes' steps.</dd></div>
-  <div class="r"><dt>Knobs 1, 2, 8</dt><dd>The lane's LENGTH and RATE; knob 8 is TIME SCALE (×1 to ×32), every lane that many times slower for long sweeps.</dd></div>
+  <div class="r"><dt>Knobs 1, 2, 3, 8</dt><dd>The lane's LENGTH, RATE and CHANCE (every step of the lane at once; hold a step + knob 1 for one); knob 8 is TIME SCALE (×1 to ×32), every lane that many times slower for long sweeps.</dd></div>
   <div class="r"><dt>Shift + pad 1-16</dt><dd>Punch pattern 1-16.</dd></div>
 </dl>
 <p class="note">They stack: one from each group plays at once (TIME: pads 1-8; FILTER: pads 9-11; BITCRUSH, GATE, PAN SWING, ECHO THROW and KILL each on their own).</p>

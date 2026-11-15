@@ -3,15 +3,24 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.10
+
+- **AUTOMATION page:** a list of the settings that have steps (8 rows to start, more as you add them; EMPTY rows open a picker of everything that can be automated). A setting opens as a pop-up: its steps on top (each bar as high as its value), VALUE and LENGTH below (pads 1 and 2, like the other pop-ups). Back returns to the list.
+  - Sound settings get a lane of their own: any step can have a value, notes or not (a held note can be swept), and the lane has its own length. Velocity, chance and the other step settings stay on the notes (marked NOTES when a sound setting is locked on notes).
+  - Set a step: hold it, pick several with Shift + steps (white boxes), or move the white box with the wheel and push to set a step on / off. In SEQ mode a pad sets a new step's value by how hard you hit it. K1's position is the value (halfway = halfway).
+  - Record with record on and playing: knob 1 plays the setting live and lays it on the steps; it goes back to its value when recording ends.
+- **Punch FX:** pad 3 = CHANCE for every step of the effect's lane. A pad with no setting no longer makes the others fade.
+- **K1 on a step setting:** at an end stop the setting goes to its lowest / highest.
+- **NEW PROJECT** lands on the INSTRUMENTS page.
+- **Sequencer pages:** MINUS = Undo, PLUS = Redo; Shift + MINUS / PLUS = the previous / next 16 steps.
+- **PAD FX is a pop-up** over the page you are on (like the ARP): knobs 1-5 are the pads' settings, PLUS / MINUS change the octave, the pads keep playing. PAD FX again or BACK closes it.
+- **Live pattern recording:** COUNT IN clicks before PLAY starts the recording; a pass is one undo step; pads are recorded at the time you pressed them (the app's reading delay is taken off), and a pad at the very start lands on step 1.
+- Fix: Shift + PLUS (redo) on a synth sequencer page crashed the app.
+
 ## 0.0.9
 
 - **Per-note sequencer:** a note is always picked (the lowest pad at first). Tapping it again no longer jumps to an "all notes" lane, so the steps always belong to the note shown.
 - Fix: the version label on the card no longer shows a stray `\n`.
-- **Sequencer pages:** MINUS = Undo, PLUS = Redo; Shift + MINUS / PLUS = the previous / next 16 steps.
-- **AUTOMATION page:** a list of the settings that have steps (8 rows to start, EMPTY ones open a picker of everything that can be set). A setting opens as a pop-up with its steps and the value to change: hold a step, Shift + steps (white boxes) to set several at once, or the wheel moves a white box and its push sets a step on / off. Back returns to the list.
-- **PAD FX is a pop-up** over the page you are on (like the ARP): knobs 1-5 are the pads' settings, PLUS / MINUS change the octave, the pads keep playing. PAD FX again or BACK closes it.
-- **Live pattern recording:** COUNT IN clicks before PLAY starts the recording; a pass is one undo step; pads are recorded at the time you pressed them (the app's reading delay is taken off), and a pad at the very start lands on step 1.
-- Fix: Shift + PLUS (redo) on a synth sequencer page crashed the app.
 
 ## 0.0.8
 
