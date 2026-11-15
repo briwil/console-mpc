@@ -286,6 +286,27 @@ def arp_popup_toggle(T):
     T.arp_pop = 1
 
 
+def step_setting_end(T, val):
+    """Steps selected and a setting picked, knob 1 turning it by clicks: when the pot reaches an end stop the setting goes to its
+    lowest (or highest) value, so all the way round always means the end, however the clicks added up. True when it did."""
+    last = getattr(T, "_k1_end_last", 64)
+    T._k1_end_last = val
+    way = -1 if (val <= 1 and last > 1) else 1 if (val >= 126 and last < 126) else 0
+    if not way:
+        return False
+    try:
+        if T.fx_page or T.punch.active() or T.auto.active() or not T.seq_page or not T.engine:
+            return False
+        ms = T.msyn if T.synth_shown() else T.mseq
+        if not (ms.active() and ms.selected and ms.sel is not None):
+            return False
+        for _ in range(64):                                     # (a setting that steps through choices moves one a call)
+            ms.set_selected(way * 64, True)
+    except Exception:                                           # noqa: BLE001
+        return False
+    return True
+
+
 def swap_plus_minus(board, num, val, orig_cc):
     """On a sequencer page: MINUS / PLUS = Undo / Redo, and Shift + MINUS / PLUS = the steps' previous / next page (the bridge sends them the
     other way round: its arrows plain, undo / redo with Shift). Not in the pop-ups (they use PLUS / MINUS themselves)."""
@@ -391,6 +412,8 @@ def install(MoveBoard, pad_velocity=None):
             finally:
                 self.shift = shift
             return
+        if num == K1_ABS and step_setting_end(T, val):
+            return                                              # (the pot at an end stop: the selected step setting goes to its end)
         if num == K1_ABS or num == K1:
             if length_page(T):
                 now = time.monotonic()
