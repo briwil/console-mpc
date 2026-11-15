@@ -289,9 +289,12 @@ class Auto:
     def fraction(self, i, key):
         """How high a step's bar is: its value from 0 (lowest) to 1 (highest)."""
         try:
+            d = self.T.engine.drums
             if self.rec(key):
                 ln = self.rec_lane(key)
-                return max(0.0, min(1.0, ln.steps[i] / 127.0)) if ln and i in ln.steps else 0.0
+                if not (ln and i in ln.steps):
+                    return 0.0
+                return max(0.0, min(1.0, float(d.fraction(key[1], ln.steps[i])) if hasattr(d, "fraction") else ln.steps[i] / 127.0))
             us = [u for u in self.units(i) if self.has(u, key)]
             if not us:
                 return 0.0
@@ -307,7 +310,7 @@ class Auto:
                 return max(0.0, min(1.0, (u.nudge + 50) / 100.0))
             if isinstance(key, str):
                 return u.comp[key] / float(max(1, len(sequencer.COMPONENTS[key]) - 1))
-            return max(0.0, min(1.0, u.locks[key] / 127.0))
+            return max(0.0, min(1.0, float(d.fraction(key, u.locks[key])) if hasattr(d, "fraction") else u.locks[key] / 127.0))
         except Exception:                                      # noqa: BLE001
             return 1.0
 
