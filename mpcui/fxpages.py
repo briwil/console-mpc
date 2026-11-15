@@ -377,6 +377,8 @@ def _steps_page(T, nat, key, left, right, msg, strip_args, pairs):
 
     items = [(str(a), str(b), 1.0) for a, b in pairs]
     active = _active(T, nat, key, [it[1] for it in items])
+    if active is not None and active < len(items) and not items[active][0]:
+        active = None                                   # a pad with no setting on it: nothing grows, nothing fades
     items, active = sp.by_pad_rows(items, active)
     sp.grid(nat, key, "", "", items, active, now, None, head=head, band_dy=sp.SEQ_DY)
 
