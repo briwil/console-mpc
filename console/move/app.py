@@ -1086,6 +1086,11 @@ def handle(name, T, m, e):
         v = knobgate.set_speed(knobgate.SPEED + (1 if name[1] > 0 else -1) * (1 if abs(name[1]) < 3 else 2))
         T.say("KNOB SPEED: %d CLICK%s A STEP" % (v, "" if v == 1 else "S"), 3)
         return
+    if name == "STOP" and e and not T.playing and not (m.open or m.kits.open) and getattr(T, "song", None) is not None \
+            and T.song.on and T.song.rows:
+        start = e.loop_a / e.frames_per_beat() if (e.loop_on and e.loop_region()) else 0.0
+        T.set_pos(start if T.tape.pos > start + 1e-6 else 0.0)       # song mode, STOP when already stopped: the playhead to the top (as pushing the wheel)
+        return
     if name in ("PLAY", "STOP"):
         try:
             if _count_in(name, T, m, e):
