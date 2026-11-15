@@ -856,7 +856,6 @@ def main():
             T.song.tick()
             T.tick(now - last)
             last = now
-            e.inst_view = e.inst_view or T.song_page         # the instruments play on the song page too
             if now >= next_icon_check:
                 next_icon_check = now + 0.5
                 try:                                         # console/stepdim: another colour for an empty step, to try

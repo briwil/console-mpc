@@ -1321,7 +1321,7 @@ class Transport:
         if self.inst_page:
             self.instp.tick()
         if e:
-            e.inst_view = bool(self.inst_page or self.drum_page)   # there every instrument plays, the tape doesn't
+            e.inst_view = bool(self.inst_page or self.drum_page or getattr(self, "song_page", False))   # there every instrument plays, the tape doesn't (the song page too: set once here, never off and back on in the same frame)
             self.update_glide(seconds)
             was = self._playing
             t.pos = e.beats()
