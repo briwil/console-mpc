@@ -750,7 +750,7 @@ def install(pages):
             if card is None and T.engine and on_song_page(T, menu):
                 draw_song(T)
                 publish()
-                set_mode("W")                                       # W: the song page (as T, but SEQ goes to the sequencer)
+                set_mode("W%d" % max(0, min(8, len(T.song.slots()))))   # W: the song page (as T, but SEQ goes to the sequencer); then how many instruments (only those pads light in KNOB FX)
                 return
             if card is None and T.engine and on_mixer_page(T, menu):
                 draw_mixer(T)

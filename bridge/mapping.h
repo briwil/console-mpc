@@ -64,6 +64,7 @@ static volatile int page_arp;               /* the ARP pop-up is up (page mode "
 static volatile int page_k1;                /* a sound page (Q): K1 is also sent as its absolute position */
 static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
 static volatile int page_retrig;            /* a sound page, or steps selected: knob mode re-plays the drum while a knob is turned (not on song, punch FX, automation, LFO, mixer ...) */
+static volatile int page_song_n = 8;        /* on the song page: how many instruments (the page mode's second character): only that many knob pads light up */
 static volatile int page_song;              /* the song page (W): SEQ goes to the instrument's sequencer (CC 101) */
 static volatile int page_sound;             /* the instrument's sound / parameter page that has a sequencer: SEQ goes to it (as B1 does) */
 static volatile int page_nostep;            /* a page with no steps (the sound page): SEQ does nothing there and step mode / step settings don't apply (written by the screen thread) */
@@ -113,7 +114,7 @@ static void refresh_pads(void)
         colour_rgb(v, &r, &g, &b);
         if (v == 0) { r = 0; g = 6; b = 14; }                       /* idle: a faint blue so the pads can be found */
         if (knob_mode) {                                            /* pads 1-8 = knobs 1-8; the touched one is bright */
-            if (i < 8) { if (pad_knob[i] >= 0) { r = 30; g = 127; b = 110; } else { r = 0; g = 40; b = 48; } }
+            if (i < 8) { if (page_song && i >= page_song_n) { r = 0; g = 1; b = 2; } else if (pad_knob[i] >= 0) { r = 30; g = 127; b = 110; } else { r = 0; g = 40; b = 48; } }
             else if (page_arp) { r = 100; g = 42; b = 0; }          /* the ARP pop-up: pads 9-16 play notes */
             else if (page_song && i == 11) { if (pad_knob[11] >= 0) { r = 127; g = 70; b = 0; } else { r = 100; g = 42; b = 0; } }     /* the song page: pad 12 (orange) = PLAYS of the picked row, with the wheel */
             else { r = 0; g = 1; b = 2; }
@@ -238,6 +239,7 @@ static void mpc_pad_event(int idx, int vel, int on)
     }
     if (on && knob_mode && !(page_arp && idx >= 8)) {
         if (idx < 8) {
+            if (page_song && idx >= page_song_n) return;               /* (no instrument there) */
             pad_knob[idx] = idx;
             knob_stamp[idx] = ++knob_clock;
             send3(0x9F, idx, 127);                      /* "knob touched": Console shows the value */
