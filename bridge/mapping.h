@@ -115,6 +115,7 @@ static void refresh_pads(void)
         if (knob_mode) {                                            /* pads 1-8 = knobs 1-8; the touched one is bright */
             if (i < 8) { if (pad_knob[i] >= 0) { r = 30; g = 127; b = 110; } else { r = 0; g = 40; b = 48; } }
             else if (page_arp) { r = 100; g = 42; b = 0; }          /* the ARP pop-up: pads 9-16 play notes */
+            else if (page_song && i == 11) { if (pad_knob[11] >= 0) { r = 127; g = 70; b = 0; } else { r = 100; g = 42; b = 0; } }     /* the song page: pad 12 (orange) = PLAYS of the picked row, with the wheel */
             else { r = 0; g = 1; b = 2; }
         }
         int key = (r << 16) | (g << 8) | b;
@@ -229,6 +230,12 @@ static void mpc_pad_event(int idx, int vel, int on)
         int cc = idx == 15 ? 109 : idx == 11 ? 110 : (idx == 13 && page_tapeonly) ? 111 : 0;
         if (cc) { send3(0xBF, cc, 127); send3(0xBF, cc, 0); return; }
     }
+    if (on && knob_mode && page_song && idx == 11) {                /* the song page, KNOB FX: pad 12 held = the wheel changes PLAYS (knob 8 for Console) */
+        pad_knob[11] = 7;
+        knob_stamp[11] = ++knob_clock;
+        refresh_pads();
+        return;
+    }
     if (on && knob_mode && !(page_arp && idx >= 8)) {
         if (idx < 8) {
             pad_knob[idx] = idx;
@@ -237,6 +244,11 @@ static void mpc_pad_event(int idx, int vel, int on)
             refresh_pads();
         }
         return;                                         /* pads 9-16: silent */
+    }
+    if (!on && idx == 11 && pad_knob[11] == 7 && page_song) {       /* (pad 12's touch was never sent) */
+        pad_knob[11] = -1;
+        refresh_pads();
+        return;
     }
     if (!on && pad_knob[idx] >= 0) {
         send3(0x8F, pad_knob[idx], 0);                  /* touch ends */

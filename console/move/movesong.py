@@ -158,6 +158,15 @@ class Song:
         if self.on and not self.T.playing and self.rows:
             self.apply(0, False)                           # stopped: row 1 is what PLAY will play
 
+    def plays(self, delta):
+        """KNOB FX, pad 12 held: the wheel changes how many times the picked row plays, a notch a time."""
+        if not self.rows:
+            self.T.say("PRESS STEP BUTTON 1 TO ADD A ROW", 2)
+            return
+        way = knobgate.gate(("song", "plays"), delta, False, 4)          # (4 clicks of the encoder are a notch)
+        if way:
+            self.change(len(self.slots()), way)
+
     def wheel(self, delta):
         """The wheel: the white box moves (nothing picked), or the picked cell changes."""
         if not self.rows:
