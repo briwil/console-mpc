@@ -222,7 +222,10 @@ class Song:
 
     def apply(self, i, playing):
         import punch
-        for s, p in self.rows[i]["pats"].items():
+        pats = self.rows[i]["pats"]
+        for s in self.slots():                         # (an instrument the row doesn't name shows "-": it is silent too, not left on whatever it last played)
+            pats.setdefault(s, None)
+        for s, p in pats.items():
             q = self.seq_of(s)
             if q is None:
                 continue
