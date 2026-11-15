@@ -330,7 +330,7 @@ def on_presets_page(T, menu):
 
 # ------------------------------------------------------------------ steps (AUTOMATION, PUNCH FX)
 
-def _strip(c, first, length, on, at, held, dark, tails=(), long_=(), x0=8, pitch=19, wd=17, y=32, hh=40, bar_y=91, bar_x=8, bar_w=None):
+def _strip(c, first, length, on, at, held, dark, tails=(), long_=(), x0=8, pitch=19, wd=17, y=32, hh=40, bar_y=91, bar_x=8, bar_w=None, fracs=None):
     hl = set(held) if isinstance(held, (set, list, tuple)) else {held}
     for k in range(16):
         i = first + k
@@ -339,7 +339,10 @@ def _strip(c, first, length, on, at, held, dark, tails=(), long_=(), x0=8, pitch
             c.rect(x + wd // 2 - 1, y + hh // 2, 3, 3, G[2])
             continue
         c.rect(x, y, wd, hh, G[1] if (k // 4) % 2 == 0 else G[0])
-        if i in on:
+        if i in on and fracs is not None:                       # a bar as high as the step's value
+            bh = max(3, int(round((hh - 4) * max(0.0, min(1.0, fracs.get(i, 1.0))))))
+            c.rect(x, y + hh - bh, wd, bh, WHITE if i in hl else G[5])
+        elif i in on:
             c.rect(x, y + 6, wd, hh - 6, WHITE if i in hl else G[5])
             if i in long_:
                 c.rect(x + wd, y + hh // 2 - 2, 2, 8, G[5])
@@ -437,7 +440,8 @@ def draw_auto(T, nat):
     if a.cur is not None:
         hl.add(a.cur)
     _strip(c, a.page * 16, length, on, a.playing_step(), hl, lambda i: sequencer.dark(i, sequencer.TRIPLETS),
-           x0=x0 + 10, pitch=18, wd=16, y=y0 + 40, hh=32, bar_y=y0 + 96, bar_x=x0 + 10, bar_w=w - 20)
+           x0=x0 + 10, pitch=18, wd=16, y=y0 + 40, hh=32, bar_y=y0 + 96, bar_x=x0 + 10, bar_w=w - 20,
+           fracs={i: a.fraction(i, key) for i in on})
     targets = a.targets()
     if targets:
         i = targets[0]

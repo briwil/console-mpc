@@ -286,6 +286,31 @@ class Auto:
         with self.seq.lock:
             return {i for i in range(self.length()) if any(self.has(u, key) for u in self.units(i))}
 
+    def fraction(self, i, key):
+        """How high a step's bar is: its value from 0 (lowest) to 1 (highest)."""
+        try:
+            if self.rec(key):
+                ln = self.rec_lane(key)
+                return max(0.0, min(1.0, ln.steps[i] / 127.0)) if ln and i in ln.steps else 0.0
+            us = [u for u in self.units(i) if self.has(u, key)]
+            if not us:
+                return 0.0
+            u = us[0]
+            if key == "vel":
+                return max(0.0, min(1.0, u.vel / 127.0))
+            if key == "chance":
+                return u.chance / float(max(1, len(sequencer.CHANCES) - 1))
+            if key == "ratchet":
+                at = RATCHETS.index(u.ratchet) if u.ratchet in RATCHETS else 0
+                return at / float(len(RATCHETS) - 1)
+            if key == "nudge" and "nudge" not in u.comp and hasattr(u, "nudge"):
+                return max(0.0, min(1.0, (u.nudge + 50) / 100.0))
+            if isinstance(key, str):
+                return u.comp[key] / float(max(1, len(sequencer.COMPONENTS[key]) - 1))
+            return max(0.0, min(1.0, u.locks[key] / 127.0))
+        except Exception:                                      # noqa: BLE001
+            return 1.0
+
     def value_text(self, i, key):
         if self.rec(key):
             ln = self.rec_lane(key)
