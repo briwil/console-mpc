@@ -39,6 +39,21 @@ def lane_free(ms):
     return ms.lane not in getattr(ms, 'pads_down', {}).values()
 
 
+def pad_frame(e):
+    """Where the sequencer is as you hear it, at the moment the pad was pressed: the app reads a pad a little after the
+    core did (up to a few tens of ms), so that wait is taken off, or a recorded note lands late."""
+    f = e._heard_frame()
+    w = time.monotonic() - getattr(e, "pad_read_t", time.monotonic())
+    return f - int(max(0.0, min(w, 0.15)) * getattr(e, "rate", 44100))
+
+
+def live_snapshot(T, seq):
+    """One undo step for a whole live-recording pass (taken at its first note)."""
+    if not getattr(T, "_live_snap", False):
+        T._live_snap = True
+        seq.snapshot()
+
+
 class MoveSynth:
     def __init__(self, T):
         self.T = T
@@ -251,7 +266,8 @@ class MoveSynth:
             e.seq_changed()
             return False
         if self.T.live_rec and e.playing:
-            frame = e._heard_frame()
+            frame = pad_frame(e)
+            live_snapshot(self.T, seq)
             i = seq.live_place(note, frame, e.frames_per_beat(), vel=getattr(self, "vel", 100))
             self.rec[p] = (i, seq.pattern.notes[i][note], frame)
             e.seq_changed()

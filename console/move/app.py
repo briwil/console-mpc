@@ -265,8 +265,9 @@ class MoveBoard:
                 note = max(0, min(127, note + 12 * getattr(T, "octave", 0)))
                 self.notes_down[p] = note
                 if T.live_rec and e.playing and T.drum_page and not T.seq_page and seq is not None:
-                    frame = e._heard_frame()                   # recording into the pattern from the sound page
+                    frame = movesynth.pad_frame(e)             # recording into the pattern from the sound page
                     try:
+                        movesynth.live_snapshot(T, seq)
                         i = seq.live_place(note, frame, e.frames_per_beat(), vel=vel)
                         self.rec_sound[p] = (i, seq.pattern.notes[i][note], frame, seq)
                         e.seq_changed()
@@ -300,7 +301,8 @@ class MoveBoard:
                 return
             if vel:
                 if T.live_rec and e.playing and (T.seq_page or T.drum_page):
-                    e.seq.live_place(lane, e._heard_frame(), e.frames_per_beat())
+                    movesynth.live_snapshot(T, e.seq)
+                    e.seq.live_place(lane, movesynth.pad_frame(e), e.frames_per_beat())
                     e.seq_changed()
                 if not getattr(self, "core_played", False):
                     e.hit(lane, vel)                           # (the core plays it itself when it can: fast pads)
@@ -333,7 +335,8 @@ class MoveBoard:
                 e.seq_changed()
                 T.say("STEP %s  PITCH %+d" % (",".join(str(i + 1) for i in sorted(ms.down)), semis), 2)
             elif T.live_rec and e.playing and (T.seq_page or T.drum_page):   # recorded with its pitch: the step locks it
-                i = e.seq.live_place(lane, e._heard_frame(), e.frames_per_beat())
+                movesynth.live_snapshot(T, e.seq)
+                i = e.seq.live_place(lane, movesynth.pad_frame(e), e.frames_per_beat())
                 with e.seq.lock:
                     e.seq.step(lane, i).locks.update(locks)
                 e.seq_changed()
@@ -857,6 +860,7 @@ def main():
                 menu_tick(m)
                 if T.live_rec and (not (T.seq_page or T.drum_page) or (getattr(T, "_rec_was_playing", False) and not e.playing)):
                     T.live_rec = False                        # recording into the pattern ends at Stop, or when you leave the page
+                    T._live_snap = False
                     T.say("PATTERN RECORDING OFF", 2)
                 T._rec_was_playing = bool(e.playing)
                 if T.sbrowse.active and (T.seq_page or T.fx_page or T.inst_page or T.song_page or not T.drum_page):
@@ -998,6 +1002,16 @@ def handle(name, T, m, e):
         v = knobgate.set_speed(knobgate.SPEED + (1 if name[1] > 0 else -1) * (1 if abs(name[1]) < 3 else 2))
         T.say("KNOB SPEED: %d CLICK%s A STEP" % (v, "" if v == 1 else "S"), 3)
         return
+    if name in ("PLAY", "STOP"):
+        import metronome
+        if metronome.count_cancel():                              # PLAY / STOP during a count-in: cancelled
+            T.say("COUNT IN CANCELLED", 2)
+            return
+        if name == "PLAY" and getattr(T, "_count_done", False):
+            T._count_done = False                                 # (the count has finished: this is the PLAY it was holding back)
+        elif (name == "PLAY" and T.live_rec and not T.playing and (T.seq_page or T.drum_page)
+                and metronome.count_in_then(T, lambda: (setattr(T, "_count_done", True), handle("PLAY", T, m, e)))):
+            return                                                # recording into a pattern: the count-in first
     if getattr(T, "arp_pop", 0):                                  # the ARP pop-up: only its own controls (and the transport) work
         if arp_popup_key(name, T):
             return
@@ -1107,6 +1121,7 @@ def handle(name, T, m, e):
     if (name == "RECORD" and (T.seq_page or T.drum_page) and not menus_open(m) and e and e.drums
             and e.slot is not None and not (T.fx_page or T.inst_page)):
         T.live_rec = not T.live_rec                  # on an instrument's pages: pads and knob moves go into the pattern
+        T._live_snap = False
         T.say("RECORDING INTO THE PATTERN: PADS AND KNOBS" if T.live_rec else "PATTERN RECORDING OFF", 2)
         return
     if name == "RECORD" and e and not T.recording and not e.record_tracks():

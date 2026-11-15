@@ -10,7 +10,7 @@ SAVE = os.path.join(os.environ.get("CONSOLE_HOME", "/data/UserData/console"), "m
 STATE = {"on": False, "vol": 60, "sent": 0.0, "was": False, "count": 0}
 COUNTS = [0, 1, 2, 4]                       # COUNT IN: OFF, or this many bars of clicks before a recording starts
 BEAT = {"n": 0, "est": None, "bpm": 0, "bar": 0}      # the click grid: a steady bar start, and a heartbeat the bridge watches
-CI = {"active": False, "end": 0.0, "start_ns": 0, "e": None, "last": -1, "patched": False}
+CI = {"active": False, "end": 0.0, "start_ns": 0, "e": None, "last": -1, "patched": False, "then": None}
 
 
 def load():
@@ -80,6 +80,28 @@ def set_volume(delta):
     save()
 
 
+def count_in_then(T, fn):
+    """COUNT IN before something other than the tape: clicks the chosen bars, then calls fn(). False if no count is set."""
+    e = T.engine
+    if not STATE["count"] or CI["active"] or e is None:
+        return False
+    if not CI["patched"]:
+        _patch(type(e))
+    bars = STATE["count"]
+    CI.update(active=True, e=e, last=-1, start_ns=time.monotonic_ns(), then=fn,
+              end=time.monotonic() + bars * max(1, int(round(e.bar_beats()))) * 60.0 / e.bpm)
+    return True
+
+
+def count_cancel():
+    """PLAY or STOP during a count-in: it is cancelled. True if there was one."""
+    if not CI["active"]:
+        return False
+    CI["active"], CI["then"] = False, None
+    _write("0 0 12000 4 0")
+    return True
+
+
 def _patch(Engine):
     """COUNT IN: pressing record while the tape is stopped clicks the chosen number of bars first, then the recording starts."""
     CI["patched"] = True
@@ -95,7 +117,7 @@ def _patch(Engine):
             return
         if STATE["count"] and not self.recording and not self.playing and not CI["active"]:
             bars = STATE["count"]
-            CI.update(active=True, e=self, last=-1, start_ns=time.monotonic_ns(),
+            CI.update(active=True, e=self, last=-1, start_ns=time.monotonic_ns(), then=None,
                       end=time.monotonic() + bars * max(1, int(round(self.bar_beats()))) * 60.0 / self.bpm)
             return
         return orig(self, on)
@@ -108,7 +130,11 @@ def _count_tick(T):
     if now >= CI["end"]:
         CI["active"] = False
         _write("0 0 12000 4 0")
-        CI["orig"](e, True)
+        then, CI["then"] = CI["then"], None
+        if then is not None:
+            then()                                       # (a pattern recording: start the playing)
+        else:
+            CI["orig"](e, True)
         return
     bar = max(1, int(round(e.bar_beats())))
     beat = int((now - (CI["end"] - STATE["count"] * bar * 60.0 / e.bpm)) * e.bpm / 60.0)
