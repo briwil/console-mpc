@@ -229,7 +229,7 @@ class Auto:
             ln = self.rec_lane(key)
             if ln:
                 return ln.length
-            return seq.pattern.length if self.synth() else seq.lane(self.T.seqp.lane).length      # (a new one starts as long as the pattern)
+            return max(16, seq.pattern.length if self.synth() else seq.lane(self.T.seqp.lane).length)      # (a new one: at least 16 steps)
         return seq.pattern.length if self.synth() else seq.lane(self.T.seqp.lane).length
 
     def units(self, i):
@@ -431,7 +431,7 @@ class Auto:
                     else:
                         lane = self.seq.lane(self.T.seqp.lane)
                         length, rate = lane.length, lane.rate
-                    ln = a[key[1]] = autom.Lane(length, rate)
+                    ln = a[key[1]] = autom.Lane(max(16, length), rate)
                 if i < ln.length:
                     ln.steps[i] = int(d.get_param(key[1]))
             self._snapped = (i, key)
