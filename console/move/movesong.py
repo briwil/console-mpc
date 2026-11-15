@@ -292,7 +292,7 @@ class Song:
             self._cycle = cycle
             if self._end:                                  # loop off: the last row has played its last time, the song ends
                 self._end = self._queued = False
-                if getattr(T, "recording", False) or self._tape_ahead():   # the song is over but the tape keeps going (tails, recorded audio); STOP ends it
+                if True:                                   # the song is over but the tape is not affected: it plays / records on until STOP
                     self._finished = True                  # (e.end_limit stays: the sequencers send nothing more)
                     self.playing_row = None
                     return
