@@ -9,7 +9,7 @@ pi-app/notes.py's NoteSequencer; this is the Move's buttons for it.
   pads            the notes (the scale, up the pads; Up / Down on a sound page move the octave)
   two types, picked per track (knob 3):
     UNIFIED   one sequence: tap a step with pads held to put that chord there (nothing held: the last note)
-    PER NOTE  tap a pad: its notes only are on the step buttons (it lights); tap it again for them all
+    PER NOTE  tap a pad: its notes only are on the step buttons (it lights); a note is always picked (the lowest pad at first)
   Record: the pads you play go onto the nearest step of the pattern while it plays (nothing to do with the tape)
   knobs (nothing held)  1 length  2 rate  3 type  4 the lit note's own length  5 key  6 scale
 """
@@ -57,7 +57,10 @@ class MoveSynth:
 
     def active(self):
         T = self.T
-        return bool(T.seq_page and not T.fx_page and not getattr(T, "auto_page", False) and T.synth_shown() and T.engine and T.engine.drums)
+        on = bool(T.seq_page and not T.fx_page and not getattr(T, "auto_page", False) and T.synth_shown() and T.engine and T.engine.drums)
+        if on and self.lane is None and getattr(self.seq, "move_type", 0):
+            self.lane = self.pad_note(0)                        # PER NOTE always has a note picked: the lowest pad (the key's root)
+        return on
 
     @property
     def seq(self):
@@ -253,9 +256,9 @@ class MoveSynth:
             self.rec[p] = (i, seq.pattern.notes[i][note], frame)
             e.seq_changed()
             return False
-        if self.kind:                                           # PER NOTE: this note's steps on the buttons
-            self.lane = None if self.lane == note else note
-            self.T.say("ALL NOTES" if self.lane is None else "NOTE %s" % notes_mod.note_name(note), 2)
+        if self.kind:                                           # PER NOTE: this note's steps on the buttons (tapping it again keeps it)
+            self.lane = note
+            self.T.say("NOTE %s" % notes_mod.note_name(note), 2)
         return False
 
     # ------------------------------------------------------------ settings of selected steps (the pads)
