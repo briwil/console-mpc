@@ -155,12 +155,12 @@ class Auto:
     def wheel(self, delta, shift):
         """The big wheel: down the list / the picker; in the pop-up the white box along the steps."""
         if self.mode == "list":
-            way = knobgate.gate(("auto-pick",), delta, shift)
+            way = knobgate.gate(("auto-pick",), delta, shift, 1)
             if way:
                 self.row = max(0, min(self.shown() - 1, self.row + (1 if way > 0 else -1)))
                 self.confirm_until = 0.0
         elif self.mode == "pick":
-            way = knobgate.gate(("auto-pick",), delta, shift)
+            way = knobgate.gate(("auto-pick",), delta, shift, 1)
             if way and self.items:
                 self.prow = (self.prow + (1 if way > 0 else -1)) % len(self.items)
         else:
