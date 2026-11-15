@@ -9,9 +9,9 @@ from soundpage import text_width
 
 G = colour.GREENS
 OUTLINE = [G[2], G[4], G[5], G[3], G[4], G[5], G[3], G[5]]       # each track's outline colour (from the design)
-SHOWN = 4                                                         # tracks on screen at once (Shift + the wheel scrolls through the 8)
-BOX_Y = [14, 64, 114, 164]                                        # the top of each row's box
-BOX_H = 47
+SHOWN = 8                                                         # tracks on screen at once (Shift + the wheel scrolls through the 8)
+BOX_Y = [14 + 24 * i for i in range(8)]                                       # the top of each row's box
+BOX_H = 23
 X_BOX, W_BOX = 22, 295                                           # the boxes span x 22 .. 317
 BAR_Y, BAR_H = 217, 4                                            # the grey bar under the tracks
 GREY = (0x95, 0x9B, 0x87)
@@ -76,9 +76,9 @@ def draw(T, nat):
         is_sel = n == sel
         muted = not e.audible(n)
         c.frame(X_BOX, by, W_BOX, BOX_H, nat.WHITE if is_sel else OUTLINE[n])
-        c.text_px(2, by + BOX_H // 2 + 9, str(n + 1), G[2] if muted else nat.WHITE, 24, 0)
+        c.text_px(6, by + BOX_H // 2 + 6, str(n + 1), G[2] if muted else nat.WHITE, 16, 0)
         if n in e.arm_extra:
-            c.rect(18, by + 6, 3, BOX_H - 12, nat.RED)
+            c.rect(18, by + 4, 3, BOX_H - 8, nat.RED)
         ch = e.chans(n)[0]
         boxes = e.regions[ch]
         ink = G[1] if muted else (G[6] if is_sel else OUTLINE[n])     # recorded audio: a plain bar in the track's green
@@ -100,9 +100,10 @@ def draw(T, nat):
                 c.rect(xb, top - 1, 1, rows_n + 2, nat.WHITE)
 
     # the scroll bar (right edge): which 4 of the 8 tracks are showing
-    c.rect(318, BOX_Y[0], 2, BOX_Y[-1] + BOX_H - BOX_Y[0], G[1])
-    span = BOX_Y[-1] + BOX_H - BOX_Y[0]
-    c.rect(318, BOX_Y[0] + span * top_n // 8, 2, span * SHOWN // 8, G[5])
+    if SHOWN < 8:
+        c.rect(318, BOX_Y[0], 2, BOX_Y[-1] + BOX_H - BOX_Y[0], G[1])
+        span = BOX_Y[-1] + BOX_H - BOX_Y[0]
+        c.rect(318, BOX_Y[0] + span * top_n // 8, 2, span * SHOWN // 8, G[5])
 
     # the playhead
     c.rect(mid, RULER_Y, 1, BAR_Y + 10 - RULER_Y, nat.WHITE)

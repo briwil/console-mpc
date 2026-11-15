@@ -292,7 +292,7 @@ class Song:
             self._cycle = cycle
             if self._end:                                  # loop off: the last row has played its last time, the song ends
                 self._end = self._queued = False
-                if getattr(T, "recording", False):         # recording: the song is over but the tape keeps going, for the tails (STOP ends it)
+                if getattr(T, "recording", False) or self._tape_ahead():   # the song is over but the tape keeps going (tails, recorded audio); STOP ends it
                     self._finished = True                  # (e.end_limit stays: the sequencers send nothing more)
                     self.playing_row = None
                     return
@@ -316,6 +316,15 @@ class Song:
                 return
             self.apply((self.playing_row + 1) % len(self.rows), True)
             self._queued = True
+
+    def _tape_ahead(self):
+        """True when a tape track has recorded audio at or after the playhead: the tape plays on when the song ends."""
+        try:
+            e, T = self.T.engine, self.T
+            pos = T.tape.pos * e.frames_per_beat()
+            return any(r[1] > pos for boxes in e.regions for r in boxes)
+        except Exception:                                  # noqa: BLE001
+            return False
 
     def toggle_loop(self):
         self.loop = not self.loop
