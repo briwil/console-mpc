@@ -1278,6 +1278,21 @@ class Transport:
         except Exception as ex:                      # noqa: BLE001
             print("insert effects:", ex)
         self.tape.pos = 0.0
+        try:                                         # a new project starts on the INSTRUMENTS page (every slot is empty)
+            punch = getattr(self, "punch", None)
+            if punch is not None:
+                punch.leave()
+            self.auto_page = self.seq_page = self.drum_page = self.song_page = False
+            self.fx_page = None
+            self.inst_page = True
+            self.live_rec = False
+            self.arp_pop = self.pads_pop = 0
+            self.seqp.held, self.synthp.held = {}, {}
+            if getattr(self, "mlfo", None) is not None:
+                self.mlfo.tab = None
+            self.instp.mode, self.instp.row = None, 0
+        except Exception as ex:                      # noqa: BLE001
+            print("new project page:", ex)
         self.s.set("song", t=name or "NEW PROJECT")
         self.say("NEW PROJECT: %s" % name.upper() if name else "NEW PROJECT  (SAVE PROJECT NAMES IT)", 5)
 
