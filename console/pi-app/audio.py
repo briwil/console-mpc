@@ -1820,6 +1820,31 @@ class Engine:
             self.dirty.add(-1)
         return self.input_text(t)
 
+    def place_input(self, t, side, frac):
+        """A pot in the zoomed view: its position (0-1) picks the input from the list, each input an equal share of
+        the knob's turn. Returns the input text if it changed, else None (also None with no input device)."""
+        with self.lock:
+            ch = self.in_channels()
+            if not ch:
+                return None
+            stereo = t in self.stereo
+            choices = (self.track_input_choices(stereo=True) or [0]) if stereo else self.track_input_choices()
+            if not choices:
+                return None
+            i = min(len(choices) - 1, int(max(0.0, min(1.0, frac)) * len(choices)))
+            if stereo:
+                cur = list(self.source(t) or (0, 0))
+                if cur[side] == choices[i]:
+                    return None
+                cur[side] = choices[i]
+                self.inputs[t] = cur
+            else:
+                if self.source(t) == choices[i]:
+                    return None
+                self.inputs[t] = choices[i] if choices[i] is not None else "mix"
+            self.dirty.add(-1)
+        return self.input_text(t)
+
     def chans(self, t):
         """Track t's channels: [t], or [t, t + RIGHT] for a stereo track."""
         return [t, t + RIGHT] if t in self.stereo else [t]

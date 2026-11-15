@@ -300,8 +300,29 @@ def _pads_pop_up():
     return bool(T is not None and getattr(T, "pads_pop", 0) and T.engine and (T.drum_page or T.seq_page))
 
 
+def _pad_label():
+    """The pad mode's name (PADS, KNOB FX, SEQ, STEP SETTINGS) for a second, in a box in the middle of the screen."""
+    T = _popT
+    pl = getattr(T, "pad_label", None) if T is not None else None
+    if not pl or not pl[1] or time.monotonic() >= pl[0]:
+        return
+    c = canvas
+    f = c.pxfont(16)
+    tw = fxpages.text_width(f, pl[1], -1)
+    w, h = tw + 36, 40
+    x0, y0 = (W - w) // 2, (H - h) // 2
+    c.rect(x0 - 2, y0 - 2, w + 4, h + 4, WHITE)
+    c.rect(x0, y0, w, h, (14, 16, 14))
+    c.text_px(x0 + 18, y0 + h // 2 + f.cap_h // 2, pl[1], WHITE, 16, -1)
+
+
 def publish():
     global _seq, _last
+    try:
+        _pad_label()
+    except Exception:
+        import traceback
+        print("pad label error:\n" + traceback.format_exc(), flush=True)
     if _pads_pop_up():
         try:
             fxpages.draw_pads_popup(_popT, sys.modules[__name__])

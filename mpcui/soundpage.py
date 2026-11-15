@@ -347,7 +347,7 @@ def draw_song(T, nat):
         shift = bool(T.shift_held())
     except Exception:
         pass
-    title = "SONG " + ("ON" if sg.on else "OFF")
+    title = "SONG " + ("ON" if sg.on else "OFF") + "   LOOP " + ("ON" if sg.loop else "OFF")
     if not sg.rows:
         c.clear((0, 0, 0))
         c.px[:] = bands()

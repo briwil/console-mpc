@@ -1299,6 +1299,9 @@ def handle(name, T, m, e):
         if name == "HOME":
             T.song.push()                                  # push the wheel: pick the cell the box is on / let go
             return
+        if name == "LOOP":
+            T.song.toggle_loop()                           # LOOP: the song goes round (off: it stops after the last row)
+            return
     if name in ("INST_HOME", "SEQ_PAGE") and T.song_page and not menus and not (T.seq_page or T.drum_page or T.inst_page or T.fx_page):
         T.song_page = False                           # the song page: SAMPLE = page 1 of the instrument, SEQ = its sequencer
         T.key("DRUMS")

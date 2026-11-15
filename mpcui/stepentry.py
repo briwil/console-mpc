@@ -293,6 +293,33 @@ def auto_value_page(T):
         return False
 
 
+def focus_view(T):
+    """The tape's zoomed track view (no menu or other page on top)."""
+    try:
+        if not T.engine or T.focus.track is None:
+            return False
+        if T.fx_page or T.seq_page or T.drum_page or T.inst_page or getattr(T, "song_page", False):
+            return False
+        mn = getattr(T, "_mpc_menu", None)
+        return not (mn is not None and (mn.open or mn.kits.open))
+    except Exception:                                                            # noqa: BLE001
+        return False
+
+
+def focus_input(T, side, val):
+    """K2 (side 0) / K3 (side 1) in the zoomed view: the pot's position picks the input, evenly spaced."""
+    e, n = T.engine, T.focus.shown
+    t = n - 1
+    if T.recording:
+        return
+    if side == 1 and t not in e.stereo:
+        return                                                                   # (a mono track: K3 does nothing)
+    text = e.place_input(t, side, val / 127.0)
+    if text is not None:
+        T.say("TRACK %d%s  INPUT %s" % (n, " STEREO" if t in e.stereo else "", text), 2)
+        T.input_popup = (time.monotonic() + 2.5, t, side)
+
+
 def sound_k1(T, n=1):
     """On a sound page: the n-th setting on the page (knob n's), or None when that knob isn't a number there."""
     try:
@@ -412,7 +439,7 @@ def install(MoveBoard, pad_velocity=None):
         if num == 102:                                                          # what the pads are now (bridge/mapping.h): named for a second
             try:
                 if not on_tape(T) and not T.inst_page and not T.song_page:
-                    T.say({1: "PADS", 2: "KNOB FX", 3: "SEQ", 4: "STEP SETTINGS"}.get(val, ""), 1)
+                    T.pad_label = (time.monotonic() + 1.0, {1: "PADS", 2: "KNOB FX", 3: "SEQ", 4: "STEP SETTINGS"}.get(val, ""))   # (a pop-up in the middle of the screen: native.py)
             except Exception:                                                   # noqa: BLE001
                 pass
             return
@@ -474,6 +501,13 @@ def install(MoveBoard, pad_velocity=None):
             finally:
                 self.shift = shift
             return
+        if num in (116, 117) and focus_view(T):                                  # the zoomed track: K2 / K3 are pots, the position picks the input
+            T._pot_abs_at = getattr(T, "_pot_abs_at", {})
+            T._pot_abs_at[num - 44] = time.monotonic()
+            focus_input(T, num - 116, val)
+            return
+        if num in (72, 73) and val and focus_view(T) and time.monotonic() - getattr(T, "_pot_abs_at", {}).get(num, -9.0) < 0.15:
+            return                                              # (its clicks are not used there: the position was)
         if num in (K1_ABS, 116, 117) and sound_k1_set(self.T, val, {K1_ABS: 1, 116: 2, 117: 3}[num]):
             self.T._pot_abs_at = getattr(self.T, "_pot_abs_at", {})
             self.T._pot_abs_at[{K1_ABS: 71, 116: 72, 117: 73}[num]] = time.monotonic()
@@ -482,6 +516,8 @@ def install(MoveBoard, pad_velocity=None):
         if num in (71, 72, 73) and val and time.monotonic() - getattr(self.T, "_pot_abs_at", {}).get(num, -9.0) < 0.15 \
                 and sound_k1(self.T, num - 70) is not None:
             return                                              # (its clicks are not used there: the position was)
+        if num in (116, 117):
+            return                                              # (K2 / K3's positions: only used on the pages above)
         if (num == K1_ABS or num == K1) and auto_value_page(T):
             now = time.monotonic()
             if num == K1_ABS:

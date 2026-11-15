@@ -29,6 +29,8 @@ class Song:
         self.T = T
         self.rows = []              # [{"pats": {slot: pattern or None}, "punch": {slot: punch pattern or None}, "repeat": n}]
         self.on = False
+        self.loop = False           # LOOP on the song page: after the last row, back to row 1 (off: the song stops there)
+        self._end = False           # (loop off: the last row is playing its last time)
         self.pick = 0               # the row the knobs change
         self.playing_row = None     # the row playing (song mode on and playing)
         self._loops = 0
@@ -49,9 +51,10 @@ class Song:
 
     def load(self):
         self._song = getattr(self.T.engine, "song", None)
-        self.rows, self.on, self.pick = [], False, 0
+        self.rows, self.on, self.pick, self.loop = [], False, 0, False
         try:
             d = json.load(open(self.path()))
+            self.loop = bool(d.get("loop", False))
             self.on = False                       # (song mode is always off when a song opens; the rows are kept)
             for r in d.get("rows", [])[:MAX_ROWS]:
                 pats = {int(k): (None if v is None else max(0, min(PATTERNS - 1, int(v))))
@@ -66,7 +69,7 @@ class Song:
         try:
             os.makedirs(os.path.dirname(self.path()), exist_ok=True)
             with open(self.path(), "w") as fh:
-                json.dump({"on": self.on, "rows": [{"pats": {str(k): v for k, v in r["pats"].items()},
+                json.dump({"on": self.on, "loop": self.loop, "rows": [{"pats": {str(k): v for k, v in r["pats"].items()},
                                                     "punch": {str(k): v for k, v in r.get("punch", {}).items()},
                                                     "repeat": r["repeat"]} for r in self.rows]}, fh)
         except OSError as ex:
@@ -237,7 +240,7 @@ class Song:
         if playing and (not self._was_playing or self.playing_row is None):   # (or song mode turned on while playing)
             if not self._was_playing:
                 self.apply(0, False)                       # row 1 as it is now (it may have been changed since it was last set up)
-            self.playing_row, self._loops, self._cycle, self._queued = 0, 0, None, False
+            self.playing_row, self._loops, self._cycle, self._queued, self._end = 0, 0, None, False, False
         elif not playing:
             if self._was_playing or not getattr(self, "_ready", False):
                 self.apply(0, False)                       # stopped: ready at row 1
@@ -264,6 +267,10 @@ class Song:
             self._cycle = cycle
         if cycle != self._cycle:
             self._cycle = cycle
+            if self._end:                                  # loop off: the last row has played its last time, the song ends
+                self._end = self._queued = False
+                T.stop()
+                return
             if self._queued:                               # the next row has started
                 self.playing_row = (self.playing_row + 1) % len(self.rows)
                 self._loops, self._queued = 0, False
@@ -274,8 +281,18 @@ class Song:
         if into < 0.15 * length:
             return                                         # let this row's first pass begin before queuing the next
         if not self._queued and self._loops >= row["repeat"] - 1:
+            if self.playing_row + 1 >= len(self.rows) and not self.loop:
+                self._end = self._queued = True            # the last row's last time: stop at its end
+                return
             self.apply((self.playing_row + 1) % len(self.rows), True)
             self._queued = True
+
+    def toggle_loop(self):
+        self.loop = not self.loop
+        if self.loop and self._end:                        # turned on during the last row: go round again
+            self._end = self._queued = False
+        self.save()
+        self.T.say("SONG LOOP " + ("ON" if self.loop else "OFF"), 1)
 
     # ------------------------------------------------------------ lights
 
