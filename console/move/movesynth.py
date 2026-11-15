@@ -47,6 +47,24 @@ def pad_frame(e):
     return f - int(max(0.0, min(w, 0.15)) * getattr(e, "rate", 44100))
 
 
+def live_on(T, e):
+    """Recording into the pattern, and the pattern is playing (or about to: the last moments of the count-in)."""
+    if not T.live_rec:
+        return False
+    if e.playing:
+        return True
+    try:
+        import metronome
+        return metronome.near_start()
+    except Exception:                                           # noqa: BLE001
+        return False
+
+
+def live_frame(e, seq):
+    """The time a pad is recorded at: where the sequencer is as you hear it; before PLAY has begun, the start (step 1)."""
+    return pad_frame(e) if e.playing else seq.anchor
+
+
 def live_snapshot(T, seq):
     """One undo step for a whole live-recording pass (taken at its first note)."""
     if not getattr(T, "_live_snap", False):
@@ -265,8 +283,8 @@ class MoveSynth:
             self.used.update(self.down)
             e.seq_changed()
             return False
-        if self.T.live_rec and e.playing:
-            frame = pad_frame(e)
+        if live_on(self.T, e):
+            frame = live_frame(e, seq)
             live_snapshot(self.T, seq)
             i = seq.live_place(note, frame, e.frames_per_beat(), vel=getattr(self, "vel", 100))
             self.rec[p] = (i, seq.pattern.notes[i][note], frame)

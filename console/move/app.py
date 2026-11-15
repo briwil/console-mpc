@@ -264,8 +264,8 @@ class MoveBoard:
                     note = 48 + p
                 note = max(0, min(127, note + 12 * getattr(T, "octave", 0)))
                 self.notes_down[p] = note
-                if T.live_rec and e.playing and T.drum_page and not T.seq_page and seq is not None:
-                    frame = movesynth.pad_frame(e)             # recording into the pattern from the sound page
+                if movesynth.live_on(T, e) and T.drum_page and not T.seq_page and seq is not None:
+                    frame = movesynth.live_frame(e, seq)       # recording into the pattern from the sound page
                     try:
                         movesynth.live_snapshot(T, seq)
                         i = seq.live_place(note, frame, e.frames_per_beat(), vel=vel)
@@ -300,9 +300,9 @@ class MoveBoard:
             if lane >= d.lanes:
                 return
             if vel:
-                if T.live_rec and e.playing and (T.seq_page or T.drum_page):
+                if movesynth.live_on(T, e) and (T.seq_page or T.drum_page):
                     movesynth.live_snapshot(T, e.seq)
-                    e.seq.live_place(lane, movesynth.pad_frame(e), e.frames_per_beat())
+                    e.seq.live_place(lane, movesynth.live_frame(e, e.seq), e.frames_per_beat())
                     e.seq_changed()
                 if not getattr(self, "core_played", False):
                     e.hit(lane, vel)                           # (the core plays it itself when it can: fast pads)
@@ -334,9 +334,9 @@ class MoveBoard:
                             st.locks.update(locks)
                 e.seq_changed()
                 T.say("STEP %s  PITCH %+d" % (",".join(str(i + 1) for i in sorted(ms.down)), semis), 2)
-            elif T.live_rec and e.playing and (T.seq_page or T.drum_page):   # recorded with its pitch: the step locks it
+            elif movesynth.live_on(T, e) and (T.seq_page or T.drum_page):   # recorded with its pitch: the step locks it
                 movesynth.live_snapshot(T, e.seq)
-                i = e.seq.live_place(lane, movesynth.pad_frame(e), e.frames_per_beat())
+                i = e.seq.live_place(lane, movesynth.live_frame(e, e.seq), e.frames_per_beat())
                 with e.seq.lock:
                     e.seq.step(lane, i).locks.update(locks)
                 e.seq_changed()
