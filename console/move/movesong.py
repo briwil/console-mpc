@@ -249,6 +249,8 @@ class Song:
         if not (self.on and self.rows):
             self._was_playing, self.playing_row = playing, None
             return
+        if getattr(self, "_finished", False) and playing:
+            return
         if playing and (not self._was_playing or self.playing_row is None):   # (or song mode turned on while playing)
             if not self._was_playing:
                 self.apply(0, False)                       # row 1 as it is now (it may have been changed since it was last set up)
@@ -256,12 +258,15 @@ class Song:
             e.end_limit = None
             self.pick = 0
         elif not playing:
+            self._finished = False
             if self._was_playing or not getattr(self, "_ready", False):
                 self.apply(0, False)                       # stopped: ready at row 1
                 self._ready = True
             self.playing_row = None
             self._was_playing = False
             return
+        if getattr(self, "_finished", False):
+            return                                         # the song has played out; the tape is still recording its tails
         self._ready = False
         self._was_playing = True
         if self.playing_row != getattr(self, "_shown_row", None) and self.playing_row is not None:
@@ -287,6 +292,10 @@ class Song:
             self._cycle = cycle
             if self._end:                                  # loop off: the last row has played its last time, the song ends
                 self._end = self._queued = False
+                if getattr(T, "recording", False):         # recording: the song is over but the tape keeps going, for the tails (STOP ends it)
+                    self._finished = True                  # (e.end_limit stays: the sequencers send nothing more)
+                    self.playing_row = None
+                    return
                 T.stop()
                 e.end_limit = None
                 return
