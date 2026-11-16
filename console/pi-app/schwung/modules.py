@@ -359,9 +359,10 @@ class Module:
         si = getattr(self, "sample_param_index", None)
         if si is not None and si in kit:                  # a one-sample instrument: its first page is the sample (push the wheel: the sample browser), then its start / loop
             first = next((k for k, (n, _i) in enumerate(self._kit_pages) if n == "SAMPLE"), None)
-            idx = [si] + (self._kit_pages.pop(first)[1] if first is not None else [])
-            used.add(si)
-            self._kit_pages.insert(0, ("SAMPLE", idx[:8]))
+            idx = self._kit_pages.pop(first)[1] if first is not None else []
+            used.add(si)                                  # (the sample itself isn't a knob: its name is the page's title, the wheel's push picks it)
+            if idx:
+                self._kit_pages.insert(0, ("SAMPLE", idx[:8]))
         rest = [i for i in kit if i not in used]
         for k in range(0, len(rest), 8):
             self._kit_pages.append(("MORE" if self._kit_pages or k else "KIT", rest[k:k + 8]))

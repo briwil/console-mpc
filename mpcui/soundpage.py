@@ -190,6 +190,14 @@ def draw(T, nat):
     vname = (names[voice] if voice < len(names) else "") or str(getattr(d, "title", ""))
     if vname == "EMPTY":
         vname = "EMPTY - PAD %d" % (voice + 1)                     # (so the screen changes as you hit pads with nothing loaded yet)
+    si = getattr(d, "sample_param_index", None)
+    if si is not None:                                             # a one-sample instrument (MrSample): the title is its sample (push the wheel to pick one)
+        try:
+            vname = d.value_text(si)
+            if vname == "-":
+                vname = "NO SAMPLE"
+        except Exception:                                          # noqa: BLE001
+            pass
     now = nat.time.monotonic()
     active = nat._touched[-1] if nat._touched else None
     if active is None:
