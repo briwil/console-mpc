@@ -515,16 +515,16 @@ static void pagemode_poll(void)
         in_usb = (w == 'u');
     }
     int fd = open("/tmp/console-pagemode", 0);
-    if (fd < 0) { page_tape = 0; page_tapeonly = 0; page_param = 0; page_nostep = 0; page_sound = 0; page_retrig = 0; page_seq = 0; page_song = 0; page_k1 = 0; page_arp = 0; page_padsn = 0; page_popn = 0; page_linear = 0; return; }
+    if (fd < 0) { page_tape = 0; page_tapeonly = 0; page_param = 0; page_nostep = 0; page_sound = 0; page_retrig = 0; page_seq = 0; page_song = 0; page_k1 = 0; page_arp = 0; page_padsn = 0; page_popn = 8; page_linear = 0; return; }
     char two[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     long n = read(fd, two, 8);
     char ch = two[0];
     close(fd);
-    int knobs_n = 0;
+    int knobs_n = 8;                                                 /* (8: every pad is a knob, unless the page says fewer) */
     page_linear = 0;
     for (int i = 1; i < n; i++) {                                    /* the letters after the page's: y = a synth (the note pads run in order); n<k> = k settings on the page */
         if (two[i] == 'y') page_linear = 1;
-        else if (two[i] == 'n' && i + 1 < n && two[i + 1] >= '1' && two[i + 1] <= '8') { knobs_n = two[i + 1] - '0'; i++; }
+        else if (two[i] == 'n' && i + 1 < n && two[i + 1] >= '0' && two[i + 1] <= '8') { knobs_n = two[i + 1] - '0'; i++; }
     }
     if (n >= 1) { page_tape = (ch == 'T' || ch == 'A' || ch == 'W'); page_song = (ch == 'W'); page_song_n = (ch == 'W' && n >= 2 && two[1] >= '0' && two[1] <= '9') ? two[1] - '0' : 8; page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N' || ch == 'Q' || ch == 'R'); page_sound = (ch == 'Q' || ch == 'R'); page_retrig = (ch == 'Q' || ch == 'P'); page_seq = (ch == 'S' || ch == 'P' || ch == 'U' || ch == 'B' || ch == 'V'); page_padsn = (ch == 'X') ? 5 : (ch == 'Z') ? 3 : 0; page_popn = (ch == 'U') ? 7 : (ch == 'B') ? 2 : page_padsn ? page_padsn : knobs_n; page_arp = (ch == 'U' || ch == 'B' || page_padsn > 0); page_k1 = (ch == 'Q'); }
 }

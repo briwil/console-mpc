@@ -61,7 +61,7 @@ static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
 static volatile int page_tapeonly;          /* the tape recorder page itself (not the instrument list, song or mixer): its own button layout */
 static volatile int page_padsn;            /* the PADS pop-up is up (page mode "X" = 5 settings, "Z" = 3): like the ARP pop-up, but only pads 1-n are knobs, the rest of 1-8 are off */
-static volatile int page_popn;             /* how many of pads 1-8 are settings in a pop-up (ARP 7, ARP 2: 2, PADS 5 / 3); the rest are off (0 = not a pop-up) */
+static volatile int page_popn = 8;             /* how many of pads 1-8 are settings in a pop-up (ARP 7, ARP 2: 2, PADS 5 / 3); the rest are off (0 = not a pop-up) */
 static volatile int page_arp;               /* the ARP pop-up is up (page mode "U"): KNOB FX comes on by itself, pads 9-16 play notes (orange) */
 static volatile int page_k1;                /* a sound page (Q): K1 is also sent as its absolute position */
 static volatile int page_seq;               /* a sequencer page (drum or synth): K1 is also sent as its absolute position */
@@ -116,7 +116,7 @@ static void refresh_pads(void)
         colour_rgb(v, &r, &g, &b);
         if (v == 0) { r = 0; g = 6; b = 14; }                       /* idle: a faint blue so the pads can be found */
         if (knob_mode) {                                            /* pads 1-8 = knobs 1-8; the touched one is bright */
-            if (i < 8) { if ((page_song && i >= page_song_n) || (page_popn && i >= page_popn)) { r = 0; g = 1; b = 2; } else if (pad_knob[i] >= 0) { r = 30; g = 127; b = 110; } else { r = 0; g = 40; b = 48; } }
+            if (i < 8) { if ((page_song && i >= page_song_n) || (i >= page_popn)) { r = 0; g = 1; b = 2; } else if (pad_knob[i] >= 0) { r = 30; g = 127; b = 110; } else { r = 0; g = 40; b = 48; } }
             else if (page_arp) { r = 100; g = 42; b = 0; }          /* the ARP pop-up: pads 9-16 play notes */
             else if (page_song && i == 11) { if (pad_knob[11] >= 0) { r = 127; g = 40; b = 0; } else { r = 100; g = 28; b = 0; } }     /* the song page: pad 12 (orange) = PLAYS of the picked row, with the wheel */
             else { r = 0; g = 1; b = 2; }
@@ -244,7 +244,7 @@ static void mpc_pad_event(int idx, int vel, int on)
     if (on && knob_mode && !(page_arp && idx >= 8)) {
         if (idx < 8) {
             if (page_song && idx >= page_song_n) return;               /* (no instrument there) */
-            if (page_popn && idx >= page_popn) return;               /* (the PADS pop-up: no setting there) */
+            if (idx >= page_popn) return;               /* (the PADS pop-up: no setting there) */
             pad_knob[idx] = idx;
             knob_stamp[idx] = ++knob_clock;
             send3(0x9F, idx, 127);                      /* "knob touched": Console shows the value */

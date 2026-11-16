@@ -598,6 +598,7 @@ def draw_seq(T, nat):
         gkey = ("seqsel", lane, key, ct is not None)
     else:
         items = [(str(lb), str(v), 1.0) for lb, v, _l in ms.knob_list()[:4]]
+        nat._pad_n = min(8, len(ms.knob_list()))                 # (KNOB FX: only this many pads are knobs)
         cur_vals = [it[1] for it in items]
         prev = SEQ["prev"]
         if prev is not None and prev[0] == lane:
@@ -724,6 +725,7 @@ def draw_synth_seq(T, nat):
         gkey = ("synsel", key, ct is not None)
     else:
         items = [(str(lb), str(v), 1.0) for lb, v, _x in ms.knob_list()[:8]]
+        nat._pad_n = min(8, len(ms.knob_list()))
         cur_vals = [it[1] for it in items]
         prev = SYN["prev"]
         if prev is not None and len(prev) == len(cur_vals):
