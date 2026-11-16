@@ -3,6 +3,14 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.18
+
+- **KNOB FX:** a pad is only lit (and only works) when the page has a setting for it, on every page: sound pages, SENDS, LFO, INSERT, REVERB / DELAY, the sequencer knob pages, the mixer (a pad per loaded instrument) and PUNCH FX (four pads; TIME SCALE is now knob 4). The ARP pop-up leaves pad 8 off (ARP 2: only pads 1-2); the PADS pop-up starts KNOB FX by itself with only its own pads lit, and pads 9-16 play notes.
+- **Synth sequencer:** the big wheel moves a white box along the steps (also with steps selected), a push puts a note down or selects the step. A step setting's pad shows its setting while held (the wheel and K1 change it); let go and all the settings show again. The settings grid clears the bent bars.
+- **MrSample:** loop starts off; the sample's name is the page title (push the wheel to pick one), its first page is SAMPLE with the waveform drawn in the big black place (no PRESETS page).
+- **Shortcuts:** Shift + B1 / hold B1 = SETTINGS, Shift + B2 / hold B2 = Project menu, Shift + B3 / hold B3 = CHANGE / REMOVE for the instrument; B1 / B2 / B3 close an open menu.
+- **Start-up:** the loading animation is only the green bent bars; the welcome screen's bars are exactly the animation's last frame and its button groups line up.
+
 ## 0.0.17
 
 - **Start-up animation and welcome screen:** the animation is now only the green bent bars (no CONSOLE, bar or STARTING text), moved down to where the welcome screen has them, and the welcome screen's bars are exactly the animation's last frame (same thickness, curve and place).
