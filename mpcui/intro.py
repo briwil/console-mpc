@@ -3,7 +3,6 @@
 from native import BG, FG
 import colour
 
-_BARS = {}
 GREEN0, GREEN1, GREEN2, GREEN3, GREEN4, GREEN5, GREEN6 = colour.GREENS[:7]
 
 
@@ -37,16 +36,8 @@ def draw_frame(c):
     c.rect(232, 21, 69, 1, GREEN5)
     c.text_px(67, 136, "WELCOME TO", FG, 16)
     c.text_px(81, 161, "CONSOLE", GREEN5, 32)
-    # the two bent bars: the instruments page's (soundpage.bands: same colours, thickness and curve), at this page's place
-    for key, y, vx, r, col in (("outer", 91.5, 302.5, 59.5, colour.GREENS[3]), ("inner", 104.5, 289.5, 46.4, colour.GREENS[2])):
-        m = _BARS.get(key)
-        if m is None:
-            import numpy as np
-            import soundpage
-            m = np.zeros((soundpage.H, soundpage.W), bool)
-            soundpage._band_stroke(m, y, vx - r, r, 10.5)
-            _BARS[key] = m
-        c.px[m] = col
+    import intro_bars                               # the two bent bars: exactly the start-up animation's last frame
+    intro_bars.draw(c)
     import soundpage
     for n, x0 in ((1, 17), (2, 123), (3, 232)):                       # the names in the middle of their boxes
         t = "BTN %d" % n
