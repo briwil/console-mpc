@@ -1091,11 +1091,13 @@ def handle(name, T, m, e):
         if m.open or m.kits.open or (T.inst_page and not T.fx_page and T.instp.mode):
             handle("BACK", T, m, e)
         elif act == "INST_MENU":
-            if not T.inst_page:
-                handle("INST_HOME", T, m, e)
-                T.want_inst_menu = time.monotonic() + 1.0
-            elif not T.fx_page:
-                T.instp.shift_push()
+            T.fx_page = None
+            for _ in range(4):                       # to the instruments list: out of the sequencer / drum pages, then in from the tape
+                if T.inst_page and not (T.seq_page or T.drum_page):
+                    break
+                handle("DRUMS_BACK" if (T.seq_page or T.drum_page or T.inst_page) else "DRUMS", T, m, e)
+            if T.inst_page and not (T.seq_page or T.drum_page) and not T.instp.mode:
+                T.instp.shift_push()                 # (an empty slot has nothing to change: nothing opens)
         else:
             handle(act, T, m, e)
         return
