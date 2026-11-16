@@ -195,8 +195,9 @@ def _wave_mask(path):
             x = sampler.read_wav(path)
             if x is None or not len(x):
                 return
-            n = max(WAVE_W, len(x) // WAVE_W * WAVE_W)
-            x = np.pad(x, (0, n - len(x)))[:n].reshape(WAVE_W, -1)
+            if len(x) < WAVE_W:
+                x = np.pad(x, (0, WAVE_W - len(x)))
+            x = x[:len(x) // WAVE_W * WAVE_W].reshape(WAVE_W, -1)
             hi, lo = x.max(axis=1), x.min(axis=1)
             peak = max(1e-6, float(max(abs(hi).max(), abs(lo).max())))
             half = WAVE_H / 2.0 - 1
