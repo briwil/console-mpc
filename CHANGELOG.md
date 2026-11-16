@@ -3,6 +3,10 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.13
+
+- **Tape page:** a recording is a filled box in its colour with the waveform in black, so each one reads clearly.
+
 ## 0.0.12
 
 - **Tape page:** each recording gets its own muted colour (a splice's right half turns a new one), so the sections tell apart at a glance. The zoomed track's strip uses the same colours.
