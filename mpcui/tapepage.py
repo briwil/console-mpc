@@ -229,6 +229,7 @@ def _paint(px, cx, cy, r0, r1, col, a0=None, a1=None):
     px[y0:y1, x0:x1][m] = col
 
 
+REEL_K = 0.5                                                   # the zoomed page's reels are half size (the recording below is bigger)
 OLIVE = (0x67, 0x6F, 0x58)                                      # from Brian's reel drawing
 
 
@@ -245,15 +246,15 @@ def _reel(c, cx, cy, wf, rot):
     windows (they turn), an olive ring round the white hub. Returns the radius of the tape pack."""
     px = c.px
     white = (255, 255, 255)
-    pack = 17 + (36.3 - 17) * max(0.0, min(1.0, wf))
-    _paint(px, cx, cy, 41.2, 42.3, white)                           # the outer ring
+    pack = (17 + (36.3 - 17) * max(0.0, min(1.0, wf))) * REEL_K
+    _paint(px, cx, cy, 41.2 * REEL_K, 42.3 * REEL_K, white)                           # the outer ring
     _paint(px, cx, cy, 0, pack, white)                              # the tape
     for k in range(3):                                              # the three windows
         a = rot - np.pi / 2 + k * 2 * np.pi / 3
-        _paint(px, cx, cy, 17.5, 33, OLIVE, a - 0.24, a + 0.24)
-    _paint(px, cx, cy, 0, 14.7, OLIVE)                              # the hub: an olive ring, white inside, an olive dot
-    _paint(px, cx, cy, 0, 12.3, white)
-    _paint(px, cx, cy, 0, 1.5, OLIVE)
+        _paint(px, cx, cy, 17.5 * REEL_K, 33 * REEL_K, OLIVE, a - 0.24, a + 0.24)
+    _paint(px, cx, cy, 0, 14.7 * REEL_K, OLIVE)                              # the hub: an olive ring, white inside, an olive dot
+    _paint(px, cx, cy, 0, 12.3 * REEL_K, white)
+    _paint(px, cx, cy, 0, 1.5 * REEL_K + 0.5, OLIVE)
     return pack
 
 
@@ -288,12 +289,12 @@ def draw_focus(T, nat):
     c.text_px(160 - text_width(c.pxfont(24), tc, -2) // 2, 36, tc, nat.WHITE, 24, -2)
 
     # the two reels (Brian's drawing): the left empties as the right fills
-    ly, lx, rx = 104, 87, 233
+    ly, lx, rx = 76, 100, 220
     pl = _reel(c, lx, ly, 1.0 - frac, rot)
     pr = _reel(c, rx, ly, frac, rot)
 
     # the play / pause / record glyph, between the reels
-    gx, gy = 160, 100
+    gx, gy = 160, 72
     if T.recording:
         _paint(c.px, gx, gy, 0, 7, nat.RED)
     elif T.playing:
@@ -305,20 +306,20 @@ def draw_focus(T, nat):
 
     # the tape path, as drawn: off each reel's pack, down under a white guide, over a roller, sagging to the middle
     white = (255, 255, 255)
-    gyd, ryr = ly + 54, ly + 52                                     # the guides (dots) and the rollers (rings)
+    gyd, ryr = ly + 28, ly + 27                                     # the guides (dots) and the rollers (rings)
     for side, cx, pk in ((-1, lx, pl), (1, rx, pr)):
-        dotx, rolx = cx - side * 1, cx - side * 27
-        _line(c, cx + side * pk * 0.75, ly + pk * 0.66, dotx + side * 2, gyd + 2, white)
-        _line(c, dotx + side * 2, gyd + 2, dotx - side * 2, gyd + 3, white)
-        _line(c, dotx - side * 2, gyd + 3, rolx, ryr - 6, white)
-        _line(c, rolx, ryr - 6, rolx - side * 14, ryr - 6, white)
-        _line(c, rolx - side * 14, ryr - 6, gx, ryr + 3, white)
-        _paint(c.px, dotx, gyd, 0, 4, white)
-        _paint(c.px, rolx, ryr, 0, 5.5, (0, 0, 0))
-        _paint(c.px, rolx, ryr, 4.9, 5.9, white)
+        dotx, rolx = cx - side * 1, cx - side * 14
+        _line(c, cx + side * pk * 0.75, ly + pk * 0.66, dotx + side * 1, gyd + 1, white)
+        _line(c, dotx + side * 1, gyd + 1, dotx - side * 1, gyd + 2, white)
+        _line(c, dotx - side * 1, gyd + 2, rolx, ryr - 3, white)
+        _line(c, rolx, ryr - 3, rolx - side * 7, ryr - 3, white)
+        _line(c, rolx - side * 7, ryr - 3, gx, ryr + 2, white)
+        _paint(c.px, dotx, gyd, 0, 2.2, white)
+        _paint(c.px, rolx, ryr, 0, 3.2, (0, 0, 0))
+        _paint(c.px, rolx, ryr, 2.7, 3.4, white)
 
     # the bottom strip: this track's recording as a bar, with a ruler and the playhead
-    sx0, sx1, sy = 8, 312, 196
+    sx0, sx1, sy, sh = 8, 312, 118, 96
     mid = sx0 + (sx1 - sx0) // 3
     ppb = (sx1 - sx0) / (tape.ZOOMS[t.zoom] * tape.BEATS_PER_BAR)
     bar = tape.BEATS_PER_BAR                                        # bar numbers just above the strip
@@ -335,7 +336,7 @@ def draw_focus(T, nat):
     ch = e.chans(n - 1)[0]
     boxes = e.regions[ch]
     here = None
-    c.frame(sx0, sy, sx1 - sx0, 20, G[3])
+    c.frame(sx0, sy, sx1 - sx0, sh, G[3])
     for r in boxes:
         xa = int(round(mid + (r[0] / fpb - t.pos) * ppb))
         xb = int(round(mid + (r[1] / fpb - t.pos) * ppb))
@@ -345,8 +346,9 @@ def draw_focus(T, nat):
             continue
         a, b = max(sx0 + 1, xa), min(sx1 - 1, xb)
         if b > a:
-            c.rect(a, sy + 5, b - a, 10, G[1] if muted else region_colour(n - 1, r, True))
-    c.rect(mid, sy - 1, 1, 22, nat.WHITE)                           # the playhead
+            c.rect(a, sy + 1, b - a, sh - 2, G[1] if muted else region_colour(n - 1, r, True))      # the recording: its colour, the waveform in black
+            _wave(c, T, e.levels[ch], a, b, mid, ppb, sy + 1, sh - 2, (0, 0, 0))
+    c.rect(mid, sy - 1, 1, sh + 2, nat.WHITE)                       # the playhead
 
     # one compact line of the box's settings (what knobs 4-6 edit)
     stereo = (n - 1) in e.stereo
