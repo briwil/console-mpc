@@ -93,7 +93,7 @@ def count_in_then(T, fn):
     CI.update(active=True, e=e, last=-1, start_ns=time.monotonic_ns() + int(LEAD * 1e9), then=fn,          # (the first click is a moment ahead:
               end=now + LEAD + bars * max(1, int(round(e.bar_beats()))) * 60.0 / e.bpm)                  #  a beat already gone would be skipped)
     STATE["sent"], STATE["was"] = now, True
-    _send(max(STATE["vol"], 40), e.bpm, max(1, int(round(e.bar_beats()))), CI["start_ns"])      # (told at once, not at the next screen frame)
+    _send(STATE["vol"], e.bpm, max(1, int(round(e.bar_beats()))), CI["start_ns"])      # (told at once, not at the next screen frame)
     return True
 
 
@@ -157,7 +157,7 @@ def _count_tick(T):
         T.say("COUNT IN  %d" % left, 2)
     if now - STATE["sent"] >= 0.2:
         STATE["sent"], STATE["was"] = now, True
-        _send(max(STATE["vol"], 40), e.bpm, bar, CI["start_ns"])
+        _send(STATE["vol"], e.bpm, bar, CI["start_ns"])
 
 
 def tick(T):
