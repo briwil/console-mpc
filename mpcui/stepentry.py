@@ -563,8 +563,8 @@ def install(MoveBoard, pad_velocity=None):
             if step:
                 self.keys.put(("KNOB", 10, 1 if step > 0 else -1, False))   # Shift + wheel on the tape page: the grid (all 8 tracks show, nothing scrolls)
             return
-        if num == PUSH and val and self.shift and on_tape(T):
-            self.keys.put(("KNOB", 10, 1, False))               # Shift + push on the tape page: the next grid (1/4, 1/8 ...)
+        if num == PUSH and val and on_tape(T):
+            self.keys.put("HOME" if self.shift else "SPLICE")   # the tape page: push the wheel = SPLICE (like CHOP); Shift + push = the playhead to the start / loop in
             return
         if num == PUSH and val and in_seq(T):
             click(T, self.shift)
