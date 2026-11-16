@@ -191,6 +191,27 @@ def _disc(cx, cy, r0, r1, a0=None, a1=None):
     return m
 
 
+
+def _paint(px, cx, cy, r0, r1, col, a0=None, a1=None):
+    """Fill the ring r0..r1 around (cx, cy) (optionally only the wedge a0..a1) with col, touching only its bounding box
+    (the full-screen masks cost most of the zoomed page's frame time)."""
+    x0, x1 = max(0, int(cx - r1) - 1), min(320, int(cx + r1) + 2)
+    y0, y1 = max(0, int(cy - r1) - 1), min(240, int(cy + r1) + 2)
+    if x1 <= x0 or y1 <= y0:
+        return
+    gy, gx = np.ogrid[y0:y1, x0:x1]
+    dy = gy - cy
+    dx = gx - cx
+    d2 = dx * dx + dy * dy
+    m = (d2 >= r0 * r0) & (d2 <= r1 * r1)
+    if a0 is not None:
+        ang = np.arctan2(dy, dx) % (2 * np.pi)
+        a0 %= 2 * np.pi
+        a1 %= 2 * np.pi
+        m &= (ang >= a0) & (ang <= a1) if a0 <= a1 else ((ang >= a0) | (ang <= a1))
+    px[y0:y1, x0:x1][m] = col
+
+
 OLIVE = (0x67, 0x6F, 0x58)                                      # from Brian's reel drawing
 
 
@@ -208,14 +229,14 @@ def _reel(c, cx, cy, wf, rot):
     px = c.px
     white = (255, 255, 255)
     pack = 17 + (36.3 - 17) * max(0.0, min(1.0, wf))
-    px[_disc(cx, cy, 41.2, 42.3)] = white                           # the outer ring
-    px[_disc(cx, cy, 0, pack)] = white                              # the tape
+    _paint(px, cx, cy, 41.2, 42.3, white)                           # the outer ring
+    _paint(px, cx, cy, 0, pack, white)                              # the tape
     for k in range(3):                                              # the three windows
         a = rot - np.pi / 2 + k * 2 * np.pi / 3
-        px[_disc(cx, cy, 17.5, 33, a - 0.24, a + 0.24)] = OLIVE
-    px[_disc(cx, cy, 0, 14.7)] = OLIVE                              # the hub: an olive ring, white inside, an olive dot
-    px[_disc(cx, cy, 0, 12.3)] = white
-    px[_disc(cx, cy, 0, 1.5)] = OLIVE
+        _paint(px, cx, cy, 17.5, 33, OLIVE, a - 0.24, a + 0.24)
+    _paint(px, cx, cy, 0, 14.7, OLIVE)                              # the hub: an olive ring, white inside, an olive dot
+    _paint(px, cx, cy, 0, 12.3, white)
+    _paint(px, cx, cy, 0, 1.5, OLIVE)
     return pack
 
 
@@ -257,7 +278,7 @@ def draw_focus(T, nat):
     # the play / pause / record glyph, between the reels
     gx, gy = 160, 100
     if T.recording:
-        c.px[_disc(gx, gy, 0, 7)] = nat.RED
+        _paint(c.px, gx, gy, 0, 7, nat.RED)
     elif T.playing:
         for r in range(13):
             c.rect(gx - 5, gy - 6 + r, 7 - abs(r - 6), 1, nat.WHITE)
@@ -275,9 +296,9 @@ def draw_focus(T, nat):
         _line(c, dotx - side * 2, gyd + 3, rolx, ryr - 6, white)
         _line(c, rolx, ryr - 6, rolx - side * 14, ryr - 6, white)
         _line(c, rolx - side * 14, ryr - 6, gx, ryr + 3, white)
-        c.px[_disc(dotx, gyd, 0, 4)] = white
-        c.px[_disc(rolx, ryr, 0, 5.5)] = (0, 0, 0)
-        c.px[_disc(rolx, ryr, 4.9, 5.9)] = white
+        _paint(c.px, dotx, gyd, 0, 4, white)
+        _paint(c.px, rolx, ryr, 0, 5.5, (0, 0, 0))
+        _paint(c.px, rolx, ryr, 4.9, 5.9, white)
 
     # the bottom strip: this track's recording as a bar, with a ruler and the playhead
     sx0, sx1, sy = 8, 312, 196
