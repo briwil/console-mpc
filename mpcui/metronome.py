@@ -40,8 +40,21 @@ def _write(text):
         pass
 
 
+_CORE = [None]
+
+
+def _master():
+    """The volume knob, as the sound core applies it (squared): the click is added after the core, so it follows the knob here."""
+    try:
+        v = float(_CORE[0].vol)
+        return v * v
+    except Exception:
+        return 1.0
+
+
 def _send(vol, bpm, bar, t0):
     BEAT["n"] += 1
+    vol = int(round(vol * _master()))
     _write("1 %d %d %d %d %d" % (vol, round(bpm * 100), bar, t0, BEAT["n"]))
 
 
@@ -86,6 +99,7 @@ def count_in_then(T, fn):
     e = T.engine
     if not STATE["count"] or CI["active"] or e is None:
         return False
+    _CORE[0] = getattr(e, "core", None)
     if not CI["patched"]:
         _patch(type(e))
     bars = STATE["count"]
@@ -163,6 +177,7 @@ def _count_tick(T):
 def tick(T):
     """Every screen frame: keep the bridge told while recording."""
     e = T.engine
+    _CORE[0] = getattr(e, "core", None)
     if e is not None and not CI["patched"]:
         _patch(type(e))
     if CI["active"]:
