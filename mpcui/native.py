@@ -409,7 +409,7 @@ def set_mode(ch):
     """Tells the bridge which page is up: "A" = the tape recorder page (its own buttons), "T" = the tape-style pages (instruments, song, mixer: the pads are the step buttons), "O" = anything else."""
     global _mode
     if ch in ("Q", "R", "N", "P", "S") and _arp_pop_up():
-        ch = "U"                               # the ARP pop-up: KNOB FX on by itself, SEQ = the pads are its 16 steps, pads 9-16 play (bridge/mapping.h)
+        ch = "B" if _popT.mlfo.arp_second() else "U"          # B: ARP 2 (two settings). The ARP pop-up: KNOB FX on by itself, SEQ = the pads are its 16 steps, pads 9-16 play (bridge/mapping.h)
     elif ch in ("Q", "R", "N", "P", "S") and _pads_pop_up():
         ch = "X" if _popT.mlfo.has_arp() else "Z"     # the PADS pop-up: KNOB FX on by itself, only pads 1-5 (a drum machine: 1-3) are its settings, pads 9-16 play (bridge/mapping.h)
     ch = ch + ("y" if _synth else "")        # y: the instrument is a synth (the bridge lays the note pads out in order)
