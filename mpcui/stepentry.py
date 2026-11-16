@@ -498,20 +498,17 @@ def install(MoveBoard, pad_velocity=None):
             if val:
                 erase(T)
             return
-        if 71 <= num <= 74 and on_tape(T):
-            # the tape page: K1 = the selected track's volume, K2 = its pan, K3 = nothing, the fader = its volume (Shift: pan)
-            if num == 73:
-                return
-            track = 70 + T.armed
-            if num == 74:
-                orig_cc(self, track, val)
-                return
-            shift = self.shift
-            self.shift = num == 72
-            try:
-                orig_cc(self, track, val)
-            finally:
-                self.shift = shift
+        if on_tape(T) and (num in (115, 116, 122) or 71 <= num <= 74):
+            # the tape page: K1 and the FADER are pots, their position is the selected track's volume (0-100 %, end to end); K2 is its
+            # pan (left end L100, middle centre, right end R100). Their clicks are not used here (the position was).
+            if num in (115, 122, 116) and T.engine:
+                e, tr = T.engine, T.armed
+                if num == 116:
+                    target = val / 127.0 * 2.0 - 1.0
+                    target = 0.0 if abs(target) < 0.04 else target
+                    T.pan(tr, target - e.pans[tr - 1])
+                else:
+                    T.volume(tr, round(val / 127.0, 3) - e.volumes[tr - 1])
             return
         if num in (116, 117) and focus_view(T):                                  # the zoomed track: K2 / K3 are pots, the position picks the input
             T._pot_abs_at = getattr(T, "_pot_abs_at", {})

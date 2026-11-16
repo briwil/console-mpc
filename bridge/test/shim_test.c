@@ -225,7 +225,8 @@ int main(int argc, char **argv)
         b = ngot;
         send((unsigned char[]){ 0xB0, 0x14, 10 }, 3);
         send((unsigned char[]){ 0xB0, 0x14, 12 }, 3);
-        CHECK(ngot == b + 2 && got[b][1] == 74 && got[b + 1][1] == 74, "A: FADER = knob 4 (CC 74)");
+        { int k74 = 0, k122 = 0; for (int i = b; i < ngot; i++) { if (got[i][1] == 74) k74++; if (got[i][1] == 122) k122++; }
+          CHECK(k74 == 2 && k122 == 2, "A: FADER = knob 4 (CC 74), and its position (CC 122)"); }
     }
     {   /* PLUS / MINUS = arrows; Shift + them = Move + / - (Console sees Shift released meanwhile); LOOP = Loop */
         int b = ngot;
