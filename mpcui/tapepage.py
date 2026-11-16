@@ -111,7 +111,8 @@ def draw(T, nat):
             if b <= a:
                 continue
             ink = G[1] if muted else region_colour(n, r, is_sel)           # each recording its own muted colour
-            _wave(c, T, e.levels[ch], a, b, mid, ppb, top, rows_n, ink)
+            c.rect(a, top + 1, b - a, rows_n - 2, ink)                      # a filled box in the recording's colour, the waveform in black on it
+            _wave(c, T, e.levels[ch], a, b, mid, ppb, top, rows_n, (0, 0, 0))
             if spliced_after and x0 <= xb < x1:
                 c.rect(xb, top - 1, 1, rows_n + 2, nat.WHITE)
 
