@@ -135,7 +135,7 @@ def by_pad_rows(items, active):
     return out, active
 
 
-def grid(nat, key, top, title, items, active, now, message=None, head=None, band_dy=0):
+def grid(nat, key, top, title, items, active, now, message=None, head=None, band_dy=0, under=None):
     """One page in this style. items = [(label, value, idle)] for up to 8 settings (two rows of four); idle = how bright (0..1) a
     setting is while none is being turned. active = the index being turned / touched, or None. key: a change of it (another page,
     another instrument) snaps everything to its place instead of easing."""
@@ -151,6 +151,8 @@ def grid(nat, key, top, title, items, active, now, message=None, head=None, band
             top, colr = message[:24], nat.ACC
         c.text_px(6, 19, top, colr, 16, -1)
         title_line(c, title)
+    if under is not None:
+        under(c)                                                    # (behind the settings' text)
     texts = [(str(a).upper(), str(b).upper()) for a, b, _i in items]
     goal = targets(n, active, texts)
     for g, (_a, _b, idle) in zip(goal, items):
@@ -175,6 +177,56 @@ def grid(nat, key, top, title, items, active, now, message=None, head=None, band
         c.text_px(int(round(s["cx"] - text_width(c.pxfont(ls), label, 0) / 2.0)), int(round(s["lb"])), label, col, ls, 0)
         vtr = -(vs // 8)
         c.text_px(int(round(s["cx"] - text_width(c.pxfont(vs), value, vtr) / 2.0)), int(round(s["vm"] + 0.3125 * vs)), value, col, vs, vtr)
+
+
+WAVE = {}                                                           # sample path -> the drawn shape (a boolean picture), or None while it is being read
+WAVE_X0, WAVE_Y0, WAVE_W, WAVE_H = 8, 104, 276, 84                  # the big black place on a one-sample instrument's first page
+
+
+def _wave_mask(path):
+    """The sample's waveform as a WAVE_H x WAVE_W boolean picture (None: can't be read, or not ready yet: it is read in the background)."""
+    if path in WAVE:
+        return WAVE[path]
+    WAVE[path] = None
+
+    def work():
+        try:
+            import sampler
+            x = sampler.read_wav(path)
+            if x is None or not len(x):
+                return
+            n = max(WAVE_W, len(x) // WAVE_W * WAVE_W)
+            x = np.pad(x, (0, n - len(x)))[:n].reshape(WAVE_W, -1)
+            hi, lo = x.max(axis=1), x.min(axis=1)
+            peak = max(1e-6, float(max(abs(hi).max(), abs(lo).max())))
+            half = WAVE_H / 2.0 - 1
+            mid = WAVE_H / 2.0
+            top = np.clip(np.round(mid - hi / peak * half), 0, WAVE_H - 1).astype(int)
+            bot = np.clip(np.round(mid - lo / peak * half), 0, WAVE_H - 1).astype(int)
+            rows = np.arange(WAVE_H)[:, None]
+            WAVE[path] = (rows >= np.minimum(top, bot - 0)[None, :]) & (rows <= np.maximum(bot, top + 1)[None, :])
+        except Exception:                                           # noqa: BLE001
+            WAVE[path] = None
+    import threading
+    threading.Thread(target=work, daemon=True).start()
+    return None
+
+
+def _sample_wave(d, si):
+    """A drawing function for the one-sample instrument's loaded sample, or None."""
+    try:
+        v = d.get_param(si)
+        if v < 1 or v > len(d.files):
+            return None
+        m = _wave_mask(d.files[v - 1])
+    except Exception:                                               # noqa: BLE001
+        return None
+    if m is None:
+        return None
+
+    def under(c):
+        c.px[WAVE_Y0:WAVE_Y0 + WAVE_H, WAVE_X0:WAVE_X0 + WAVE_W][m] = colour.GREENS[4]
+    return under
 
 
 def draw(T, nat):
@@ -217,7 +269,8 @@ def draw(T, nat):
     msg = T.message if (T.message and now < T.message_until and active is None) else None   # (while a setting is turned, its name and value are on screen)
     items = [(d.label(p), d.value_text(p), 1.0) for p in params]
     items, active = by_pad_rows(items, active)
-    grid(nat, (id(d), voice, page_name, len(params)), top, vname.upper(), items, active, now, msg)
+    under = _sample_wave(d, si) if (si is not None and T.drum_tab == 0) else None      # the sample's shape on the first page
+    grid(nat, (id(d), voice, page_name, len(params)), top, vname.upper(), items, active, now, msg, under=under)
 
 
 MIX = {"prev": None, "when": {}, "kind": {}}
