@@ -229,7 +229,7 @@ def _paint(px, cx, cy, r0, r1, col, a0=None, a1=None):
     px[y0:y1, x0:x1][m] = col
 
 
-REEL_K = 0.5                                                   # the zoomed page's reels are half size (the recording below is bigger)
+REEL_K = 0.77                                                  # the zoomed page's reels are half size (the recording below is bigger)
 OLIVE = (0x67, 0x6F, 0x58)                                      # from Brian's reel drawing
 
 
@@ -283,18 +283,18 @@ def draw_focus(T, nat):
     rot = t.pos * 0.85                                               # the reels turn as the tape moves (still when stopped)
 
     # the track number, big, top-left
-    c.text_px(6, 40, str(n), G[2] if muted else nat.WHITE, 32, 0)
-    # the time counter, top-centre
+    c.text_px(6, 28, str(n), G[2] if muted else nat.WHITE, 24, 0)
+    # the time counter, under the reels
     tc = _time(t.pos, e.bpm)
-    c.text_px(160 - text_width(c.pxfont(24), tc, -2) // 2, 36, tc, nat.WHITE, 24, -2)
+    c.text_px(160 - text_width(c.pxfont(24), tc, -2) // 2, 111, tc, nat.WHITE, 24, -2)
 
     # the two reels (Brian's drawing): the left empties as the right fills
-    ly, lx, rx = 76, 100, 220
+    ly, lx, rx = 42, 109, 216
     pl = _reel(c, lx, ly, 1.0 - frac, rot)
     pr = _reel(c, rx, ly, frac, rot)
 
     # the play / pause / record glyph, between the reels
-    gx, gy = 160, 72
+    gx, gy = 162, 38
     if T.recording:
         _paint(c.px, gx, gy, 0, 7, nat.RED)
     elif T.playing:
@@ -306,20 +306,20 @@ def draw_focus(T, nat):
 
     # the tape path, as drawn: off each reel's pack, down under a white guide, over a roller, sagging to the middle
     white = (255, 255, 255)
-    gyd, ryr = ly + 28, ly + 27                                     # the guides (dots) and the rollers (rings)
+    gyd, ryr = ly + 41, ly + 40                                     # the guides (dots) and the rollers (rings)
     for side, cx, pk in ((-1, lx, pl), (1, rx, pr)):
-        dotx, rolx = cx - side * 1, cx - side * 14
+        dotx, rolx = cx - side * 1, cx - side * 21
         _line(c, cx + side * pk * 0.75, ly + pk * 0.66, dotx + side * 1, gyd + 1, white)
         _line(c, dotx + side * 1, gyd + 1, dotx - side * 1, gyd + 2, white)
-        _line(c, dotx - side * 1, gyd + 2, rolx, ryr - 3, white)
-        _line(c, rolx, ryr - 3, rolx - side * 7, ryr - 3, white)
-        _line(c, rolx - side * 7, ryr - 3, gx, ryr + 2, white)
-        _paint(c.px, dotx, gyd, 0, 2.2, white)
-        _paint(c.px, rolx, ryr, 0, 3.2, (0, 0, 0))
-        _paint(c.px, rolx, ryr, 2.7, 3.4, white)
+        _line(c, dotx - side * 1, gyd + 2, rolx, ryr - 4, white)
+        _line(c, rolx, ryr - 4, rolx - side * 10, ryr - 4, white)
+        _line(c, rolx - side * 10, ryr - 4, gx, ryr + 2, white)
+        _paint(c.px, dotx, gyd, 0, 3, white)
+        _paint(c.px, rolx, ryr, 0, 4.2, (0, 0, 0))
+        _paint(c.px, rolx, ryr, 3.7, 4.6, white)
 
     # the bottom strip: this track's recording as a bar, with a ruler and the playhead
-    sx0, sx1, sy, sh = 8, 312, 118, 96
+    sx0, sx1, sy, sh = 3, 314, 138, 99
     mid = sx0 + (sx1 - sx0) // 3
     ppb = (sx1 - sx0) / (tape.ZOOMS[t.zoom] * tape.BEATS_PER_BAR)
     bar = tape.BEATS_PER_BAR                                        # bar numbers just above the strip
@@ -329,8 +329,8 @@ def draw_focus(T, nat):
         if x >= sx1:
             break
         if x >= sx0 and k % bar == 0 and k >= 0:
-            c.rect(x, sy - 6, 1, 4, G[4])
-            c.text_px(x + 3, sy - 3, str(int(k // bar) + 1), G[4], 8, 0)
+            c.rect(x, sy - 12, 1, 4, G[4])
+            c.text_px(x + 3, sy - 6, str(int(k // bar) + 1), G[4], 8, 0)
         k += 1
     bar_col = G[1] if muted else OUTLINE[n - 1]
     ch = e.chans(n - 1)[0]
@@ -348,24 +348,17 @@ def draw_focus(T, nat):
         if b > a:
             c.rect(a, sy + 1, b - a, sh - 2, G[1] if muted else region_colour(n - 1, r, True))      # the recording: its colour, the waveform in black
             _wave(c, T, e.levels[ch], a, b, mid, ppb, sy + 1, sh - 2, (0, 0, 0))
+    k2 = int(t.pos - (mid - sx0) / ppb) - 1
+    while True:                                                     # the bar lines, as short ticks along the top and bottom edge
+        x = int(round(mid + (k2 - t.pos) * ppb))
+        if x >= sx1:
+            break
+        if x > sx0 and k2 % bar == 0 and k2 >= 0:
+            c.rect(x, sy + 1, 1, 5, nat.WHITE)
+            c.rect(x, sy + sh - 6, 1, 5, nat.WHITE)
+        k2 += 1
     c.rect(mid, sy - 1, 1, sh + 2, nat.WHITE)                       # the playhead
 
-    # one compact line of the box's settings (what knobs 4-6 edit)
-    stereo = (n - 1) in e.stereo
-    try:
-        src = str(e.input_text(n - 1))
-    except Exception:
-        src = "?"
-    c.text_px(8, 232, ("STEREO" if stereo else "MONO") + "  " + src[:10], G[5], 16, -1)
-    if here is not None:
-        gain = here[3] if len(here) > 3 else 0.0
-        fin = (here[4] if len(here) > 4 else 0) / 44100.0
-        fout = (here[5] if len(here) > 5 else 0) / 44100.0
-
-        def fade(sec):
-            return "OFF" if sec <= 0 else ("%dMS" % round(sec * 1000) if sec < 1 else "%.2gS" % sec)
-        txt = "G%+.1f  I%s O%s" % (gain, fade(fin), fade(fout))
-        c.text_px(312 - text_width(c.pxfont(16), txt, -1), 232, txt, nat.WHITE, 16, -1)
     if T.message and now < T.message_until:
         c.rect(0, 220, 320, 20, (0, 0, 0))
         c.text_px(8, 236, T.message.upper()[:22], nat.WHITE, 16, -1)
