@@ -262,7 +262,7 @@ def draw_focus(T, nat):
     fpb = e.frames_per_beat()
     muted = not e.audible(n - 1)
     frac = max(0.0, min(1.0, t.pos / t.total_beats)) if t.total_beats else 0.0
-    rot = t.pos * 1.7                                               # the reels turn as the tape moves (still when stopped)
+    rot = t.pos * 0.85                                               # the reels turn as the tape moves (still when stopped)
 
     # the track number, big, top-left
     c.text_px(6, 40, str(n), G[2] if muted else nat.WHITE, 32, 0)
