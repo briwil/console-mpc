@@ -1489,6 +1489,10 @@ def handle(name, T, m, e):
             handle("DRUMS", T, m, e)                 # (the same as left button 1 from the tape)
         elif T.focus.track is not None:
             T.key("FOCUS")
+        elif e and not T.playing and not T.recording:
+            # the tape page, stopped: STOP (the MPC sends Back when nothing is playing) sends the playhead to the start, or the loop's in point
+            start = e.loop_a / e.frames_per_beat() if (e.loop_on and e.loop_region()) else 0.0
+            T.set_pos(start if T.tape.pos > start + 1e-6 else 0.0)
         return
     if (m.open or m.kits.open) and isinstance(name, tuple) and name[0] in ("HOLD", "RELEASE"):
         if name[0] == "HOLD":
