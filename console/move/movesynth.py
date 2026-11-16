@@ -261,6 +261,9 @@ class MoveSynth:
         note = self.pad_note(p)
         if not vel:
             self.pads_down.pop(p, None)
+            if self.selected and self.sel == p:
+                self.sel = None                                 # a step setting shows while its pad is held; let go: all the settings again
+                return False
             rec = self.rec.pop(p, None)
             if rec and self.T.engine.playing:                    # a recorded note lasts as long as you held the pad
                 e, seq = self.T.engine, self.seq

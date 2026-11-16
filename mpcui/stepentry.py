@@ -680,7 +680,7 @@ def install(MoveBoard, pad_velocity=None):
             if step:
                 move(T, step)                                    # (the box keeps moving; K1 is the amount)
             return
-        if num == WHEEL and val and not self.shift and in_synth_seq(T) and (T.msyn.selected or not T.engine.playing):
+        if num == WHEEL and val and not self.shift and in_synth_seq(T) and T.msyn.sel is None and (T.msyn.selected or not T.engine.playing):
             step = val - 128 if val > 63 else val
             if step:
                 synth_move(T, step)                              # (steps selected: the box keeps moving too)

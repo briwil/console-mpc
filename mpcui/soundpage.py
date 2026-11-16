@@ -648,15 +648,15 @@ def draw_synth_seq(T, nat):
         items = ms.pad_items()
         for p in range(16):
             col, row = p % 4, 3 - p // 4
-            x, y = 6 + col * 70, 124 + row * 29
+            x, y = 4 + col * 68, 136 + row * 26                # (smaller and lower: clear of the bent bars)
             if p >= len(items):
                 continue
             key, label = items[p]
             on = ms.engaged(key)
-            c.rect(x, y, 68, 27, colour.GREENS[3] if on else colour.GREENS[0])
-            c.text_px(x + 4, y + 10, str(label)[:11], WHITE if on else colour.GREENS[4], 8, 0)
+            c.rect(x, y, 66, 24, colour.GREENS[3] if on else colour.GREENS[0])
+            c.text_px(x + 4, y + 9, str(label)[:11], WHITE if on else colour.GREENS[4], 8, 0)
             if on:
-                c.text_px(x + 4, y + 22, str(ms.item_value(key))[:11], WHITE, 8, 0)
+                c.text_px(x + 4, y + 20, str(ms.item_value(key))[:11], WHITE, 8, 0)
         LAST["key"] = None
         return
     if selected:
