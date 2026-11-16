@@ -429,12 +429,7 @@ def pads_popup_toggle(T):
 
 def _lp_fire(board, name):
     T = board.T
-    if name == "INST_MENU":
-        if not T.inst_page:
-            board.keys.put("INST_HOME")
-        T.want_inst_menu = time.monotonic() + 1.0
-    else:
-        board.keys.put(name)
+    board.keys.put(("BTN", name))
 
 
 def _lp_tick(board):
@@ -478,8 +473,7 @@ def install(MoveBoard, pad_velocity=None):
                 return
             ent = bp.pop(num, None)
             if ent is not None and not ent[1]:
-                orig_cc(self, num, 127)                                         # (a short press: the button's own action, now)
-                orig_cc(self, num, 0)
+                self.keys.put(("BTN", {43: "DRUMS", 41: "FX", 40: "TAPE"}[num]))   # (a short press: the button's own action, now)
             return
         if num == 101:                                                          # the song page: SEQ = the instrument's sequencer (bridge/mapping.h)
             if val:
