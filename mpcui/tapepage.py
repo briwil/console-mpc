@@ -319,7 +319,7 @@ def draw_focus(T, nat):
         _paint(c.px, rolx, ryr, 3.7, 4.6, white)
 
     # the bottom strip: this track's recording as a bar, with a ruler and the playhead
-    sx0, sx1, sy, sh = 3, 314, 138, 99
+    sx0, sx1, sy, sh = 3, 314, 142, 94
     mid = sx0 + (sx1 - sx0) // 3
     ppb = (sx1 - sx0) / (tape.ZOOMS[t.zoom] * tape.BEATS_PER_BAR)
     bar = tape.BEATS_PER_BAR                                        # bar numbers just above the strip
@@ -328,15 +328,18 @@ def draw_focus(T, nat):
         x = int(round(mid + (k - t.pos) * ppb))
         if x >= sx1:
             break
-        if x >= sx0 and k % bar == 0 and k >= 0:
-            c.rect(x, sy - 12, 1, 4, G[4])
-            c.text_px(x + 3, sy - 6, str(int(k // bar) + 1), G[4], 8, 0)
+        if x >= sx0 and k >= 0:
+            if k % bar == 0:
+                c.rect(x, sy - 12, 1, 8, G[4])
+                c.text_px(x + 3, sy - 6, str(int(k // bar) + 1), G[4], 8, 0)
+            elif ppb >= 6:
+                c.rect(x, sy - 7, 1, 3, G[3])                       # a beat
         k += 1
     bar_col = G[1] if muted else OUTLINE[n - 1]
     ch = e.chans(n - 1)[0]
     boxes = e.regions[ch]
     here = None
-    c.frame(sx0, sy, sx1 - sx0, sh, G[3])
+    c.frame(sx0, sy, sx1 - sx0, sh, G[2])
     for r in boxes:
         xa = int(round(mid + (r[0] / fpb - t.pos) * ppb))
         xb = int(round(mid + (r[1] / fpb - t.pos) * ppb))
@@ -346,17 +349,9 @@ def draw_focus(T, nat):
             continue
         a, b = max(sx0 + 1, xa), min(sx1 - 1, xb)
         if b > a:
-            c.rect(a, sy + 1, b - a, sh - 2, G[1] if muted else region_colour(n - 1, r, True))      # the recording: its colour, the waveform in black
-            _wave(c, T, e.levels[ch], a, b, mid, ppb, sy + 1, sh - 2, (0, 0, 0))
-    k2 = int(t.pos - (mid - sx0) / ppb) - 1
-    while True:                                                     # the bar lines, as short ticks along the top and bottom edge
-        x = int(round(mid + (k2 - t.pos) * ppb))
-        if x >= sx1:
-            break
-        if x > sx0 and k2 % bar == 0 and k2 >= 0:
-            c.rect(x, sy + 1, 1, 5, nat.WHITE)
-            c.rect(x, sy + sh - 6, 1, 5, nat.WHITE)
-        k2 += 1
+            col = G[1] if muted else region_colour(n - 1, r, True)
+            c.rect(a, sy + 1, b - a, sh - 2, tuple(int(v * 0.16) for v in col))          # the recording: a dark tint of its colour, the waveform in the colour
+            _wave(c, T, e.levels[ch], a, b, mid, ppb, sy + 1, sh - 2, col)
     c.rect(mid, sy - 1, 1, sh + 2, nat.WHITE)                       # the playhead
 
     if T.message and now < T.message_until:
