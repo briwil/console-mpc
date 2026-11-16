@@ -3,6 +3,18 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.11
+
+- **Song page:** SEQ opens the sequencer and SAMPLE page 1 of the instrument the white box is on. LOOP loops the song (off by default; shown in the title). In KNOB FX, pad 12 (orange) held + the wheel changes how many times a row PLAYS (the number grows while held), and only as many blue pads as the song has instruments light up. The shown row follows the playing row. An instrument a row doesn't name is silent in it.
+- **Song end and STOP:** with loop off the song ends exactly at the end of its last row (no extra notes) and does not touch the tape: the tape keeps playing / recording (for the tails) until STOP. STOP cuts every note at once, including an arp running over a long note. STOP when already stopped sends the playhead to the start, or the loop's in point.
+- **Tape page:** all 8 tracks on screen again, each with a small waveform instead of a bar, in subtle dark-grey boxes. K1 and the fader set the selected track's volume by position (0-100 %), K2 its pan (left end L100, middle centre, right end R100). Shift + wheel changes the grid.
+- **Zoomed tape page:** about ten times less drawing time (the reels), and they turn half as far per beat.
+- **Start-up screen** after each start: it stays until left button 1, 2 or 3 is pressed.
+- **Wheel and knobs:** one click of the wheel is 1 % on number settings, K1 / K2 / K3 are pots on sound pages (their position is the value, end to end), K2 / K3 pick the tape inputs evenly. Every knob was checked for 1 click = 1 %.
+- **Sequencer bars** on the synth sequencer scale with each note's velocity. A one-second pop-up names the pad mode (PADS / KNOB FX / SEQ / STEP SETTINGS).
+- Fix: crackle in song mode (the sound of the instruments was switching between two paths every frame).
+- Fix: updating (the update script checks the exact version, retries, and prints what it installed).
+
 ## 0.0.10
 
 - **AUTOMATION page:** a list of the settings that have steps (8 rows to start, more as you add them; EMPTY rows open a picker of everything that can be automated). A setting opens as a pop-up: its steps on top (each bar as high as its value), VALUE and LENGTH below (pads 1 and 2, like the other pop-ups). Back returns to the list.
