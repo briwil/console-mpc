@@ -3,6 +3,14 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.14
+
+- **Tape page:** the wheel push splices (like CHOP); Shift + push sends the playhead to the start (or the loop's in point). STOP when already stopped does the same. K1 and the fader set the selected track's volume by position (0-100 %), K2 its pan.
+- **Zoomed tape page:** a new layout: the track number, the reels (smaller), the time under them and the recording across the bottom as a coloured waveform with a ruler above. The wheel push splices there too.
+- **Faster screen** on the tape pages: the waveforms and the reels are drawn on whole arrays.
+- **Start-up screen** shows at once when Console starts (no flash of the last page).
+- Fix: the count-in and the metronome click follow the volume knob and the metronome volume (they played at full level, and never fell below 40 %).
+
 ## 0.0.13
 
 - **Tape page:** a recording is a filled box in its colour with the waveform in black, so each one reads clearly.
