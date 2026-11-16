@@ -3,6 +3,10 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.15
+
+- **B1 / B2 / B3 shortcuts (every page):** Shift + B1, or holding B1, opens SETTINGS; Shift + B2 / hold B2 opens the Project menu (NEW, SAVE, LOAD, SETTINGS); Shift + B3 / hold B3 opens CHANGE / REMOVE for the instrument under the cursor. Pressing B1, B2 or B3 with one of these menus open closes it. Quit stays on Shift + STOP.
+
 ## 0.0.14
 
 - **Tape page:** the wheel push splices (like CHOP); Shift + push sends the playhead to the start (or the loop's in point). STOP when already stopped does the same. K1 and the fader set the selected track's volume by position (0-100 %), K2 its pan.
