@@ -269,6 +269,7 @@ def draw(T, nat):
         top += " OCT %+d" % octave
     msg = T.message if (T.message and now < T.message_until and active is None) else None   # (while a setting is turned, its name and value are on screen)
     items = [(d.label(p), d.value_text(p), 1.0) for p in params]
+    nat._pad_n = len(params)                                       # (KNOB FX: only this many pads are knobs)
     items, active = by_pad_rows(items, active)
     under = _sample_wave(d, si) if (si is not None and T.drum_tab == 0) else None      # the sample's shape on the first page
     grid(nat, (id(d), voice, page_name, len(params)), top, vname.upper(), items, active, now, msg, under=under)

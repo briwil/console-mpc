@@ -402,6 +402,7 @@ def publish():
 
 MODE_PATH = os.environ.get("CONSOLE_PAGEMODE", "/tmp/console-pagemode")
 _mode = None
+_pad_n = None                 # how many settings the page just drawn has (set by the page, used by set_mode)
 _synth = False            # the instrument shown is a synth (set every frame by the draw wrapper)
 
 
@@ -413,6 +414,10 @@ def set_mode(ch):
     elif ch in ("Q", "R", "N", "P", "S") and _pads_pop_up():
         ch = "X" if _popT.mlfo.has_arp() else "Z"     # the PADS pop-up: KNOB FX on by itself, only pads 1-5 (a drum machine: 1-3) are its settings, pads 9-16 play (bridge/mapping.h)
     ch = ch + ("y" if _synth else "")        # y: the instrument is a synth (the bridge lays the note pads out in order)
+    global _pad_n
+    if ch[0] in "QRN" and isinstance(_pad_n, int) and 1 <= _pad_n < 8:
+        ch += "n%d" % _pad_n                 # n<k>: only k pads are knobs in KNOB FX (the page has k settings); the others stay dark
+    _pad_n = None
     if ch == _mode:
         return
     _mode = ch

@@ -48,6 +48,7 @@ def knob_page(T, nat, key, top, title, pairs):
     """pairs = [(label, value)] for up to 8 knobs."""
     now = nat.time.monotonic()
     items = [(str(a), str(b), 1.0) for a, b in pairs[:8]]
+    nat._pad_n = max([k + 1 for k, (a, _b) in enumerate(pairs[:8]) if str(a).strip()] or [0])      # (KNOB FX: only this many pads are knobs)
     active = _active(T, nat, key, [it[1] for it in items])
     items, active = sp.by_pad_rows(items, active)
     sp.grid(nat, key, top, title, items, active, now, _msg(T, now))
