@@ -247,20 +247,42 @@ def _line(c, xa, ya, xb, yb, col):
     c.px[ys[ok], xs[ok]] = col
 
 
+_REEL_GEO = {}
+
+
+def _geo(cx, cy):
+    """For a reel's place on the screen: its corner and each pixel's squared distance and angle from the centre (made once, not every frame)."""
+    g = _REEL_GEO.get((cx, cy))
+    if g is None:
+        R = int(42.3 * REEL_K) + 3
+        x0, x1 = max(0, int(cx) - R), min(320, int(cx) + R + 1)
+        y0, y1 = max(0, int(cy) - R), min(240, int(cy) + R + 1)
+        gy, gx = np.ogrid[y0:y1, x0:x1]
+        dy = gy - cy
+        dx = gx - cx
+        g = _REEL_GEO[(cx, cy)] = (y0, y1, x0, x1, dx * dx + dy * dy, np.arctan2(dy, dx) % (2 * np.pi))
+    return g
+
+
 def _reel(c, cx, cy, wf, rot):
     """A reel as Brian drew it: a thin white ring, the tape as a white disc (it shrinks as the tape runs off: wf 0..1), three olive
     windows (they turn), an olive ring round the white hub. Returns the radius of the tape pack."""
-    px = c.px
     white = (255, 255, 255)
     pack = (17 + (36.3 - 17) * max(0.0, min(1.0, wf))) * REEL_K
-    _paint(px, cx, cy, 41.2 * REEL_K, 42.3 * REEL_K, white)                           # the outer ring
-    _paint(px, cx, cy, 0, pack, white)                              # the tape
-    for k in range(3):                                              # the three windows
+    y0, y1, x0, x1, d2, ang = _geo(cx, cy)
+    view = c.px[y0:y1, x0:x1]
+    K = REEL_K
+    view[(d2 >= (41.2 * K) ** 2) & (d2 <= (42.3 * K) ** 2)] = white                 # the outer ring
+    view[d2 <= pack * pack] = white                                                # the tape
+    ring = (d2 >= (17.5 * K) ** 2) & (d2 <= (33 * K) ** 2)
+    for k in range(3):                                                             # the three windows
         a = rot - np.pi / 2 + k * 2 * np.pi / 3
-        _paint(px, cx, cy, 17.5 * REEL_K, 33 * REEL_K, OLIVE, a - 0.24, a + 0.24)
-    _paint(px, cx, cy, 0, 14.7 * REEL_K, OLIVE)                              # the hub: an olive ring, white inside, an olive dot
-    _paint(px, cx, cy, 0, 12.3 * REEL_K, white)
-    _paint(px, cx, cy, 0, 1.5 * REEL_K + 0.5, OLIVE)
+        a0, a1 = (a - 0.24) % (2 * np.pi), (a + 0.24) % (2 * np.pi)
+        wedge = ((ang >= a0) & (ang <= a1)) if a0 <= a1 else ((ang >= a0) | (ang <= a1))
+        view[ring & wedge] = OLIVE
+    view[d2 <= (14.7 * K) ** 2] = OLIVE                                            # the hub: an olive ring, white inside, an olive dot
+    view[d2 <= (12.3 * K) ** 2] = white
+    view[d2 <= (1.5 * K + 0.5) ** 2] = OLIVE
     return pack
 
 
