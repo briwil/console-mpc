@@ -3,6 +3,10 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.17
+
+- **Start-up animation and welcome screen:** the animation is now only the green bent bars (no CONSOLE, bar or STARTING text), moved down to where the welcome screen has them, and the welcome screen's bars are exactly the animation's last frame (same thickness, curve and place).
+
 ## 0.0.16
 
 - **Welcome screen:** the button groups line up with the buttons, the two bent bars are the instruments page's (same colours, thickness and curve), BTN 1 / 2 / 3 are centred in their boxes, and WELCOME TO CONSOLE sits a little higher and further left.
