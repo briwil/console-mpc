@@ -342,17 +342,31 @@ def _intro_draw():
         return False
 
 
+def _write_frame():
+    global _seq, _last
+    data = canvas.px.tobytes()
+    if data != _last or not os.path.exists(PATH):
+        _last = data
+        _seq += 1
+        tmp = PATH + ".tmp"
+        with open(tmp, "wb") as f:
+            f.write(b"CNAT" + _seq.to_bytes(4, "little") + data)
+        os.replace(tmp, PATH)
+
+
+def show_intro_now():
+    """As soon as the screen code is loaded (before the engine and the pages start): the start-up screen replaces whatever the last run left."""
+    try:
+        if _intro_draw():
+            _write_frame()
+    except Exception:
+        pass
+
+
 def publish():
     global _seq, _last
     if _intro_draw():
-        data = canvas.px.tobytes()
-        if data != _last or not os.path.exists(PATH):
-            _last = data
-            _seq += 1
-            tmp = PATH + ".tmp"
-            with open(tmp, "wb") as f:
-                f.write(b"CNAT" + _seq.to_bytes(4, "little") + data)
-            os.replace(tmp, PATH)
+        _write_frame()
         return
     try:
         _pad_label()

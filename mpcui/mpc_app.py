@@ -20,6 +20,7 @@ try:
     pygame.init()
     import pages
     import native
+    native.show_intro_now()               # the start-up screen at once, not the last run's page until the engine is up
     native.install(pages)
 except Exception:
     import traceback
