@@ -3,6 +3,10 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.12
+
+- **Tape page:** each recording gets its own muted colour (a splice's right half turns a new one), so the sections tell apart at a glance. The zoomed track's strip uses the same colours.
+
 ## 0.0.11
 
 - **Song page:** SEQ opens the sequencer and SAMPLE page 1 of the instrument the white box is on. LOOP loops the song (off by default; shown in the title). In KNOB FX, pad 12 (orange) held + the wheel changes how many times a row PLAYS (the number grows while held), and only as many blue pads as the song has instruments light up. The shown row follows the playing row. An instrument a row doesn't name is silent in it.
