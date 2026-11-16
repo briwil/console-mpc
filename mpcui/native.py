@@ -415,7 +415,7 @@ def set_mode(ch):
         ch = "X" if _popT.mlfo.has_arp() else "Z"     # the PADS pop-up: KNOB FX on by itself, only pads 1-5 (a drum machine: 1-3) are its settings, pads 9-16 play (bridge/mapping.h)
     ch = ch + ("y" if _synth else "")        # y: the instrument is a synth (the bridge lays the note pads out in order)
     global _pad_n
-    if ch[0] in "QRNOS" and isinstance(_pad_n, int) and 0 <= _pad_n < 8:
+    if ch[0] in "QRNOST" and isinstance(_pad_n, int) and 0 <= _pad_n < 8:
         ch += "n%d" % _pad_n                 # n<k>: only k pads are knobs in KNOB FX (the page has k settings); the others stay dark
     _pad_n = None
     if ch == _mode:

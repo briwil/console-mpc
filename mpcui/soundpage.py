@@ -284,6 +284,7 @@ def draw_mixer(T, nat):
     e = T.engine
     now = nat.time.monotonic()
     cur = [(round(float(e.inst_levels[i]), 3), e.inst_pans[i], i in e.slot_mutes) for i in range(8)]
+    nat._pad_n = max([i + 1 for i in range(8) if e.slots[i]] or [0])      # (KNOB FX: a pad for each instrument loaded, up to the last one)
     prev = MIX["prev"]
     if prev is not None:
         for i in range(8):

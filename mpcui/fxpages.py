@@ -466,7 +466,8 @@ def draw_punch(T, nat):
     trip = pu.trip()
     ca = pu.chance_all(ln)
     chance = ("CHANCE", str(sequencer.CHANCES[ca]) if ca is not None else ("MIXED" if ln.steps else "-"))
-    pairs = [("LENGTH", str(ln.length)), ("RATE", str(pu.rate_name())), chance] + [("", "")] * 4 + [("SCALE", "X%d" % punch.SCALES[st.pattern.scale])]
+    pairs = [("LENGTH", str(ln.length)), ("RATE", str(pu.rate_name())), chance, ("SCALE", "X%d" % punch.SCALES[st.pattern.scale])]
+    nat._pad_n = 4                                                                # (KNOB FX: four settings, four pads)
     if pu.held is not None and pu.held in ln.steps:
         L = ln.lens.get(pu.held, 1)
         pairs[0] = ("CHANCE", str(sequencer.CHANCES[ln.steps[pu.held]]))

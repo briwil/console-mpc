@@ -10,7 +10,7 @@ one lane per effect (see punch.py).
                                 a later step: it lasts until there (again: back to one step). Hold one + tap
                                 pads: those effects' steps there on / off. Delete + step: off
   knob 1, 2 (nothing held)      the lane's LENGTH and RATE (as the drum lanes; TRIPLETS too)
-  knob 8                        TIME SCALE: every lane's steps that many times longer (long sweeps)
+  knob 4                        TIME SCALE: every lane's steps that many times longer (long sweeps)
   Shift + Delete, twice         every lane of the punch pattern cleared
   < > (or the wheel)            steps 17-32...
 """
@@ -25,7 +25,7 @@ PADS = punch.LANES                      # pads 0-15: the effects
 # each effect's pad colour, by group: time (repeats orange, the others yellow), filters, crush / gate, pan / echo, kill
 COLOUR = [3, 3, 3, 3, 3, 8, 8, 8, 11, 11, 11, 15, 15, 22, 22, 127]
 CONFIRM_SECONDS = 4.0
-SCALE_KNOB = 8
+SCALE_KNOB = 4
 
 
 class Punch:
