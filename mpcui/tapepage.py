@@ -142,21 +142,27 @@ def draw(T, nat):
 
 
 def _wave(c, T, lv, a, b, mid, ppb, top, rows_n, ink):
-    """A small waveform of the recorded audio in x a..b: one column a pixel, its height the loudest level there (a thin line through the middle for silence)."""
+    """A waveform of the recorded audio in x a..b: one column a pixel, its height the loudest level there (a thin line through the middle for
+    silence). Done on whole arrays: a Python loop per column made the tape page crawl on the MPC."""
     from tape import RES
-    cy = top + rows_n // 2
+    if b <= a:
+        return
     span = max(1, int(RES / ppb))
     xs = np.arange(a, b)
-    idx = ((xs - mid) / ppb + T.tape.pos) * RES
+    idx = (((xs - mid) / ppb + T.tape.pos) * RES).astype(np.int64)
     n = len(lv)
-    px = c.px
+    if span > 1:
+        win = np.clip(idx[:, None] + np.arange(span)[None, :], 0, n - 1)
+        v = lv[win].max(axis=1)
+    else:
+        v = lv[np.clip(idx, 0, n - 1)]
+    v = np.where((idx >= 0) & (idx < n), v, 0.0)
+    shaped = np.minimum(1.0, np.sqrt(v)) if getattr(T.tape, "engine", None) else v
     half = max(1, (rows_n - 4) // 2)
-    for x, i in zip(xs.tolist(), idx.astype(int).tolist()):
-        v = 0.0
-        if 0 <= i < n:
-            v = float(lv[i:i + span].max()) if span > 1 else float(lv[i])
-        h = max(1, int(round(T.tape.shape(v) * half))) if v > 0.0003 else 0
-        px[cy - h:cy + h + 1, x] = ink
+    h = np.where(v > 0.0003, np.maximum(1, np.rint(shaped * half)), 0).astype(np.int64)
+    cy = top + rows_n // 2
+    ys = np.arange(top, top + rows_n)[:, None]
+    c.px[top:top + rows_n, a:b][np.abs(ys - cy) <= h[None, :]] = ink
 
 
 def _ruler(c, nat, e, t, x0, x1, mid, ppb, fpb, y, loop):
