@@ -427,6 +427,32 @@ def pads_popup_toggle(T):
         T.pads_pop = 1
 
 
+def _lp_fire(board, name):
+    T = board.T
+    if name == "INST_MENU":
+        if not T.inst_page:
+            board.keys.put("INST_HOME")
+        T.want_inst_menu = time.monotonic() + 1.0
+    else:
+        board.keys.put(name)
+
+
+def _lp_tick(board):
+    """Every frame: a B button held 0.6 s fires its menu; the CHANGE / REMOVE request waits for the instruments page."""
+    T, now = board.T, time.monotonic()
+    for num, ent in list(T.__dict__.get("bpress", {}).items()):
+        if not ent[1] and now - ent[0] >= 0.6:
+            ent[1] = True
+            _lp_fire(board, {43: "SETTINGS", 41: "FILE", 40: "INST_MENU"}[num])
+    w = T.__dict__.get("want_inst_menu", 0)
+    if w:
+        if T.inst_page and not T.fx_page and T.instp.mode is None:
+            T.want_inst_menu = 0
+            T.instp.shift_push()
+        elif now > w:
+            T.want_inst_menu = 0
+
+
 def install(MoveBoard, pad_velocity=None):
     orig_cc, orig_pad, orig_note = MoveBoard.cc, MoveBoard.pad, MoveBoard.note
 
@@ -438,6 +464,23 @@ def install(MoveBoard, pad_velocity=None):
                 native.intro_dismiss()
             except Exception:                                                   # noqa: BLE001
                 pass
+        if num in (43, 41, 40):                                                 # B1 / B2 / B3: Shift or a long press = SETTINGS / PROJECT / CHANGE-REMOVE
+            lp = {43: "SETTINGS", 41: "FILE", 40: "INST_MENU"}[num]
+            bp = T.__dict__.setdefault("bpress", {})
+            if T.__dict__.get("lp_tick") is None:
+                T.lp_tick = lambda: _lp_tick(self)
+            if val and self.shift:
+                bp.pop(num, None)
+                _lp_fire(self, lp)
+                return
+            if val:
+                bp[num] = [time.monotonic(), False]
+                return
+            ent = bp.pop(num, None)
+            if ent is not None and not ent[1]:
+                orig_cc(self, num, 127)                                         # (a short press: the button's own action, now)
+                orig_cc(self, num, 0)
+            return
         if num == 101:                                                          # the song page: SEQ = the instrument's sequencer (bridge/mapping.h)
             if val:
                 self.keys.put("SEQ_PAGE")

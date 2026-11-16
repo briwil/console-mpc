@@ -1318,6 +1318,9 @@ class Transport:
 
     def tick(self, seconds):
         t, e = self.tape, self.engine
+        lp = getattr(self, "lp_tick", None)
+        if lp:
+            lp()
         if self.inst_page:
             self.instp.tick()
         if e:
