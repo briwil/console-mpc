@@ -35,8 +35,8 @@ def draw_frame(c):
     c.rect(123, 61, 69, 1, GREEN1)
     c.text_px(255, 19, "TAPE", GREEN5, 8)
     c.rect(232, 21, 69, 1, GREEN5)
-    c.text_px(71, 140, "WELCOME TO", FG, 16)
-    c.text_px(85, 165, "CONSOLE", GREEN5, 32)
+    c.text_px(67, 136, "WELCOME TO", FG, 16)
+    c.text_px(81, 161, "CONSOLE", GREEN5, 32)
     # the two bent bars: the instruments page's (soundpage.bands: same colours, thickness and curve), at this page's place
     for key, y, vx, r, col in (("outer", 91.5, 302.5, 59.5, colour.GREENS[3]), ("inner", 104.5, 289.5, 46.4, colour.GREENS[2])):
         m = _BARS.get(key)
