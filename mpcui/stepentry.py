@@ -68,6 +68,69 @@ def active(T):
         return False
 
 
+def in_synth_seq(T):
+    """A synth's sequencer page (steps selected or not, no menu or pop-up on top): the wheel's white box and push are in use."""
+    try:
+        mn = getattr(T, "_mpc_menu", None)
+        if mn is not None and (mn.open or mn.kits.open):
+            return False
+        if getattr(T, "arp_pop", 0) or getattr(T, "pads_pop", 0):
+            return False
+        if not T.seq_page or T.fx_page or T.punch.active() or T.auto.active() or T.sbrowse.active:
+            return False
+        return bool(T.engine and T.msyn.active())
+    except Exception:
+        return False
+
+
+def synth_move(T, way):
+    """The synth sequencer's wheel: the white box along the steps (the first turn only brings it up); the 16 steps shown follow it."""
+    import sequencer
+    ms = T.msyn
+    length = ms.length()
+    if not getattr(ms, "cur_on", False):
+        ms.cur_on = True
+        ms.cur = min(_cursor(ms), max(0, length - 1))
+        ms.page = ms.cur // 16
+        return
+    d = 1 if way > 0 else -1
+    cur = _cursor(ms)
+    nxt = cur + d
+    while 0 <= nxt < length and sequencer.dark(nxt, sequencer.TRIPLETS):
+        nxt += d
+    if 0 <= nxt < length:
+        cur = nxt
+    ms.cur = cur
+    ms.page = cur // 16
+
+
+def synth_click(T):
+    """The wheel was pushed on a synth sequencer: an empty step gets a note; a step with notes joins the selected steps (pushed again: leaves)."""
+    import sequencer
+    ms = T.msyn
+    if not getattr(ms, "cur_on", False):
+        return
+    i = _cursor(ms)
+    if i >= ms.length():
+        T.say("STEP %d IS PAST THE END (LENGTH %d: KNOB 1)" % (i + 1, ms.length()), 2)
+        return
+    if sequencer.dark(i, sequencer.TRIPLETS):
+        return
+    if i in ms.selected:
+        ms.selected.remove(i)
+        ms.sel = None
+        return
+    here = ms.notes_at(i)
+    on = (ms.lane in here) if (ms.lane is not None and ms.kind) else bool(here)
+    if not on:
+        ms._tap(i)                                              # an empty step: the notes you're holding (or the last / first one) go down
+        return
+    if not ms.selected:
+        ms.knob_page = getattr(T, "drum_tab", 0)
+    ms.selected = list(ms.selected) + [i]
+    ms.sel = None
+
+
 def on_tape(T):
     """The 8-track page (not zoomed, no menu on top)."""
     try:
@@ -606,6 +669,9 @@ def install(MoveBoard, pad_velocity=None):
         if num == PUSH and val and in_seq(T):
             click(T, self.shift)
             return
+        if num == PUSH and val and in_synth_seq(T):
+            synth_click(T)
+            return
         if num == BACK and val and not self.shift and in_seq(T) and T.mseq.selected:
             T.mseq.selected, T.mseq.sel = [], None               # BACK: done with the selected steps
             return
@@ -613,6 +679,11 @@ def install(MoveBoard, pad_velocity=None):
             step = val - 128 if val > 63 else val
             if step:
                 move(T, step)                                    # (the box keeps moving; K1 is the amount)
+            return
+        if num == WHEEL and val and not self.shift and in_synth_seq(T) and (T.msyn.selected or not T.engine.playing):
+            step = val - 128 if val > 63 else val
+            if step:
+                synth_move(T, step)                              # (steps selected: the box keeps moving too)
             return
         if num == WHEEL and val and not self.shift and active(self.T) and not self.T.engine.playing:
             step = val - 128 if val > 63 else val

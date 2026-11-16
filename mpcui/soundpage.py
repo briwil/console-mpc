@@ -580,6 +580,10 @@ def draw_synth_seq(T, nat):
     sel = set(ms.selected)
     at = ms.playing_step()
     blink = int(now * 3) % 2 == 0
+    cur = getattr(ms, "cur", None)
+    if now - SEQ.get("seen_synth", 0) > 0.5:
+        ms.cur_on = False                                       # back on this page: no box until the wheel is turned
+    SEQ["seen_synth"] = now
     msg = T.message if (T.message and now < T.message_until) else None
     per_note = ms.lane is not None and ms.kind
     if selected:
@@ -617,7 +621,7 @@ def draw_synth_seq(T, nat):
                 c.rect(x, y + 40 - h, 17, h, WHITE if is_sel else colour.GREENS[5])
             if is_sel and blink:
                 c.rect(x, y, 17, 40, WHITE)
-            if i in ms.down:
+            if i in ms.down or (cur is not None and getattr(ms, "cur_on", False) and i == cur):
                 c.frame(x - 1, y - 1, 19, 42, WHITE)
             if at is not None and i == at:
                 c.rect(x, y + 42, 17, 3, WHITE)
