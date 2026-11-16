@@ -10,8 +10,8 @@ GREEN0, GREEN1, GREEN2, GREEN3, GREEN4, GREEN5, GREEN6 = colour.GREENS[:7]
 def draw_frame(c):
     c.clear(BG)
     c.rect(17, -62, 69, 74, GREEN5)
-    c.rect(121, -62, 69, 74, GREEN3)
-    c.rect(228, -62, 69, 74, GREEN2)
+    c.rect(119, -62, 69, 74, GREEN3)
+    c.rect(224, -62, 69, 74, GREEN2)
     c.text_px(23, 19, "INSTRUMENT", GREEN5, 8)
     c.text_px(22, 26, "PARAMETERS", GREEN5, 8)
     c.text_px(25, 36, "SEQUENCER", GREEN4, 8)
@@ -23,22 +23,22 @@ def draw_frame(c):
     c.rect(17, 58, 69, 1, GREEN2)
     c.text_px(37, 66, "SONG", GREEN2, 8)
     c.rect(17, 68, 69, 1, GREEN1)
-    c.text_px(143, 19, "MIXER", GREEN5, 8)
-    c.text_px(138, 29, "REVERB", GREEN4, 8)
-    c.rect(121, 21, 69, 1, GREEN5)
-    c.rect(121, 31, 69, 1, GREEN4)
-    c.text_px(142, 39, "DELAY", GREEN3, 8)
-    c.rect(121, 41, 69, 1, GREEN3)
-    c.text_px(121, 49, "SONG INSERT 1", GREEN2, 8)
-    c.rect(121, 51, 69, 1, GREEN2)
-    c.text_px(120, 59, "SONG INSERT 2", GREEN2, 8)
-    c.rect(121, 61, 69, 1, GREEN1)
-    c.text_px(251, 19, "TAPE", GREEN5, 8)
-    c.rect(228, 21, 69, 1, GREEN5)
+    c.text_px(141, 19, "MIXER", GREEN5, 8)
+    c.text_px(136, 29, "REVERB", GREEN4, 8)
+    c.rect(119, 21, 69, 1, GREEN5)
+    c.rect(119, 31, 69, 1, GREEN4)
+    c.text_px(140, 39, "DELAY", GREEN3, 8)
+    c.rect(119, 41, 69, 1, GREEN3)
+    c.text_px(119, 49, "SONG INSERT 1", GREEN2, 8)
+    c.rect(119, 51, 69, 1, GREEN2)
+    c.text_px(118, 59, "SONG INSERT 2", GREEN2, 8)
+    c.rect(119, 61, 69, 1, GREEN1)
+    c.text_px(247, 19, "TAPE", GREEN5, 8)
+    c.rect(224, 21, 69, 1, GREEN5)
     c.text_px(71, 140, "WELCOME TO", FG, 16)
     c.text_px(85, 165, "CONSOLE", GREEN5, 32)
     # the two bent bars: the instruments page's (soundpage.bands: same colours, thickness and curve), at this page's place
-    for key, y, vx, r, col in (("outer", 107.5, 302.5, 59.5, colour.GREENS[3]), ("inner", 120.5, 289.5, 46.4, colour.GREENS[2])):
+    for key, y, vx, r, col in (("outer", 91.5, 302.5, 59.5, colour.GREENS[3]), ("inner", 104.5, 289.5, 46.4, colour.GREENS[2])):
         m = _BARS.get(key)
         if m is None:
             import numpy as np
@@ -47,9 +47,9 @@ def draw_frame(c):
             soundpage._band_stroke(m, y, vx - r, r, 10.5)
             _BARS[key] = m
         c.px[m] = col
-    c.text_px(32, 8, "BTN 1", BG, 8)
-    c.text_px(148, 8, "BTN 2", BG, 8)
-    c.text_px(260, 8, "BTN 3", BG, 8)
+    c.text_px(38, 8, "BTN 1", BG, 8)
+    c.text_px(142, 8, "BTN 2", BG, 8)
+    c.text_px(244, 8, "BTN 3", BG, 8)
 
 
 def frame_at(_t):
