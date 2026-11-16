@@ -20,6 +20,21 @@ BASE = 236                                                       # baseline of t
 RULER_Y, RULER_H = 1, 10
 
 
+def region_colour(n, r, bright=False):
+    """A recording's colour: a muted, random-looking hue from where it starts on its track, so a splice (the left half keeps its start,
+    the right half starts somewhere new) turns the right half a new colour, and two tracks recorded together differ."""
+    import colorsys
+    k = (int(r[0]) * 2654435761 + (n + 1) * 40503 * 977) & 0xFFFFFFFF
+    k = ((k ^ (k >> 15)) * 2246822519) & 0xFFFFFFFF
+    h = (k & 0xFFFF) / 65536.0
+    sat = 0.28 + 0.14 * (((k >> 16) & 0xFF) / 255.0)            # muted, like the greens
+    val = 0.58 + 0.14 * (((k >> 24) & 0xFF) / 255.0)
+    if bright:
+        sat, val = sat * 0.85, min(1.0, val + 0.16)
+    rr, gg, bb = colorsys.hsv_to_rgb(h, sat, val)
+    return int(rr * 255), int(gg * 255), int(bb * 255)
+
+
 def top_row(T):
     """The first track on screen: it follows the selected track when that changes, Shift + the wheel moves it."""
     sel = T.armed - 1
@@ -82,7 +97,6 @@ def draw(T, nat):
             c.rect(18, by + 4, 3, BOX_H - 8, nat.RED)
         ch = e.chans(n)[0]
         boxes = e.regions[ch]
-        ink = G[1] if muted else (G[6] if is_sel else OUTLINE[n])     # recorded audio: a plain bar in the track's green
         top = by + 1
         rows_n = BOX_H - 2                                       # the rows inside the outline
         for i, r in enumerate(boxes):
@@ -96,6 +110,7 @@ def draw(T, nat):
             b = min(x1, xb - (1 if spliced_after else 0))
             if b <= a:
                 continue
+            ink = G[1] if muted else region_colour(n, r, is_sel)           # each recording its own muted colour
             _wave(c, T, e.levels[ch], a, b, mid, ppb, top, rows_n, ink)
             if spliced_after and x0 <= xb < x1:
                 c.rect(xb, top - 1, 1, rows_n + 2, nat.WHITE)
@@ -329,7 +344,7 @@ def draw_focus(T, nat):
             continue
         a, b = max(sx0 + 1, xa), min(sx1 - 1, xb)
         if b > a:
-            c.rect(a, sy + 5, b - a, 10, bar_col)
+            c.rect(a, sy + 5, b - a, 10, G[1] if muted else region_colour(n - 1, r, True))
     c.rect(mid, sy - 1, 1, 22, nat.WHITE)                           # the playhead
 
     # one compact line of the box's settings (what knobs 4-6 edit)
