@@ -561,8 +561,7 @@ def install(MoveBoard, pad_velocity=None):
         if num == WHEEL and val and self.shift and on_tape(T):
             step = val - 128 if val > 63 else val
             if step:
-                import tapepage
-                tapepage.scroll(T, step)                        # Shift + wheel on the tape page: scroll through the 8 tracks
+                self.keys.put(("KNOB", 10, 1 if step > 0 else -1, False))   # Shift + wheel on the tape page: the grid (all 8 tracks show, nothing scrolls)
             return
         if num == PUSH and val and self.shift and on_tape(T):
             self.keys.put(("KNOB", 10, 1, False))               # Shift + push on the tape page: the next grid (1/4, 1/8 ...)
