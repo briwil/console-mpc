@@ -9,6 +9,7 @@ from soundpage import text_width
 
 G = colour.GREENS
 OUTLINE = [G[2], G[4], G[5], G[3], G[4], G[5], G[3], G[5]]       # each track's outline colour (from the design)
+BOX_LINE = (0x30, 0x34, 0x30)                                    # the outline of a track's box (a subtle dark grey; the selected one is white)
 SHOWN = 8                                                         # tracks on screen at once (Shift + the wheel scrolls through the 8)
 BOX_Y = [14 + 24 * i for i in range(8)]                                       # the top of each row's box
 BOX_H = 23
@@ -75,7 +76,7 @@ def draw(T, nat):
         by = BOX_Y[row]
         is_sel = n == sel
         muted = not e.audible(n)
-        c.frame(X_BOX, by, W_BOX, BOX_H, nat.WHITE if is_sel else OUTLINE[n])
+        c.frame(X_BOX, by, W_BOX, BOX_H, nat.WHITE if is_sel else BOX_LINE)
         c.text_px(6, by + BOX_H // 2 + 6, str(n + 1), G[2] if muted else nat.WHITE, 16, 0)
         if n in e.arm_extra:
             c.rect(18, by + 4, 3, BOX_H - 8, nat.RED)
