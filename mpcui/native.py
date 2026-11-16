@@ -410,6 +410,8 @@ def set_mode(ch):
     global _mode
     if ch in ("Q", "R", "N", "P", "S") and _arp_pop_up():
         ch = "U"                               # the ARP pop-up: KNOB FX on by itself, SEQ = the pads are its 16 steps, pads 9-16 play (bridge/mapping.h)
+    elif ch in ("Q", "R", "N", "P", "S") and _pads_pop_up():
+        ch = "X" if _popT.mlfo.has_arp() else "Z"     # the PADS pop-up: KNOB FX on by itself, only pads 1-5 (a drum machine: 1-3) are its settings, pads 9-16 play (bridge/mapping.h)
     ch = ch + ("y" if _synth else "")        # y: the instrument is a synth (the bridge lays the note pads out in order)
     if ch == _mode:
         return

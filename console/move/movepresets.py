@@ -39,7 +39,7 @@ class Presets:
         """Has this instrument a PRESETS page? (every synth)"""
         e = self.T.engine
         d = self.d()
-        return bool(d and e.is_synth(d.machine) and hasattr(d, "has_presets"))
+        return bool(d and e.is_synth(d.machine) and hasattr(d, "has_presets") and getattr(d, "sample_param_index", None) is None)
 
     def on_page(self):
         T = self.T

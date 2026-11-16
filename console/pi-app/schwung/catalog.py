@@ -222,6 +222,7 @@ MODULES = [
      "repo": 'athousanddetails/schwung-tablor', "commit": "release", "json": "module.json", "build": [],
      "asset": 'tablor-module.tar.gz'},
     {"id": 'mrsample', "title": 'MRSAMPLE', "kind": 'synth', "license": "see its repo",
+     "start": {"loop_mode": "off"},               # (loop off, however the module starts or a sample sets it)
      "sample_key": "sample_path",                 # (its one sample is chosen in the sample browser: push the wheel)
      "repo": 'charlesvestal/schwung-mrsample', "commit": "release", "json": "module.json", "build": [],
      "asset": 'mrsample-module.tar.gz'},

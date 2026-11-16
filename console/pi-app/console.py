@@ -649,7 +649,8 @@ class Transport:
         d = self.engine.drums
         self.drum_voice = min(self.drum_voice, d.voices - 1)
         pages = d.pages(self.drum_voice)
-        if getattr(self, "presets_page", False) and self.engine.is_synth(d.machine) and hasattr(d, "has_presets"):
+        if getattr(self, "presets_page", False) and self.engine.is_synth(d.machine) and hasattr(d, "has_presets") \
+                and getattr(d, "sample_param_index", None) is None:      # (a one-sample instrument has its sample page first, not presets)
             pages = [("PRESETS", [])] + list(pages)      # (the Move: a synth's first page is its presets)
         return pages
 

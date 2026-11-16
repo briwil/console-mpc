@@ -181,6 +181,8 @@ class SampleBrowser:
         else:
             self._cancel()
             self.drums.set_param(self.param, val)
+            if hasattr(self.drums, "start_values"):
+                self.drums.start_values()              # (MrSample: a new sample doesn't switch the loop on)
             self._unsolo()                             # (no sound as it goes back to the list)
             self._remember()
             if self.single:                            # a one-sample instrument: that was the choice, done
@@ -254,6 +256,8 @@ class SampleBrowser:
             if self.active and self.stage == "files":
                 self.drums.set_param(self.param, val)
                 if self.single:
+                    if hasattr(self.drums, "start_values"):
+                        self.drums.start_values()
                     self.drums.hear()                  # (a note: it plays chromatically)
                 else:
                     self.T.engine.hit(self.voice, 110)

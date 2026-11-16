@@ -356,6 +356,12 @@ class Module:
                 for k in range(0, len(idx), 8):
                     page = ("KIT" if name == "root" else label[:10]) if k == 0 else "%s %d" % (label[:8], k // 8 + 1)
                     self._kit_pages.append((page, idx[k:k + 8]))
+        si = getattr(self, "sample_param_index", None)
+        if si is not None and si in kit:                  # a one-sample instrument: its first page is the sample (push the wheel: the sample browser), then its start / loop
+            first = next((k for k, (n, _i) in enumerate(self._kit_pages) if n == "SAMPLE"), None)
+            idx = [si] + (self._kit_pages.pop(first)[1] if first is not None else [])
+            used.add(si)
+            self._kit_pages.insert(0, ("SAMPLE", idx[:8]))
         rest = [i for i in kit if i not in used]
         for k in range(0, len(rest), 8):
             self._kit_pages.append(("MORE" if self._kit_pages or k else "KIT", rest[k:k + 8]))
@@ -363,6 +369,18 @@ class Module:
         self.values = [self._position(i, s.get(p["key"])) for i, p in enumerate(self.params)]
         self.init_values = list(self.values)
         self._locked = [set() for _ in range(self.lanes)]
+        self.start_values()
+
+    def start_values(self):
+        """Settings the catalog says a module starts with whatever it does itself (MrSample: loop off), sent again after a sample is chosen."""
+        for key, val in (self.spec.get("start") or {}).items():
+            i = self.index.get(key)
+            if i is None or self.params[i]["kind"] != "menu" or val not in self.params[i]["raw"]:
+                continue
+            with self._lock:
+                self.values[i] = self.params[i]["raw"].index(val)
+                self.init_values[i] = self.values[i]
+                self._pending.append(("raw", key, val))
 
     def _position(self, i, text):
         """A setting's text (from the module) as a knob position."""
