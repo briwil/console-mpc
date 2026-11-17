@@ -262,27 +262,28 @@ def guitar(name="GUITAR"):
     p = Pic()
     p.rect(2, 2, 125, 61)
     p.heading(5, 3, name)
-    from PIL import ImageChops, ImageFilter
-    body = Image.new("L", (W, H), 0)                         # an electric guitar lying on its side: the body is two bouts with a waist
-    bd = ImageDraw.Draw(body)
-    bd.ellipse([8, 25, 38, 57], fill=255)
-    bd.ellipse([30, 29, 54, 53], fill=255)
-    edge = ImageChops.subtract(body, body.filter(ImageFilter.MinFilter(3)))
-    p.im.paste(1, mask=edge)
-    p.rect(20, 35, 23, 47, fill=True)                        # bridge
-    p.rect(30, 36, 32, 46)                                   # pickups
-    p.rect(38, 36, 40, 46)
-    p.knob(14, 48, 2, .3)
-    p.knob(22, 52, 2, .7)
-    p.rect(50, 38, 104, 44)                                  # neck, frets closer together toward the body
-    for x in (58, 65, 71, 77, 82, 87, 92, 96, 100):
-        p.line(x, 38, x, 44)
-    p.d.polygon([(104, 36), (120, 33), (122, 39), (120, 47), (104, 46)], outline=1, fill=0)   # headstock
-    for i in range(3):                                       # tuners
-        p.px(108 + i * 5, 34 - (i > 0))
-        p.px(108 + i * 5, 48 - (i > 1))
-    for y in (39, 41, 43):                                   # strings, bridge to nut
-        p.line(23, y, 104, y)
+    cy = 40                                                  # close up: a 1/4" plug about to go into an amp's input
+    pts = [(3, cy + 14), (8, cy + 13), (12, cy + 8), (15, cy + 2), (18, cy)]       # the cable, coming up from the left
+    for a_, b_ in zip(pts, pts[1:]):
+        p.line(a_[0], a_[1] - 1, b_[0], b_[1] - 1)
+        p.line(a_[0], a_[1] + 1, b_[0], b_[1] + 1)
+    p.d.polygon([(18, cy - 3), (24, cy - 6), (24, cy + 6), (18, cy + 3)], outline=1, fill=0)      # strain relief
+    p.rect(24, cy - 7, 46, cy + 7)                           # the barrel, with its grip lines
+    for x in (28, 32, 36, 40):
+        p.line(x, cy - 4, x, cy + 4)
+    p.rect(46, cy - 4, 50, cy + 4)                           # collar
+    p.rect(50, cy - 3, 66, cy + 3)                           # sleeve
+    p.rect(66, cy - 3, 68, cy + 3, fill=True)                # the insulating ring
+    p.d.polygon([(68, cy - 3), (72, cy - 3), (74, cy - 1), (76, cy - 3), (79, cy - 2), (81, cy), (79, cy + 2), (76, cy + 3),
+                 (74, cy + 1), (72, cy + 3), (68, cy + 3)], outline=1, fill=0)                     # the tip, with its notch
+    for x in (84, 87):                                       # (on its way in)
+        p.px(x, cy)
+    p.rect(91, 14, 122, 58)                                  # the amp's panel
+    p.circle(106, cy, 9)                                     # the jack: nut, washer, hole
+    p.circle(106, cy, 6)
+    p.circle(106, cy, 3, fill=True)
+    p.text(94, 17, "INPUT")
+    p.px(94, 55); p.px(119, 55) # panel screws
     return p
 
 
