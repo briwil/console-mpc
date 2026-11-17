@@ -1,0 +1,31 @@
+name: Publish plug-ins
+
+# This branch holds our own copy of the VST2 plug-ins Console hosts (the "plugins" folder). Every push here packs
+# them as console-plugins.tgz in the "plugins-latest" release, which the SD card zip and tools/update-mpc.sh use.
+
+on:
+  push:
+    branches: [plugins]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack
+        run: |
+          tar czf console-plugins.tgz plugins
+          sha256sum console-plugins.tgz | cut -c1-16 > PLUGINS_VERSION
+          ls -l console-plugins.tgz; cat PLUGINS_VERSION
+      - name: Publish plugins-latest
+        run: |
+          gh release delete plugins-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create plugins-latest console-plugins.tgz PLUGINS_VERSION --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "Console for the MPC Sample: the plug-ins (our own copy)" \
+            --notes "The VST2 plug-ins Console hosts, kept here so the SD card zip and the update never depend on another site. Authors and licences: console/THIRD-PARTY-NOTICES.md on main."
