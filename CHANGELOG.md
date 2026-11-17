@@ -3,6 +3,10 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.20
+
+- **GUITAR** has its picture in the instrument picker: a 1/4 inch plug about to go into an amp's input.
+
 ## 0.0.19
 
 - **The plug-ins are included.** The VST2 instruments and effects Console hosts are now installed with it, from the SD card and by the update, with nothing to copy: MODEL-72, PROFIT-5, JN-106, STURM-TP, CLEMENTINE, OXZYGEN, the OP-1 Suite, STOMPBOX (and GUITAR), VHS VIBES and BORIS. Console keeps its own copy of them. (Before this, a fresh install from the SD card had none of them.) MONOMODULE is not included: it needs Elektron's firmware file.
