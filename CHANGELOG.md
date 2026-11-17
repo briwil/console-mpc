@@ -3,6 +3,11 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.19
+
+- **The plug-ins are included.** The VST2 instruments and effects Console hosts are now installed with it, from the SD card and by the update, with nothing to copy: MODEL-72, PROFIT-5, JN-106, STURM-TP, CLEMENTINE, OXZYGEN, the OP-1 Suite, STOMPBOX (and GUITAR), VHS VIBES and BORIS. Console keeps its own copy of them. (Before this, a fresh install from the SD card had none of them.) MONOMODULE is not included: it needs Elektron's firmware file.
+- **VITALEON:** the Vitaleon wavetable synth (Vital 1.0.6's engine) as an instrument, with 48 knobs over six pages and its own picture. Its factory sounds are not included: put its `Content` folder in `ConsoleData/plugins/vitaleon` to have them.
+
 ## 0.0.18
 
 - **KNOB FX:** a pad is only lit (and only works) when the page has a setting for it, on every page: sound pages, SENDS, LFO, INSERT, REVERB / DELAY, the sequencer knob pages, the mixer (a pad per loaded instrument) and PUNCH FX (four pads; TIME SCALE is now knob 4). The ARP pop-up leaves pad 8 off (ARP 2: only pads 1-2); the PADS pop-up starts KNOB FX by itself with only its own pads lit, and pads 9-16 play notes.
