@@ -355,7 +355,7 @@ class MoveSynth:
         if key == "vel":
             return str(nt.vel)
         if key == "chance":
-            return CHANCES[nt.chance]
+            return sequencer.chance_text(nt.chance, nt.comp)
         if key == "ratchet":
             return "x%d" % nt.ratchet
         if key == "nudge":
@@ -367,6 +367,11 @@ class MoveSynth:
 
     def chance_text(self, key):
         """Knob 3's line for the picked pad: the component's chance, or None if the pad has none."""
+        if key == "chance":                                  # a fraction (1:2...): its second chance, a percentage
+            nts = self._notes_of(self.selected[0])
+            if not nts or not sequencer.is_fraction(nts[0][1].chance):
+                return "PICK 1:2 ETC FIRST"
+            return CHANCES[nts[0][1].comp.get("chance_c", 0)]
         if key not in CKEYS:
             return None
         nts = self._notes_of(self.selected[0])
@@ -377,21 +382,28 @@ class MoveSynth:
     def set_chance(self, delta, shift):
         """Knob 3 while steps are selected and a component pad picked: how likely it is to happen."""
         key, label = self.pad_items()[self.sel]
-        if key not in CKEYS:
+        if key not in CKEYS and key != "chance":
             return
         one = knobgate.gate(("synchance", key), delta, shift)
         if not one:
             return
-        if not self.engaged(key):
+        if key == "chance":
+            nts = self._notes_of(self.selected[0])
+            if not nts or not sequencer.is_fraction(nts[0][1].chance):
+                popup.show(self.T, self.which(), "CHANCE", "PICK 1:2 ETC FIRST")
+                return
+        elif not self.engaged(key):
             popup.show(self.T, self.which(), label + " CHANCE", "SET KNOB 1 FIRST")
             return
         seq = self.seq
+        top = sequencer.N_PERCENT - 1 if key == "chance" else len(CHANCES) - 1
         with seq.lock:
             for i in self.selected:
                 for _n, nt in self._notes_of(i):
-                    on = nt.ratchet != 1 if key == "ratchet" else nt.nudge != 0 if key == "nudge" else key in nt.comp
+                    on = sequencer.is_fraction(nt.chance) if key == "chance" else \
+                        nt.ratchet != 1 if key == "ratchet" else nt.nudge != 0 if key == "nudge" else key in nt.comp
                     if on:
-                        v = max(0, min(len(CHANCES) - 1, nt.comp.get(key + "_c", 0) + one))
+                        v = max(0, min(top, nt.comp.get(key + "_c", 0) + one))
                         if v:
                             nt.comp[key + "_c"] = v
                         else:
@@ -420,6 +432,7 @@ class MoveSynth:
                             nt.vel = notes_mod.DEFAULT_VELOCITY
                         elif key == "chance":
                             nt.chance = 0
+                            nt.comp.pop("chance_c", None)
                         elif key == "ratchet":
                             nt.ratchet = 1
                             nt.comp.pop("ratchet_c", None)
@@ -521,7 +534,7 @@ class MoveSynth:
             if self.sel is None:
                 return self.lock_choice(n)
             if n == 2:
-                return self.pad_items()[self.sel][0] in CKEYS
+                return self.pad_items()[self.sel][0] in CKEYS + ("chance",)
             if n != 1:
                 return False
             key = self.pad_items()[self.sel][0]
@@ -548,6 +561,7 @@ class MoveSynth:
                         nt.vel = max(1, min(127, nt.vel + clicks))
                     elif key == "chance":
                         nt.chance = max(0, min(len(CHANCES) - 1, nt.chance + one))
+                        sequencer.tidy_chance(nt.chance, nt.comp)
                     elif key == "ratchet":
                         nt.ratchet = max(1, min(MAX_RATCHET, nt.ratchet + one))
                     elif key == "nudge":

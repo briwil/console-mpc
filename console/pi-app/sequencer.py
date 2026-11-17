@@ -82,6 +82,7 @@ def next_rate(rate, delta):
     return RATE_ORDER[max(0, min(len(RATE_ORDER) - 1, at + (1 if delta > 0 else -1)))]
 # chance: a percentage, or "A:B": plays on the A-th time round the lane out of every B
 CHANCES = ["%d%%" % p for p in range(100, -1, -10)] + ["1:2", "2:2", "1:3", "2:3", "3:3", "1:4", "2:4", "3:4", "4:4"]
+N_PERCENT = 11          # the first 11 of CHANCES are percentages (100% ... 0%)
 # songs saved before October 2026 stored chance as a place in this older list
 OLD_CHANCES = ["100%", "90%", "75%", "50%", "25%", "10%", "1:2", "2:2", "1:3", "2:3", "3:3", "1:4", "2:4", "3:4", "4:4"]
 
@@ -131,6 +132,8 @@ def cpass(comp, name, cycle, rng):
 
 def comp_ok(key, x):
     """Is this a saved component (or its chance, "pulse_c") with a place that exists?"""
+    if key == "chance_c":
+        return 0 <= x < N_PERCENT
     if key.endswith("_c") and key[:-2] in COMPONENTS or key == "ratchet_c":
         return 0 <= x < len(CHANCES)
     return key in COMPONENTS and 0 <= x < len(COMPONENTS[key])
@@ -205,13 +208,36 @@ def euclid(hits, length, rotate=0):
     return on[-rotate:] + on[:-rotate] if rotate else on
 
 
-def chance_passes(chance, loop_count):
+def chance_passes(chance, loop_count, extra=0):
+    """extra: for a fraction ("1:2"), a place in CHANCES' percentages (comp["chance_c"]): it must come round
+    AND then pass this percentage too."""
     c = CHANCES[chance]
     if c.endswith("%"):
         p = int(c[:-1])
         return p >= 100 or random.random() * 100 < p
     a, b = (int(v) for v in c.split(":"))
-    return loop_count % b == a - 1
+    if loop_count % b != a - 1:
+        return False
+    if extra and 0 < extra < N_PERCENT:
+        return random.random() * 100 < int(CHANCES[extra][:-1])
+    return True
+
+
+def is_fraction(idx):
+    return 0 <= idx < len(CHANCES) and ":" in CHANCES[idx]
+
+
+def chance_text(idx, comp):
+    """The chance as shown: "1:2", or "1:2 + 70%" with its second chance."""
+    t = CHANCES[idx]
+    x = comp.get("chance_c", 0)
+    return "%s + %s" % (t, CHANCES[x]) if ":" in t and 0 < x < N_PERCENT else t
+
+
+def tidy_chance(idx, comp):
+    """A second chance only goes with a fraction: drop it when the chance is a percentage or off."""
+    if not is_fraction(idx):
+        comp.pop("chance_c", None)
 
 
 class Sequencer:
@@ -336,6 +362,7 @@ class Sequencer:
                 s.vel = max(1, min(127, s.vel + delta))
             elif what == "chance":
                 s.chance = max(0, min(len(CHANCES) - 1, s.chance + (1 if delta > 0 else -1)))
+                tidy_chance(s.chance, s.comp)
             elif what == "ratchet":
                 s.ratchet = max(1, min(MAX_RATCHET, s.ratchet + (1 if delta > 0 else -1)))
             s.on = True
@@ -552,7 +579,7 @@ class Sequencer:
                     if a <= t < b:
                         key = (li, k)
                         if key not in self._decided:
-                            self._decided[key] = chance_passes(s.chance, cycle)
+                            self._decided[key] = chance_passes(s.chance, cycle, s.comp.get("chance_c", 0))
                         if self._decided[key]:
                             out.append((int(t - block_start), li, vel, locks))
         out.sort(key=lambda e: e[0])

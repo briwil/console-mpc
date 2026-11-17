@@ -178,7 +178,7 @@ class MoveSeq:
         if key == "vel":
             return "RND" if st.vel == 0 else str(st.vel)
         if key == "chance":
-            return sequencer.CHANCES[st.chance]
+            return sequencer.chance_text(st.chance, st.comp)
         if key == "ratchet":
             return "RND" if st.ratchet == 0 else "x%d" % st.ratchet
         if isinstance(key, str):
@@ -187,31 +187,41 @@ class MoveSeq:
 
     def chance_text(self, key):
         """Knob 3's line for the picked pad: the component's chance, or None if the pad has none."""
+        st = self.held_step()
+        if key == "chance":                                  # a fraction (1:2...): its second chance, a percentage
+            if not sequencer.is_fraction(st.chance):
+                return "PICK 1:2 ETC FIRST"
+            return sequencer.CHANCES[st.comp.get("chance_c", 0)]
         if key not in CKEYS:
             return None
-        st = self.held_step()
         return sequencer.CHANCES[st.comp.get(key + "_c", 0)] if self.engaged(key) else "SET KNOB 1 1ST"
 
     def set_chance(self, delta, shift):
         """Knob 3 while a step is held and a component pad picked: how likely it is to happen on those steps."""
         key, label = self.pad_items()[self.sel]
-        if key not in CKEYS:
+        if key not in CKEYS and key != "chance":
             return
         one = knobgate.gate(("compchance", key), delta, shift)
         if not one:
             return
         sp, seq, e = self.sp, self.seq, self.T.engine
         lane = sp.lane
-        if not self.engaged(key):
+        if key == "chance":
+            if not sequencer.is_fraction(self.held_step().chance):
+                popup.show(self.T, self.which(), "CHANCE", "PICK 1:2 ETC FIRST")
+                return
+        elif not self.engaged(key):
             popup.show(self.T, self.which(), label + " CHANCE", "SET KNOB 1 FIRST")
             return
         sp._edit(("knob2", self.sel, self.held))
+        top = sequencer.N_PERCENT - 1 if key == "chance" else len(sequencer.CHANCES) - 1
         with seq.lock:
             for j in self.selected:
                 if j < seq.lane(lane).length:
                     st = seq.step(lane, j)
-                    if (st.ratchet != 1) if key == "ratchet" else (key in st.comp):
-                        v = max(0, min(len(sequencer.CHANCES) - 1, st.comp.get(key + "_c", 0) + one))
+                    if (sequencer.is_fraction(st.chance)) if key == "chance" else \
+                            (st.ratchet != 1) if key == "ratchet" else (key in st.comp):
+                        v = max(0, min(top, st.comp.get(key + "_c", 0) + one))
                         if v:
                             st.comp[key + "_c"] = v
                         else:
@@ -239,7 +249,7 @@ class MoveSeq:
             popup.show(self.T, self.which(), label, "OFF" if was_set else "")
         else:
             self.sel = p
-            popup.show(self.T, self.which(), label, self.item_value(key), "KNOB 1" + (", 2: CHANCE" if key in CKEYS else ""))
+            popup.show(self.T, self.which(), label, self.item_value(key), "KNOB 1" + (", 2: CHANCE" if key in CKEYS or (key == "chance" and sequencer.is_fraction(self.held_step().chance)) else ""))
         e.seq_changed()
 
     def which(self):
@@ -256,6 +266,7 @@ class MoveSeq:
                 st.vel = sequencer.DEFAULT_VELOCITY
             elif key == "chance":
                 st.chance = 0
+                st.comp.pop("chance_c", None)
             elif key == "ratchet":
                 st.ratchet = 1
                 st.comp.pop("ratchet_c", None)
@@ -299,6 +310,7 @@ class MoveSeq:
                 st.vel = max(0, min(127, (st.vel or 0) + clicks))
             elif key == "chance":
                 st.chance = max(0, min(len(sequencer.CHANCES) - 1, st.chance + one))
+                sequencer.tidy_chance(st.chance, st.comp)
             elif key == "ratchet":
                 at = RATCHETS.index(st.ratchet) if st.ratchet in RATCHETS else 0
                 st.ratchet = RATCHETS[max(0, min(len(RATCHETS) - 1, at + one))]

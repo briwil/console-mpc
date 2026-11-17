@@ -251,6 +251,7 @@ class NoteSequencer:
                 n.vel = max(1, min(127, n.vel + delta))
             elif what == "chance":
                 n.chance = max(0, min(len(CHANCES) - 1, n.chance + (1 if delta > 0 else -1)))
+                sequencer.tidy_chance(n.chance, n.comp)
             elif what == "ratchet":
                 n.ratchet = max(1, min(MAX_RATCHET, n.ratchet + (1 if delta > 0 else -1)))
             return getattr(n, what)
@@ -449,7 +450,7 @@ class NoteSequencer:
                     if a <= t < b:
                         key = (pitch, k)
                         if key not in self._decided:
-                            self._decided[key] = chance_passes(n.chance, loop)
+                            self._decided[key] = chance_passes(n.chance, loop, n.comp.get("chance_c", 0))
                         if self._decided[key]:
                             # a ratchet's notes share the note's length; the last one holds to its end
                             gate = each * 0.9 if r < nh - 1 else n.length * step_frames - r * each - 1
