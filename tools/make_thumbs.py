@@ -235,13 +235,37 @@ def boris(name="BORIS"):
     return p
 
 
+def vitaleon(name="VITALEON"):
+    p = Pic()
+    p.rect(2, 2, 125, 61)
+    p.heading(5, 3, name)
+    n = 7                                                    # a wavetable seen from the side: each frame further back, the wave morphing saw -> sine
+    for k in range(n - 1, -1, -1):                           # (back to front: a nearer frame hides what is behind it)
+        t = k / (n - 1)
+        x0, base = 10 + k * 7, 43 - k * 4
+        pts = []
+        for i in range(57):
+            ph = i / 56.0
+            saw = 1.0 - 2.0 * ((ph * 2.0) % 1.0)
+            sine = math.sin(ph * 4.0 * math.pi)
+            v = (1 - t) * saw + t * sine
+            pts.append((x0 + i, base - round(v * 5)))
+        p.d.polygon(pts + [(pts[-1][0], base + 6), (pts[0][0], base + 6)], fill=0)      # (solid under the line, so frames behind don't show through)
+        for a, b in zip(pts, pts[1:]):
+            p.line(a[0], a[1], b[0], b[1])
+    for i in range(4):                                       # the four macros
+        p.knob(22 + i * 28, 54, 4, (0.2, 0.75, 0.45, 0.9)[i])
+    return p
+
+
+
 OP1_INSTRUMENTS = {"op1-cluster": "CLUSTER", "op1-dbox": "DBOX", "op1-digital": "DIGITAL", "op1-dna": "DNA", "op1-drwave": "DR WAVE",
                    "op1-dsynth": "D SYNTH", "op1-fm": "FM", "op1-phase": "PHASE", "op1-pulse": "PULSE", "op1-string": "STRING",
                    "op1-voltage": "VOLTAGE"}
 OP1_FX = {"op1-cwo": "CWO", "op1-delay": "DELAY", "op1-grid": "GRID", "op1-nitro": "NITRO", "op1-phone": "PHONE", "op1-punch": "PUNCH",
           "op1-spring": "SPRING"}
 OTHERS = {"instimg": {"profit5": profit5, "jn106": jn106, "sturm": sturm, "monomodule": monomodule, "clementine": clementine,
-                      "oxzygen": oxzygen},
+                      "oxzygen": oxzygen, "vitaleon": vitaleon},
           "fximg": {"vhs-vibes": vhs, "boris": boris, "monomodule-fx": lambda: monomodule("MONOMODULE FX")}}
 
 
