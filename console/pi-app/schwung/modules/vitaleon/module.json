@@ -1,0 +1,7 @@
+{
+  "id": "vitaleon",
+  "name": "Vitaleon",
+  "description": "A wavetable synth: Vital 1.0.6's engine (Vitaleon VST plug-in by Andersson Audio, GPL-3.0)",
+  "dsp": "dsp.so",
+  "component_type": "sound_generator"
+}

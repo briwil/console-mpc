@@ -7,6 +7,8 @@
  *
  * plugin.txt:   file stompbox.so            the VST2 plugin: looked for in $CONSOLE_PLUGINS, then in the module folder
  *               knob 74 AMP 1               a knob on the insert page: the VST parameter's number, then its label
+ *               folder vitaleon             the plugin's own folder (its Content: sounds, wavetables) is $CONSOLE_PLUGINS/vitaleon
+ *                                           (told to plugins made with Akai's plugin SDK through MPC_PLUGIN_FOLDER)
  *               (up to 7 knobs; the first knob of the page is always the plugin's PRESET list)
  *
  * Built like the bridge (no headers, no libraries): see bridge/build.sh. The VST2 interface used here is the plain,
@@ -23,6 +25,7 @@ extern int dlclose(void *);
 extern void *calloc(size_t, size_t);
 extern void free(void *);
 extern char *getenv(const char *);
+extern int setenv(const char *, const char *, int);
 extern int open(const char *, int, ...);
 extern long read(int, void *, unsigned long);
 extern int close(int);
@@ -167,7 +170,7 @@ static void *open_private(const char *path)
 static void *create(const char *dir, const char *cfg)
 {
     (void)cfg;
-    char path[512], text[2048], file[128] = "";
+    char path[512], text[2048], file[128] = "", folder[128] = "";
     snprintf(path, sizeof path, "%s/plugin.txt", dir);
     if (readfile(path, text, sizeof text) < 0) return NULL;
     inst_t *s = calloc(1, sizeof *s);
@@ -178,6 +181,7 @@ static void *create(const char *dir, const char *cfg)
         char save = *eol;
         *eol = 0;
         if (!strncmp(p, "file ", 5)) snprintf(file, sizeof file, "%s", p + 5);
+        else if (!strncmp(p, "folder ", 7)) snprintf(folder, sizeof folder, "%s", p + 7);
         else if (!strncmp(p, "preset ", 7) && s->nfp < 32) {
             char *bar = strchr(p + 7, '|'), *q = bar ? bar + 1 : NULL;
             if (bar) {
@@ -210,6 +214,10 @@ static void *create(const char *dir, const char *cfg)
     snprintf(missing, sizeof missing, "%s", file);
     const char *pd = getenv("CONSOLE_PLUGINS");
     s->dl = NULL;
+    if (folder[0] && pd && pd[0]) {                       /* (an Akai-SDK plugin finds its Content folder here) */
+        snprintf(path, sizeof path, "%s/%s", pd, folder);
+        setenv("MPC_PLUGIN_FOLDER", path, 1);
+    }
     if (pd && pd[0]) {
         snprintf(path, sizeof path, "%s/%s", pd, file);
         s->dl = open_private(path);
