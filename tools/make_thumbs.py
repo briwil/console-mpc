@@ -258,6 +258,34 @@ def vitaleon(name="VITALEON"):
     return p
 
 
+def guitar(name="GUITAR"):
+    p = Pic()
+    p.rect(2, 2, 125, 61)
+    p.heading(5, 3, name)
+    from PIL import ImageChops, ImageFilter
+    body = Image.new("L", (W, H), 0)                         # an electric guitar lying on its side: the body is two bouts with a waist
+    bd = ImageDraw.Draw(body)
+    bd.ellipse([8, 25, 38, 57], fill=255)
+    bd.ellipse([30, 29, 54, 53], fill=255)
+    edge = ImageChops.subtract(body, body.filter(ImageFilter.MinFilter(3)))
+    p.im.paste(1, mask=edge)
+    p.rect(20, 35, 23, 47, fill=True)                        # bridge
+    p.rect(30, 36, 32, 46)                                   # pickups
+    p.rect(38, 36, 40, 46)
+    p.knob(14, 48, 2, .3)
+    p.knob(22, 52, 2, .7)
+    p.rect(50, 38, 104, 44)                                  # neck, frets closer together toward the body
+    for x in (58, 65, 71, 77, 82, 87, 92, 96, 100):
+        p.line(x, 38, x, 44)
+    p.d.polygon([(104, 36), (120, 33), (122, 39), (120, 47), (104, 46)], outline=1, fill=0)   # headstock
+    for i in range(3):                                       # tuners
+        p.px(108 + i * 5, 34 - (i > 0))
+        p.px(108 + i * 5, 48 - (i > 1))
+    for y in (39, 41, 43):                                   # strings, bridge to nut
+        p.line(23, y, 104, y)
+    return p
+
+
 
 OP1_INSTRUMENTS = {"op1-cluster": "CLUSTER", "op1-dbox": "DBOX", "op1-digital": "DIGITAL", "op1-dna": "DNA", "op1-drwave": "DR WAVE",
                    "op1-dsynth": "D SYNTH", "op1-fm": "FM", "op1-phase": "PHASE", "op1-pulse": "PULSE", "op1-string": "STRING",
@@ -265,7 +293,7 @@ OP1_INSTRUMENTS = {"op1-cluster": "CLUSTER", "op1-dbox": "DBOX", "op1-digital": 
 OP1_FX = {"op1-cwo": "CWO", "op1-delay": "DELAY", "op1-grid": "GRID", "op1-nitro": "NITRO", "op1-phone": "PHONE", "op1-punch": "PUNCH",
           "op1-spring": "SPRING"}
 OTHERS = {"instimg": {"profit5": profit5, "jn106": jn106, "sturm": sturm, "monomodule": monomodule, "clementine": clementine,
-                      "oxzygen": oxzygen, "vitaleon": vitaleon},
+                      "oxzygen": oxzygen, "vitaleon": vitaleon, "guitar": guitar},
           "fximg": {"vhs-vibes": vhs, "boris": boris, "monomodule-fx": lambda: monomodule("MONOMODULE FX")}}
 
 
