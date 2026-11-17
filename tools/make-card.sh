@@ -1,6 +1,6 @@
 #!/bin/sh
 # Builds the SD card zip: the folders "autorun" and "Console" to unzip onto the root of the card.
-# usage: tools/make-card.sh <console folder of this repo> <libs.tgz> <bridge.tgz> <python.tgz> <out folder> [version]
+# usage: [PLUGINS=<console-plugins.tgz>] tools/make-card.sh <console folder of this repo> <libs.tgz> <bridge.tgz> <python.tgz> <out folder> [version]
 #   libs.tgz    the synths / drum machines   ("libs-latest" release of briwil/console-mpc)
 #   bridge.tgz  the MPC bridge + launcher     ("bridge-latest" release of briwil/console-mpc: mpc-bridge.tgz)
 #   python.tgz  Python + numpy for the MPC    ("runtime-latest" release of briwil/console-mpc: mpc-python.tgz)
@@ -25,6 +25,12 @@ tar xzf "$BRIDGE" -C "$T/console"                       # -> console/mpc/ (bridg
 [ -f "$T/console/mpc/libconsolecore.so" ] && cp "$T/console/mpc/libconsolecore.so" "$T/console/pi-app/core/libconsolecore.so"        # (our sound core and module host: they hand the audio input to the GUITAR instrument)
 [ -f "$T/console/mpc/libschwunghost.so" ] && cp "$T/console/mpc/libschwunghost.so" "$T/console/pi-app/schwung/libschwunghost.so"
 [ -f "$T/console/mpc/vst2fx.so" ] && { cp "$T/console/mpc/vst2fx.so" "$T/console/pi-app/schwung/modules/stompbox/vst2fx.so"; cp "$T/console/mpc/vst2fx.so" "$T/console/pi-app/schwung/modules/guitar/dsp.so"; }     # (the VST2 plugin host: STOMPBOX in the insert list, and the GUITAR instrument)
+if [ -f "$T/console/mpc/vst2fx.so" ]; then             # every plug-in module gets the host (an effect: vst2fx.so; an instrument: dsp.so)
+  for m in "$T"/console/pi-app/schwung/modules/*/; do
+    [ -f "$m/plugin.txt" ] || continue
+    if grep -q audio_fx "$m/module.json" 2>/dev/null; then cp "$T/console/mpc/vst2fx.so" "$m/vst2fx.so"; else cp "$T/console/mpc/vst2fx.so" "$m/dsp.so"; fi
+  done
+fi
 find "$T" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 find "$T" -name '._*' -delete 2>/dev/null || true
 if [ -z "$VER" ]; then
@@ -35,7 +41,12 @@ fi
 COPYFILE_DISABLE=1 tar czf "$CARD/Console/payload/console.tgz" -C "$T" console
 cp "$PY" "$CARD/Console/payload/python.tgz"
 sha256sum "$PY" | cut -c1-16 > "$CARD/Console/payload/PYTHON_VERSION"
-( cd "$CARD/Console/payload" && sha256sum console.tgz python.tgz > SHA256SUMS )
+# the plug-ins (our own copy: the "plugins-latest" release of this repo), installed into console/plugins by install.sh
+if [ -n "${PLUGINS:-}" ] && [ -f "$PLUGINS" ]; then
+  cp "$PLUGINS" "$CARD/Console/payload/plugins.tgz"
+  sha256sum "$PLUGINS" | cut -c1-16 > "$CARD/Console/payload/PLUGINS_VERSION"
+fi
+( cd "$CARD/Console/payload" && sha256sum console.tgz python.tgz $([ -f plugins.tgz ] && echo plugins.tgz) > SHA256SUMS )
 printf '%s\n' "$VER" > "$CARD/Console/VERSION"
 cp "$HERE/card/Console/install.sh" "$HERE/card/Console/README.txt" "$CARD/Console/"
 [ -f "$HERE/launcher/install-screens.raw" ] && cp "$HERE/launcher/install-screens.raw" "$CARD/Console/"   # the progress pictures (tools/make-install-screens.py)

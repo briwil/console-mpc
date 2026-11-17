@@ -56,6 +56,17 @@ echo MARK > "$W/data/console/pi-app/marker"
 : > "$W/boot.log"; PATH="$W/bin:$PATH" CONSOLE_FB="$W/fb" CONSOLE_SLEEP=0 CONSOLE_DATA_ROOT="$W/data" CONSOLE_RUN="$W/run" BOOTLOG="$W/boot.log" sh "$CARD/Console/install.sh"
 [ ! -s "$W/boot.log" ] && ok "once per power-on" || bad "lock"
 
+# the plug-ins: a card built with them installs them into console/plugins (your own files there stay), once per set
+mkdir -p "$W/pl/plugins/samples"; echo plug > "$W/pl/plugins/model72.so"; echo wav > "$W/pl/plugins/samples/a.wav"
+( cd "$W/pl" && tar czf "$W/plugins.tgz" plugins )
+PLUGINS="$W/plugins.tgz" sh "$HERE/tools/make-card.sh" "$W/cm" "$W/libs.tgz" "$W/bridge.tgz" "$W/py.tgz" "$W/outp" "v1p" >/dev/null
+cp "$W/screens.raw" "$W/outp/card/Console/install-screens.raw"
+mkdir -p "$W/data/console/plugins"; echo mine > "$W/data/console/plugins/mine.so"
+run "$W/outp/card"
+[ -f "$W/data/console/plugins/model72.so" ] && [ -f "$W/data/console/plugins/samples/a.wav" ] && [ -f "$W/data/console/plugins/mine.so" ] \
+  && [ "$(cat "$W/data/console/plugins.version")" = "$(cat "$W/outp/card/Console/payload/PLUGINS_VERSION")" ] && ok "plug-ins installed from the card (own files kept)" || bad "plug-ins"
+grep -q plugins.tgz "$W/outp/card/Console/payload/SHA256SUMS" && ok "plug-ins are in the checksums" || bad "plug-ins checksum"
+
 # update
 sh "$HERE/tools/make-card.sh" "$W/cm" "$W/libs.tgz" "$W/bridge.tgz" "$W/py.tgz" "$W/out2" "v2" >/dev/null
 echo newer > "$W/cm/pi-app/app.py"; sh "$HERE/tools/make-card.sh" "$W/cm" "$W/libs.tgz" "$W/bridge.tgz" "$W/py.tgz" "$W/out2" "v2" >/dev/null

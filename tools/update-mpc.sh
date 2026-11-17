@@ -69,6 +69,14 @@ if [ "$PY" = 1 ]; then
   curl -fsSL "https://github.com/$CP/releases/download/runtime-latest/mpc-python.tgz" -o "$T/python.tgz"
 fi
 
+# the plug-ins (our own copy, the "plugins-latest" release): only sent when the MPC has a different set
+PLV=$(curl -fsSL "https://github.com/$CP/releases/download/plugins-latest/PLUGINS_VERSION" 2>/dev/null | tr -d '\n' || true)
+PLUG=0
+if [ -n "$PLV" ] && [ "$PLV" != "$(mpc "cat $DEST/console/plugins.version 2>/dev/null" | tr -d '\n')" ]; then
+  say "     The plug-ins (about 115 MB, only this once)"
+  curl -fsSL "https://github.com/$CP/releases/download/plugins-latest/console-plugins.tgz" -o "$T/plugins.tgz" && PLUG=1
+fi
+
 say "4/5  Copying to the MPC"
 if [ "$DRY" = 1 ]; then
   say "     would copy: console code ($(du -sh "$T/pack" | cut -f1)), bridge, libs=$LIBS, python=$PY"; exit 0
@@ -80,6 +88,8 @@ COPYFILE_DISABLE=1 tar --format ustar -cf - -C "$T/pack" console | mpc "cd $DEST
 cat "$T/bridge.tgz" | mpc "cd $DEST/console && tar xzf -"
 mpc "[ -f $DEST/console/mpc/libconsolecore.so ] && cp $DEST/console/mpc/libconsolecore.so $DEST/console/pi-app/core/libconsolecore.so && cp $DEST/console/mpc/libschwunghost.so $DEST/console/pi-app/schwung/libschwunghost.so || true"     # (our sound core and module host)
 mpc "[ -f $DEST/console/mpc/vst2fx.so ] && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/stompbox/vst2fx.so && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/guitar/dsp.so && mkdir -p $DEST/console/pi-app/schwung/modules/model72 && cp $DEST/console/mpc/vst2fx.so $DEST/console/pi-app/schwung/modules/model72/dsp.so && for m in $DEST/console/pi-app/schwung/modules/op1-* $DEST/console/pi-app/schwung/modules/vhs-vibes $DEST/console/pi-app/schwung/modules/profit5 $DEST/console/pi-app/schwung/modules/jn106 $DEST/console/pi-app/schwung/modules/sturm $DEST/console/pi-app/schwung/modules/boris $DEST/console/pi-app/schwung/modules/monomodule-fx $DEST/console/pi-app/schwung/modules/monomodule $DEST/console/pi-app/schwung/modules/clementine $DEST/console/pi-app/schwung/modules/oxzygen $DEST/console/pi-app/schwung/modules/vitaleon; do if grep -q audio_fx \$m/module.json; then cp $DEST/console/mpc/vst2fx.so \$m/vst2fx.so; else cp $DEST/console/mpc/vst2fx.so \$m/dsp.so; fi; done || true"     # (the VST2 effect host for STOMPBOX)
+mpc "[ -f $DEST/console/mpc/vst2fx.so ] && for m in $DEST/console/pi-app/schwung/modules/*/; do [ -f \$m/plugin.txt ] || continue; if grep -q audio_fx \$m/module.json; then cp $DEST/console/mpc/vst2fx.so \$m/vst2fx.so; else cp $DEST/console/mpc/vst2fx.so \$m/dsp.so; fi; done || true"     # (every plug-in module gets the host)
+[ "$PLUG" = 1 ] && cat "$T/plugins.tgz" | mpc "cd $DEST/console && tar xzf - && echo $PLV > plugins.version"
 [ "$PY" = 1 ] && cat "$T/python.tgz" | mpc "cd $DEST/console && rm -rf python && tar xzf -"
 [ -n "$GOT" ] && mpc "echo $(printf %.7s "$GOT") > $DEST/console/INSTALLED"
 mpc "sync"

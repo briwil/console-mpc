@@ -97,7 +97,11 @@ fail_broken() { say "$1"; show 5; sleep $((SLP * 6)); stop_screen; rm -f "$ATT";
 
 show 0
 kb() { _k=$(du -k "$1" 2>/dev/null | cut -f1); echo "${_k:-0}"; }
+PLNEW=$(cat "$P/PLUGINS_VERSION" 2>/dev/null)
+PLDO=0                                                # the plug-ins are unpacked when the card has a different set than the Sample
+[ -f "$P/plugins.tgz" ] && { [ "$PLNEW" != "$(cat "$C/plugins.version" 2>/dev/null)" ] || [ ! -d "$C/plugins" ]; } && PLDO=1
 NEED=$(( 2 * ($(kb "$P/console.tgz") + $(kb "$P/python.tgz")) + 150000 ))
+[ "$PLDO" = 1 ] && NEED=$(( NEED + 2 * $(kb "$P/plugins.tgz") ))
 FREE=${CONSOLE_FREE_KB:-$(df -kP "$DATA_ROOT" | tail -n 1 | awk '{print $4}')}
 if [ "${FREE:-0}" -lt "$NEED" ]; then
   fail_safe "NOT ENOUGH ROOM on the Sample: needs $((NEED / 1024)) MB free, has $((FREE / 1024)) MB. Console was not installed."
@@ -131,6 +135,14 @@ if [ -f "$P/python.tgz" ] && { [ "$PYNEW" != "$(cat "$C/python.version" 2>/dev/n
     fail_broken "COULDN'T UNPACK Console/payload/python.tgz. Console was not installed."
   fi
   printf '%s\n' "$PYNEW" > "$C/python.version"
+fi
+if [ "$PLDO" = 1 ]; then                              # the plug-ins (instruments and insert effects): into console/plugins; your own files there stay
+  show 3
+  if tar xzf "$P/plugins.tgz" -C "$C" && [ -d "$C/plugins" ]; then
+    printf '%s\n' "$PLNEW" > "$C/plugins.version"
+  else
+    echo "couldn't unpack Console/payload/plugins.tgz: Console starts without the plug-ins"
+  fi
 fi
 chmod +x "$C"/mpc/*.sh "$C/mpc/bootmenu" 2>/dev/null
 sync

@@ -5,6 +5,7 @@ name: Build card zip
 #   the synths/effects    the "libs-latest" release of this repo (made by the "Import libs" workflow)
 #   the bridge + screens  the "bridge-latest" release of this repo (built by "Build MPC bridge")
 #   Python + numpy        the "runtime-latest" release of this repo
+#   the plug-ins          the "plugins-latest" release of this repo (our own copy: the "plugins" branch)
 # and publishes it as the "card-latest" release. Runs after every successful bridge build, when card/ changes, on a
 # version tag (v1.0.0 ... : also attached to that tag's release), or by hand.
 
@@ -52,10 +53,11 @@ jobs:
           gh release download bridge-latest  --repo "$GITHUB_REPOSITORY" -p mpc-bridge.tgz  -D parts
           gh release download runtime-latest --repo "$GITHUB_REPOSITORY" -p mpc-python.tgz  -D parts
           gh release download libs-latest --repo "$GITHUB_REPOSITORY" -p move-libs.tgz -D parts
+          gh release download plugins-latest --repo "$GITHUB_REPOSITORY" -p console-plugins.tgz -D parts
           ls -l parts
       - name: Build the zip
         run: |
-          sh tools/make-card.sh console parts/move-libs.tgz parts/mpc-bridge.tgz parts/mpc-python.tgz out
+          PLUGINS=parts/console-plugins.tgz sh tools/make-card.sh console parts/move-libs.tgz parts/mpc-bridge.tgz parts/mpc-python.tgz out
           unzip -t out/Console-MPC.zip | tail -n 1
       - name: Publish card-latest
         run: |

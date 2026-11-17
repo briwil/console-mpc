@@ -109,10 +109,19 @@ Console is released under the GNU General Public License v3.0 (see [LICENSE](LIC
 - **Licence taken from Schwung's catalog only; confirm in each upstream repo:** amino, cw78, denis, essaim, fizzik, hush1, je8086, maze, tinypro5, wurl.
 - Also: `noisemaker` is GPL-2.0, `capicola` and `war_bells` are AGPL-3.0 (network-use clause), and `chiptune` is dual MIT/LGPL-2.1.
 
-## VST2 plug-ins (not included; loaded from `plugins` if you add them)
+## VST2 plug-ins (included: installed into `plugins` from the SD card or by the update)
+
+Console keeps its own copy of these 64-bit ARM builds (the `plugins` branch and the `plugins-latest` release of
+briwil/console-mpc). Each belongs to its author and stays under its own licence; the builds are unchanged. Their source
+code is at each project's page in the OpenMPC plug-in catalog (https://open-mpc.github.io/), and Vitaleon's at
+https://github.com/Andersson-Audio/vitaleon.
 
 | Plug-in | Author | License |
 |---|---|---|
-| Model-72, JN-106, Clementine-XT, Boris Granular, OP-1 Suite | their authors | GPL-3.0 |
-| Monomodule One | its author | AGPL-3.0 |
-| VHS Vibes, Profit-5, Sturm-TP, OxZygen | their authors | MIT |
+| Model-72, JN-106, Clementine-XT, Boris Granular, OP-1 Suite | their authors (sd88me and others) | GPL-3.0 |
+| Vitaleon (the plug-in only; its factory sounds and wavetables are not included and may not be redistributed) | Andersson Audio, after Matt Tytel's Vital 1.0.6 | GPL-3.0 |
+| VHS Vibes, Profit-5, Sturm-TP, OxZygen (with its samples) | their authors | MIT |
+| Stompbox | Jacob Sabella | see its project page (licence not confirmed here) |
+
+Not included: Monomodule One / FX (AGPL-3.0). They need Elektron's own firmware file, which is Elektron's and can't be
+passed on; add the plug-in and that file to `ConsoleData/plugins` yourself to use them.
