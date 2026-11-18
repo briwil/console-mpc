@@ -376,7 +376,7 @@ class MoveSynth:
             nts = self._notes_of(self.selected[0])
             if not nts or not sequencer.is_fraction(nts[0][1].chance):
                 return "PICK 1:2 ETC FIRST"
-            return CHANCES[nts[0][1].comp.get("chance_c", 0)]
+            return "%d%%" % nts[0][1].comp.get("chance_p", 100)
         if key not in CKEYS:
             return None
         nts = self._notes_of(self.selected[0])
@@ -390,7 +390,10 @@ class MoveSynth:
         if key not in CKEYS and key != "chance":
             return
         self._adj = True
-        one = knobgate.gate(("synchance", key), delta, shift)
+        if key == "chance":                                  # a plain percentage: a click is 1 %, a fast turn goes further
+            one = self.T.knob_clicks(2, delta, shift)
+        else:
+            one = knobgate.gate(("synchance", key), delta, shift)
         if not one:
             return
         if key == "chance":
@@ -402,20 +405,25 @@ class MoveSynth:
             popup.show(self.T, self.which(), label + " CHANCE", "SET KNOB 1 FIRST")
             return
         seq = self.seq
-        top = sequencer.N_PERCENT - 1 if key == "chance" else len(CHANCES) - 1
         with seq.lock:
             for i in self.selected:
                 for _n, nt in self._notes_of(i):
                     on = sequencer.is_fraction(nt.chance) if key == "chance" else \
                         nt.ratchet != 1 if key == "ratchet" else nt.nudge != 0 if key == "nudge" else key in nt.comp
                     if on:
-                        v = max(0, min(top, nt.comp.get(key + "_c", 0) + (-one if key == "chance" else one)))   # (a percentage: clockwise = more)
+                        if key == "chance":
+                            v = max(0, min(100, nt.comp.get("chance_p", 100) + one))
+                            if v < 100:
+                                nt.comp["chance_p"] = v
+                            else:
+                                nt.comp.pop("chance_p", None)
+                            nt.comp.pop("chance_pm", None)         # (set on purpose: nothing put aside any more)
+                            continue
+                        v = max(0, min(len(CHANCES) - 1, nt.comp.get(key + "_c", 0) + one))
                         if v:
                             nt.comp[key + "_c"] = v
                         else:
                             nt.comp.pop(key + "_c", None)
-                        if key == "chance":
-                            nt.comp.pop("chance_m", None)          # (set on purpose: nothing put aside any more)
         self.T.engine.seq_changed()
         popup.show(self.T, self.which(), label + " CHANCE", self.chance_text(key))
 
@@ -543,7 +551,7 @@ class MoveSynth:
             if self.sel is None:
                 return self.lock_choice(n)
             if n == 2:
-                return self.pad_items()[self.sel][0] in CKEYS + ("chance",)
+                return self.pad_items()[self.sel][0] in CKEYS
             if n != 1:
                 return False
             key = self.pad_items()[self.sel][0]

@@ -163,6 +163,8 @@ class MoveSeq:
         return self.seq.step(self.sp.lane, self.held)
 
     def engaged(self, key):
+        if self.held is None:                                  # (the screen can ask just after the step was let go)
+            return False
         st = self.held_step()
         if key == "vel":
             return st.vel != sequencer.DEFAULT_VELOCITY
@@ -175,6 +177,8 @@ class MoveSeq:
         return key in st.locks
 
     def item_value(self, key):
+        if self.held is None:
+            return ""
         st, d = self.held_step(), self.T.engine.drums
         if key == "vel":
             return "RND" if st.vel == 0 else str(st.vel)
@@ -192,7 +196,7 @@ class MoveSeq:
         if key == "chance":                                  # a fraction (1:2...): its second chance, a percentage
             if not sequencer.is_fraction(st.chance):
                 return "PICK 1:2 ETC FIRST"
-            return sequencer.CHANCES[st.comp.get("chance_c", 0)]
+            return "%d%%" % st.comp.get("chance_p", 100)
         if key not in CKEYS:
             return None
         return sequencer.CHANCES[st.comp.get(key + "_c", 0)] if self.engaged(key) else "SET KNOB 1 1ST"
@@ -203,7 +207,10 @@ class MoveSeq:
         if key not in CKEYS and key != "chance":
             return
         self._adj = True
-        one = knobgate.gate(("compchance", key), delta, shift)
+        if key == "chance":                                  # a plain percentage: a click is 1 %, a fast turn goes further
+            one = self.T.knob_clicks(2, delta, shift)
+        else:
+            one = knobgate.gate(("compchance", key), delta, shift)
         if not one:
             return
         sp, seq, e = self.sp, self.seq, self.T.engine
@@ -216,20 +223,25 @@ class MoveSeq:
             popup.show(self.T, self.which(), label + " CHANCE", "SET KNOB 1 FIRST")
             return
         sp._edit(("knob2", self.sel, self.held))
-        top = sequencer.N_PERCENT - 1 if key == "chance" else len(sequencer.CHANCES) - 1
         with seq.lock:
             for j in self.selected:
                 if j < seq.lane(lane).length:
                     st = seq.step(lane, j)
                     if (sequencer.is_fraction(st.chance)) if key == "chance" else \
                             (st.ratchet != 1) if key == "ratchet" else (key in st.comp):
-                        v = max(0, min(top, st.comp.get(key + "_c", 0) + (-one if key == "chance" else one)))   # (a percentage: clockwise = more)
+                        if key == "chance":
+                            v = max(0, min(100, st.comp.get("chance_p", 100) + one))
+                            if v < 100:
+                                st.comp["chance_p"] = v
+                            else:
+                                st.comp.pop("chance_p", None)
+                            st.comp.pop("chance_pm", None)         # (set on purpose: nothing put aside any more)
+                            continue
+                        v = max(0, min(len(sequencer.CHANCES) - 1, st.comp.get(key + "_c", 0) + one))
                         if v:
                             st.comp[key + "_c"] = v
                         else:
                             st.comp.pop(key + "_c", None)
-                        if key == "chance":
-                            st.comp.pop("chance_m", None)          # (set on purpose: nothing put aside any more)
         e.seq_changed()
         popup.show(self.T, self.which(), label + " CHANCE", self.chance_text(key))
 

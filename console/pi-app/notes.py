@@ -450,7 +450,7 @@ class NoteSequencer:
                     if a <= t < b:
                         key = (pitch, k)
                         if key not in self._decided:
-                            self._decided[key] = chance_passes(n.chance, loop, n.comp.get("chance_c", 0))
+                            self._decided[key] = chance_passes(n.chance, loop, n.comp.get("chance_p", 100))
                         if self._decided[key]:
                             # a ratchet's notes share the note's length; the last one holds to its end
                             gate = each * 0.9 if r < nh - 1 else n.length * step_frames - r * each - 1
