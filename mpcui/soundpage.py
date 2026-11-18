@@ -183,11 +183,12 @@ WAVE = {}                                                           # sample pat
 WAVE_X0, WAVE_Y0, WAVE_W, WAVE_H = 8, 104, 276, 84                  # the big black place on a one-sample instrument's first page
 
 
-def _wave_mask(path):
-    """The sample's waveform as a WAVE_H x WAVE_W boolean picture (None: can't be read, or not ready yet: it is read in the background)."""
-    if path in WAVE:
-        return WAVE[path]
-    WAVE[path] = None
+def _wave_mask(path, W=WAVE_W, H=WAVE_H):
+    """The sample's waveform as a H x W boolean picture (None: can't be read, or not ready yet: it is read in the background)."""
+    key = path if (W, H) == (WAVE_W, WAVE_H) else (path, W, H)
+    if key in WAVE:
+        return WAVE[key]
+    WAVE[key] = None
 
     def work():
         try:
@@ -195,22 +196,41 @@ def _wave_mask(path):
             x = sampler.read_wav(path)
             if x is None or not len(x):
                 return
-            if len(x) < WAVE_W:
-                x = np.pad(x, (0, WAVE_W - len(x)))
-            x = x[:len(x) // WAVE_W * WAVE_W].reshape(WAVE_W, -1)
+            if len(x) < W:
+                x = np.pad(x, (0, W - len(x)))
+            x = x[:len(x) // W * W].reshape(W, -1)
             hi, lo = x.max(axis=1), x.min(axis=1)
             peak = max(1e-6, float(max(abs(hi).max(), abs(lo).max())))
-            half = WAVE_H / 2.0 - 1
-            mid = WAVE_H / 2.0
-            top = np.clip(np.round(mid - hi / peak * half), 0, WAVE_H - 1).astype(int)
-            bot = np.clip(np.round(mid - lo / peak * half), 0, WAVE_H - 1).astype(int)
-            rows = np.arange(WAVE_H)[:, None]
-            WAVE[path] = (rows >= np.minimum(top, bot - 0)[None, :]) & (rows <= np.maximum(bot, top + 1)[None, :])
+            half = H / 2.0 - 1
+            mid = H / 2.0
+            top = np.clip(np.round(mid - hi / peak * half), 0, H - 1).astype(int)
+            bot = np.clip(np.round(mid - lo / peak * half), 0, H - 1).astype(int)
+            rows = np.arange(H)[:, None]
+            WAVE[key] = (rows >= np.minimum(top, bot - 0)[None, :]) & (rows <= np.maximum(bot, top + 1)[None, :])
         except Exception:                                           # noqa: BLE001
-            WAVE[path] = None
+            WAVE[key] = None
     import threading
     threading.Thread(target=work, daemon=True).start()
     return None
+
+
+SMALL = (14, 100, 248, 40)                                          # the Sampler's small waveform: x, y, width, height (above the settings, clear of the frame)
+
+
+def _small_wave(d, voice):
+    """A drawing function for the Sampler drum's waveform (small, above the settings), or None."""
+    try:
+        path = d.wave_path(voice)
+        x0, y0, w, h = SMALL
+        m = _wave_mask(path, w, h) if path else None
+    except Exception:                                               # noqa: BLE001
+        return None
+    if m is None:
+        return None
+
+    def under(c):
+        c.px[y0:y0 + h, x0:x0 + w][m] = colour.GREENS[3]
+    return under
 
 
 def _sample_wave(d, si):
@@ -272,6 +292,8 @@ def draw(T, nat):
     nat._pad_n = len(params)                                       # (KNOB FX: only this many pads are knobs)
     items, active = by_pad_rows(items, active)
     under = _sample_wave(d, si) if (si is not None and T.drum_tab == 0) else None      # the sample's shape on the first page
+    if under is None and hasattr(d, "wave_path") and T.drum_tab == 0 and active is None:
+        under = _small_wave(d, voice)                              # the Sampler: a small one above the settings (not while one is being turned)
     grid(nat, (id(d), voice, page_name, len(params)), top, vname.upper(), items, active, now, msg, under=under)
 
 

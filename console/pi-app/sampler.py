@@ -256,6 +256,24 @@ class Sampler:
                 return os.path.splitext(os.path.basename(self.files[i - 1]))[0].upper()
         return "EMPTY"
 
+    def wave_path(self, v):
+        """The file whose waveform goes on the drum's page: with RANDOM on, the sample that played last (when the sound
+        library tells: sw_get "pick"); otherwise the first sample set (BLEND with two: the first one)."""
+        try:
+            if self.random_on(v):
+                w = max((self._live or self._lib).sw_get(("pick%d" % (v + 1)).encode()), -1)
+                if w >= 0:
+                    i = self.values[sample_param(v, w)]
+                    if 0 < i <= len(self.files):
+                        return self.files[i - 1]
+            for w in range(SAMPLES if self.random_on(v) else 2):
+                i = self.values[sample_param(v, w)]
+                if 0 < i <= len(self.files):
+                    return self.files[i - 1]
+        except Exception:                                          # noqa: BLE001
+            pass
+        return None
+
     @property
     def names(self):
         return [self.sample_name(v) for v in range(LANES)]

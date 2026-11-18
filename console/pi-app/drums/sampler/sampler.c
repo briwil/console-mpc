@@ -70,6 +70,7 @@ int sw_get(const char *key)
     if (!strcmp(name, "decay")) return decay[v];
     if (!strcmp(name, "blend")) return blend[v];
     if (!strcmp(name, "random")) return rnd[v];
+    if (!strcmp(name, "pick")) return V[v].pick;           /* the sample the last hit played (RANDOM on), else -1 */
     return -1;
 }
 
