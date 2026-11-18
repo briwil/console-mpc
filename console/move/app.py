@@ -289,8 +289,7 @@ class MoveBoard:
         d = e.drums
         ms = T.mseq
         if ms.active() and ms.held is not None:            # steps selected: the pads are their settings
-            if vel:
-                self.keys.put(("STEP_PAD", p))
+            self.keys.put(("STEP_PAD", p) if vel else ("STEP_PAD_UP", p))     # (a setting shows while its pad is held)
             return
         if vel:
             vel = pad_velocity(T, vel)                     # PADS page: touch (with a curve) or a fixed velocity
@@ -1284,6 +1283,10 @@ def handle(name, T, m, e):
     if isinstance(name, tuple) and name[0] == "STEP_PAD":
         if ms.active():
             ms.step_pad(name[1])
+        return
+    if isinstance(name, tuple) and name[0] == "STEP_PAD_UP":
+        if ms.active() and ms.sel == name[1]:
+            ms.sel = None                                   # let go: all the step settings again
         return
     if isinstance(name, tuple) and name[0] == "PICK_LANE":
         if ms.held is None and e and e.drums and name[1] < e.drums.lanes:

@@ -675,7 +675,7 @@ def install(MoveBoard, pad_velocity=None):
         if num == BACK and val and not self.shift and in_seq(T) and T.mseq.selected:
             T.mseq.selected, T.mseq.sel = [], None               # BACK: done with the selected steps
             return
-        if num == WHEEL and val and not self.shift and in_seq(T) and T.mseq.selected:
+        if num == WHEEL and val and not self.shift and in_seq(T) and T.mseq.selected and T.mseq.sel is None:
             step = val - 128 if val > 63 else val
             if step:
                 move(T, step)                                    # (the box keeps moving; K1 is the amount)
