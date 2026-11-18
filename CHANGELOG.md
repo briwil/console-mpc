@@ -1,3 +1,7 @@
+## 0.0.23
+
+- Number knobs: the first click of a turn changes the value at once (a short turn used to do nothing; the next one did). Lists and modes keep their click count.
+
 # Changelog
 
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
