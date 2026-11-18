@@ -1080,7 +1080,7 @@ def _count_in(name, T, m, e):
 def handle(name, T, m, e):
     """One action, the way the Pi app's main loop does it (menus first), plus the Move's own."""
     if isinstance(name, tuple) and name[0] == "VOLUME":
-        T.phones_volume(name[1] * 0.01)
+        T.phones_volume(name[1] * 0.02)          # 2 % a click: the bridge sends 50 clicks for the knob's whole travel
         return
     if isinstance(name, tuple) and name[0] == "SENS":        # Shift + the volume knob: how many clicks a step takes
         v = knobgate.set_speed(knobgate.SPEED + (1 if name[1] > 0 else -1) * (1 if abs(name[1]) < 3 else 2))
