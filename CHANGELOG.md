@@ -3,6 +3,14 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.21
+
+- **CHANCE, second chance:** when a step's chance is a fraction (1:2, 2:3 ...), K2 adds a second chance, a percentage (1% a click, clockwise = more): it plays on its turn round the lane, and then only that often. Taking K1 back to a percentage puts the second chance aside; picking a fraction again brings it back. Drum and synth sequencers.
+- **Step settings (drum and synth sequencers):** a pad's setting shows while it is held (the wheel and K1 change it); let go and all the settings show again. A quick tap on a setting's pad switches it off; held a while, or turned, it keeps its value. (The drum sequencer had none of this before.)
+- **Volume knob:** its full travel is 0-100% again (it stopped at 50%).
+- **Mixer:** pan works (it never left the centre), muting no longer makes the box grow, K1-K3 and the FADER do nothing unless a KNOB FX pad is held (then K1 is that instrument's volume and K2 its pan, the big wheel still volume, Shift + wheel pan), and the FX pages no longer show PADS / SEQ / STEP SETTINGS when the pad mode changes.
+- The step-settings grid no longer crashes the screen if the step is let go while it is drawn.
+
 ## 0.0.20
 
 - **GUITAR** has its picture in the instrument picker: a 1/4 inch plug about to go into an amp's input.
