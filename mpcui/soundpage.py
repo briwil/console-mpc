@@ -288,7 +288,7 @@ def draw_mixer(T, nat):
     prev = MIX["prev"]
     if prev is not None:
         for i in range(8):
-            if cur[i] != prev[i]:
+            if cur[i][:2] != prev[i][:2]:                       # (muting / unmuting does not grow the box)
                 MIX["when"][i] = now
                 MIX["kind"][i] = "pan" if cur[i][1] != prev[i][1] else "level"
     MIX["prev"] = cur

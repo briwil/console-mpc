@@ -131,6 +131,53 @@ def synth_click(T):
     ms.sel = None
 
 
+def on_mixer(T):
+    try:
+        import native
+        return bool(T.engine) and native.on_mixer_page(T, getattr(T, "_mpc_menu", None))
+    except Exception:
+        return False
+
+
+def mixer_pots(T, num, val):
+    """The mixer. K1-K3 and the FADER do nothing unless KNOB FX is on and a pad is held; then K1 is that instrument's volume (the
+    pot's position, 0-100 %) and K2 its pan (L100 .. R100). The wheel (Shift: pan) is handled as before: its clicks reach the page as
+    that pad's knob. True when the control was dealt with here."""
+    if not on_mixer(T) or not (num in (115, 116, 117, 122) or 71 <= num <= 78):
+        return False
+    import native
+    held = native._touched[-1] if native._touched else None
+    e = T.engine
+    now = time.monotonic()
+    seen = getattr(T, "_pot_abs_at", None)
+    if seen is None:
+        seen = T._pot_abs_at = {}
+    if num in (115, 116, 117, 122):                                             # a pot's position
+        seen[{115: 71, 116: 72, 117: 73, 122: 78}[num]] = now
+        if held is None or not e.slots[held] or num in (117, 122):
+            return True                                                         # (nothing held: nothing happens; K3 / FADER: nothing here)
+        from console import mix_pan_text
+        with e.lock:
+            if num == 115:
+                e.inst_levels[held] = round(val / 127.0, 3)
+            else:
+                target = val / 127.0 * 2.0 - 1.0
+                e.inst_pans[held] = 0.0 if abs(target) < 0.04 else round(target, 3)
+            e.dirty.add(-1)
+        if num == 115:
+            T.say("INSTRUMENT %d VOLUME: %d%%" % (held + 1, round(e.inst_levels[held] * 100)), 2)
+        else:
+            T.say("INSTRUMENT %d PAN: %s" % (held + 1, mix_pan_text(e.inst_pans[held])), 2)
+        return True
+    if not val:
+        return True
+    if now - seen.get(num, -9.0) < 0.15:
+        return True                                                             # (a pot's own clicks: its position was used)
+    if held is None and num in (71, 72, 73, 78):
+        return True                                                             # (no pad held: these are the pots, not the wheel)
+    return False
+
+
 def on_tape(T):
     """The 8-track page (not zoomed, no menu on top)."""
     try:
@@ -600,6 +647,8 @@ def install(MoveBoard, pad_velocity=None):
             self._erase_seq = bool(val)                                         # (its release is swallowed too)
             if val:
                 erase(T)
+            return
+        if mixer_pots(T, num, val):                                             # the mixer: K1-K3 / FADER need a KNOB FX pad held
             return
         if on_tape(T) and (num in (115, 116, 122) or 71 <= num <= 74):
             # the tape page: K1 and the FADER are pots, their position is the selected track's volume (0-100 %, end to end); K2 is its

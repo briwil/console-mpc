@@ -1628,8 +1628,9 @@ class Engine:
         if not 0 <= k < SLOTS:
             return 0.0
         with self.lock:
-            v = round(max(-1.0, min(1.0, self.inst_pans[k] + delta)), 3)
-            self.inst_pans[k] = 0.0 if abs(v) < 0.02 else v          # (it stops at the centre)
+            old = self.inst_pans[k]
+            v = round(max(-1.0, min(1.0, old + delta)), 3)
+            self.inst_pans[k] = 0.0 if (old and v * old < 0) else v   # (it stops at the centre: going across it lands on 0)
             self.dirty.add(-1)
             return self.inst_pans[k]
 
