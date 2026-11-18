@@ -16,6 +16,7 @@
 typedef struct { uint32_t time; size_t size; unsigned char *buffer; } jack_midi_event_t;
 typedef int (*JackProcess)(uint32_t, void *);
 
+static volatile int keep_abs;                 /* 1: CC 115 (K1's position) is recorded too */
 static void *lib;
 #define FN(ret, name, args) static ret (*name) args
 FN(void *, c_open, (const char *, int, int *, ...));
@@ -56,6 +57,7 @@ static int fake_process(uint32_t n, void *arg)
     for (uint32_t i = 0; i < k; i++) {
         jack_midi_event_t ev;
         if (m_get(&ev, cin, i) == 0 && ev.size == 3 && ngot < 1024) {
+            if (!keep_abs && ev.buffer[0] == 0xBF && ev.buffer[1] == 115) continue;   /* (K1's position message: only the tests that ask for it count it) */
             memcpy(got[ngot], ev.buffer, 3);
             ngot++;
         }
@@ -427,14 +429,23 @@ int main(int argc, char **argv)
         FILE *pf = fopen("/tmp/console-pagemode", "wb"); fputc('S', pf); fclose(pf);
         usleep(200000);
         int b = ngot;
+        keep_abs = 1;
         send((unsigned char[]){ 0xB0, 0x10, 100 }, 3);
         send((unsigned char[]){ 0xB0, 0x10, 0 }, 3);
         usleep(200000);
         int abs0 = 0;
         for (int i = b; i < ngot; i++) if (got[i][0] == 0xBF && got[i][1] == 115 && got[i][2] == 0) abs0++;
         CHECK(abs0 == 1, "A: K1 also sends its absolute position (CC 115) on a sequencer page");
-        pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);
+        pf = fopen("/tmp/console-pagemode", "wb"); fputc('O', pf); fclose(pf);   /* an FX page: the position too (the pots follow it) */
         usleep(200000);
+        b = ngot;
+        send((unsigned char[]){ 0xB0, 0x10, 100 }, 3);
+        send((unsigned char[]){ 0xB0, 0x10, 40 }, 3);
+        usleep(200000);
+        abs0 = 0;
+        for (int i = b; i < ngot; i++) if (got[i][0] == 0xBF && got[i][1] == 115 && got[i][2] == 40) abs0++;
+        CHECK(abs0 == 1, "A: K1 also sends its absolute position (CC 115) on an FX page");
+        keep_abs = 0;
     }
     /* the tape page ('A'): its own buttons */
     {

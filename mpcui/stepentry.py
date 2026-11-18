@@ -454,8 +454,8 @@ def focus_input(T, side, val):
         T.input_popup = (time.monotonic() + 2.5, t, side)
 
 
-def sound_k1(T, n=1):
-    """On a sound page: the n-th setting on the page (knob n's), or None when that knob isn't a number there."""
+def sound_k1(T, n=1, choices=False):
+    """On a sound page: the n-th setting on the page (knob n's), or None when that knob isn't a number there (choices=True: a mode too)."""
     try:
         if not T.drum_page or T.seq_page or T.fx_page or T.inst_page or T.song_page or T.sbrowse.active or not T.engine:
             return None
@@ -473,7 +473,7 @@ def sound_k1(T, n=1):
         if len(params) < n:
             return None
         d = T.engine.drums
-        if d.kind(params[n - 1]) in ("menu", "onoff"):
+        if not choices and d.kind(params[n - 1]) in ("menu", "onoff"):
             return None
         return params[n - 1]
     except Exception:                                                            # noqa: BLE001
@@ -672,6 +672,13 @@ def install(MoveBoard, pad_velocity=None):
             if val:
                 erase(T)
             return
+        try:
+            import pots
+            if pots.handle(T, num, val):                                        # K1-K3 / FADER follow their position (numbers end to end, lists by zone)
+                return
+        except Exception:                                                       # noqa: BLE001
+            import traceback
+            print("pots:", traceback.format_exc())
         try:
             if seq_k2_chance(T, num, val):                                      # the sequencers: K2 on a fraction's CHANCE = a pot, 0-100 %
                 return

@@ -245,10 +245,95 @@ class MoveSeq:
         e.seq_changed()
         popup.show(self.T, self.which(), label + " CHANCE", self.chance_text(key))
 
+    def pos_selected(self, val):
+        """K1 is a pot: the setting picked with a pad follows its position (a number end to end, a short list a zone each)."""
+        if self.held is None or self.sel is None or self.sel >= len(self.pad_items()):
+            return False
+        key, label = self.pad_items()[self.sel]
+        sp, seq, e = self.sp, self.seq, self.T.engine
+        lane, i = sp.lane, self.held
+        self._adj = True
+        sp._edit(("knob1", self.sel, i))
+        for j in self.selected:
+            if j < seq.lane(lane).length:
+                self._pos_one(lane, j, key, val)
+        e.seq_changed()
+        if not isinstance(key, str):
+            sp.audition(lane, i)
+        popup.show(self.T, self.which(), label, self.item_value(key))
+        return True
+
+    def _pos_one(self, lane, i, key, val):
+        import pots
+        seq, e = self.seq, self.T.engine
+        with seq.lock:
+            st = seq.step(lane, i)
+            st.on = True
+            if key == "vel":
+                st.vel = max(0, min(127, int(val)))
+            elif key == "chance":
+                st.chance = pots.zone(val, len(sequencer.CHANCES))
+                sequencer.tidy_chance(st.chance, st.comp)
+            elif key == "ratchet":
+                st.ratchet = RATCHETS[pots.zone(val, len(RATCHETS))]
+            elif isinstance(key, str):
+                st.comp[key] = pots.zone(val, len(sequencer.COMPONENTS[key]))
+                if key in ("rand", "rup", "rdown"):                 # one pitch movement at a time
+                    for other in ("rand", "rup", "rdown"):
+                        if other != key:
+                            st.comp.pop(other, None)
+                            st.comp.pop(other + "_c", None)
+            else:
+                st.locks[key] = pots.param_value(e.drums, key, val)
+
+    def pos_lock(self, number, val):
+        """Steps selected, no pad picked: knob 1-3 / the FADER (8) lock the sound page's setting on them, from the pot's position."""
+        params = self.lock_params()
+        if self.held is None or number > len(params):
+            return False
+        key = params[number - 1]
+        e, seq, sp = self.T.engine, self.seq, self.sp
+        d = e.drums
+        if not d.lockable(key):
+            popup.show(self.T, self.which(), d.label(key), "CAN'T BE LOCKED")
+            return True
+        lane, i = sp.lane, self.held
+        sp._edit(("lockknob", number, i))
+        for j in self.selected:
+            if j < seq.lane(lane).length:
+                self._pos_one(lane, j, key, val)
+        e.seq_changed()
+        sp.audition(lane, i)
+        popup.show(self.T, self.which(), d.label(key), self.item_value(key))
+        return True
+
     def second_abs(self, val):
         """K2 is a pot: while the CHANCE pad is picked on a fraction, its position (0-127, end to end) IS the second chance, 0-100 %.
         True when this took the knob."""
-        if self.held is None or self.sel is None or self.sel >= len(self.pad_items()) or self.pad_items()[self.sel][0] != "chance":
+        if self.held is None or self.sel is None or self.sel >= len(self.pad_items()):
+            return False
+        ckey = self.pad_items()[self.sel][0]
+        if ckey in CKEYS:                                    # a component's chance: its list (100 % ... 0 %, then 1:2 ...), a zone each
+            if not self.engaged(ckey):
+                popup.show(self.T, self.which(), self.pad_items()[self.sel][1] + " CHANCE", "SET KNOB 1 FIRST")
+                return True
+            import pots
+            v = pots.zone(val, len(sequencer.CHANCES))
+            self._adj = True
+            self.sp._edit(("knob2", self.sel, self.held))
+            with self.seq.lock:
+                for j in self.selected:
+                    if j < self.seq.lane(self.sp.lane).length:
+                        st = self.seq.step(self.sp.lane, j)
+                        if (st.ratchet != 1) if ckey == "ratchet" else (ckey in st.comp):
+                            if v:
+                                st.comp[ckey + "_c"] = v
+                            else:
+                                st.comp.pop(ckey + "_c", None)
+            self.T.engine.seq_changed()
+            popup.show(self.T, self.which(), self.pad_items()[self.sel][1] + " CHANCE", self.chance_text(ckey))
+            return True
+        if ckey != "chance":
             return False
         if not sequencer.is_fraction(self.held_step().chance):
             popup.show(self.T, self.which(), "CHANCE", "PICK 1:2 ETC FIRST")

@@ -181,7 +181,7 @@ static void send3(int st, int a, int b)
    from where the knob is (1-64), which the clicks alone could not do. */
 static void knob_clicks(int slot, int val, int move_cc)
 {
-    if (slot == 0 && (page_seq || page_k1 || page_tape)) send3(0xBF, 115, val);
+    if (slot == 0) send3(0xBF, 115, val);                                    /* K1's position on every page (the pots follow it: Console mpcui/pots.py) */
     if (slot == 4) send3(0xBF, 122, val);                                    /* the FADER's position, 122 (Console: the tape page's volume) */
     if (slot == 1 || slot == 2) send3(0xBF, 115 + slot, val);                /* K2, K3: their positions, 116, 117 (Console uses them on a sound page and the zoomed track) */                 /* (on the sequencer pages) */
     if (knob_last[slot] < 0) { knob_last[slot] = val; return; }
