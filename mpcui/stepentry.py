@@ -648,8 +648,12 @@ def install(MoveBoard, pad_velocity=None):
             if val:
                 erase(T)
             return
-        if mixer_pots(T, num, val):                                             # the mixer: K1-K3 / FADER need a KNOB FX pad held
-            return
+        try:
+            if mixer_pots(T, num, val):                                         # the mixer: K1-K3 / FADER need a KNOB FX pad held
+                return
+        except Exception:                                                       # noqa: BLE001
+            import traceback
+            print("mixer pots:", traceback.format_exc())                        # (into app.log)
         if on_tape(T) and (num in (115, 116, 122) or 71 <= num <= 74):
             # the tape page: K1 and the FADER are pots, their position is the selected track's volume (0-100 %, end to end); K2 is its
             # pan (left end L100, middle centre, right end R100). Their clicks are not used here (the position was).
