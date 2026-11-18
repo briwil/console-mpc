@@ -3,6 +3,12 @@
 Each version is a release on the [Releases](https://github.com/briwil/console-mpc/releases) page with `Console-MPC.zip` attached.
 To update, drag the new `autorun` and `Console` folders from the zip onto the SD card and choose Replace.
 
+## 0.0.22
+
+- **Pots follow their position.** K1-K3 and the FADER now set a value from where the pot is, end to end (a full turn used to count only about 30 clicks): ARP 2 GLIDE and BEND, the REVERB / DELAY sends (tracks 1, 2, 3 and 8), the instrument's SENDS page, INSERT and song-insert settings, the sound pages' FADER, and on both sequencers the step settings (VELOCITY, LENGTH, MULTIPLY, NUDGE, PULSE, HOLD ... and a component's own chance) and the step locks. A short list (a five-name mode) gets an equal part of the travel for each name. K1's position is now sent on every page (bridge).
+- **CHANCE, second chance:** with a fraction (1:2, 2:2 ...) K2 sets the second percentage from the pot's position, 0-100 %, end to end.
+- Still by clicks (not changed): the ARP page 1 lists, PUNCH FX, the LFO pages and the song page.
+
 ## 0.0.21
 
 - **CHANCE, second chance:** when a step's chance is a fraction (1:2, 2:3 ...), K2 adds a second chance, a percentage (1% a click, clockwise = more): it plays on its turn round the lane, and then only that often. Taking K1 back to a percentage puts the second chance aside; picking a fraction again brings it back. Drum and synth sequencers.
