@@ -223,11 +223,13 @@ class MoveSeq:
                     st = seq.step(lane, j)
                     if (sequencer.is_fraction(st.chance)) if key == "chance" else \
                             (st.ratchet != 1) if key == "ratchet" else (key in st.comp):
-                        v = max(0, min(top, st.comp.get(key + "_c", 0) + one))
+                        v = max(0, min(top, st.comp.get(key + "_c", 0) + (-one if key == "chance" else one)))   # (a percentage: clockwise = more)
                         if v:
                             st.comp[key + "_c"] = v
                         else:
                             st.comp.pop(key + "_c", None)
+                        if key == "chance":
+                            st.comp.pop("chance_m", None)          # (set on purpose: nothing put aside any more)
         e.seq_changed()
         popup.show(self.T, self.which(), label + " CHANCE", self.chance_text(key))
 
@@ -280,7 +282,7 @@ class MoveSeq:
                 st.vel = sequencer.DEFAULT_VELOCITY
             elif key == "chance":
                 st.chance = 0
-                st.comp.pop("chance_c", None)
+                sequencer.forget_chance(st.comp)
             elif key == "ratchet":
                 st.ratchet = 1
                 st.comp.pop("ratchet_c", None)

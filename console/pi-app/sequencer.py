@@ -132,7 +132,7 @@ def cpass(comp, name, cycle, rng):
 
 def comp_ok(key, x):
     """Is this a saved component (or its chance, "pulse_c") with a place that exists?"""
-    if key == "chance_c":
+    if key in ("chance_c", "chance_m"):
         return 0 <= x < N_PERCENT
     if key.endswith("_c") and key[:-2] in COMPONENTS or key == "ratchet_c":
         return 0 <= x < len(CHANCES)
@@ -235,9 +235,19 @@ def chance_text(idx, comp):
 
 
 def tidy_chance(idx, comp):
-    """A second chance only goes with a fraction: drop it when the chance is a percentage or off."""
-    if not is_fraction(idx):
-        comp.pop("chance_c", None)
+    """A second chance only goes with a fraction. Off a fraction it is put aside (comp["chance_m"]), and comes back when a
+    fraction is picked again."""
+    if is_fraction(idx):
+        if "chance_c" not in comp and "chance_m" in comp:
+            comp["chance_c"] = comp["chance_m"]
+    elif "chance_c" in comp:
+        comp["chance_m"] = comp.pop("chance_c")
+
+
+def forget_chance(comp):
+    """The step's chance was switched off: its second chance (and the one put aside) go too."""
+    comp.pop("chance_c", None)
+    comp.pop("chance_m", None)
 
 
 class Sequencer:

@@ -409,11 +409,13 @@ class MoveSynth:
                     on = sequencer.is_fraction(nt.chance) if key == "chance" else \
                         nt.ratchet != 1 if key == "ratchet" else nt.nudge != 0 if key == "nudge" else key in nt.comp
                     if on:
-                        v = max(0, min(top, nt.comp.get(key + "_c", 0) + one))
+                        v = max(0, min(top, nt.comp.get(key + "_c", 0) + (-one if key == "chance" else one)))   # (a percentage: clockwise = more)
                         if v:
                             nt.comp[key + "_c"] = v
                         else:
                             nt.comp.pop(key + "_c", None)
+                        if key == "chance":
+                            nt.comp.pop("chance_m", None)          # (set on purpose: nothing put aside any more)
         self.T.engine.seq_changed()
         popup.show(self.T, self.which(), label + " CHANCE", self.chance_text(key))
 
@@ -438,7 +440,7 @@ class MoveSynth:
                             nt.vel = notes_mod.DEFAULT_VELOCITY
                         elif key == "chance":
                             nt.chance = 0
-                            nt.comp.pop("chance_c", None)
+                            sequencer.forget_chance(nt.comp)
                         elif key == "ratchet":
                             nt.ratchet = 1
                             nt.comp.pop("ratchet_c", None)
