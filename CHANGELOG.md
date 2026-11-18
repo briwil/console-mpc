@@ -1,3 +1,7 @@
+## 0.0.24
+
+- TAPESCAM: Wobble is gentler at the bottom (squared on its way in: the module jumped to 5% depth at the first percent). The number shown, and the top, are unchanged.
+
 ## 0.0.23
 
 - Number knobs: the first click of a turn changes the value at once (a short turn used to do nothing; the next one did). Lists and modes keep their click count.
