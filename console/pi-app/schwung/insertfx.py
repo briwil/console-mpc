@@ -151,11 +151,21 @@ class Insert:
             self.lib.sh_fx_close(self.h)
         self.h, self.params, self.values = None, [], {}
 
+    def _curve(self, key, v):
+        """TAPESCAM's wobble starts at 5% of its depth the moment it is above 0 (a step at the bottom): the shown value is squared
+        on its way in, so the first percents are gentle and the top is unchanged."""
+        try:
+            if key == "wobble" and self.index and catalog.FX[self.index - 1]["id"] == "tapescam":
+                return v * v
+        except (IndexError, KeyError, TypeError):
+            pass
+        return v
+
     def _send(self, key):
         p = next((q for q in self.params if q[0] == key), None)
         if p is None or not self.h:
             return
-        v = self.values[key]
+        v = self._curve(key, self.values[key])
         text = p[6][int(v)] if p[6] else ("%d" % v if p[5] >= 1 and float(v).is_integer() else "%.3f" % v)
         self._lib().sh_fx_set(self.h, key.encode(), str(text).encode())
 
@@ -164,7 +174,7 @@ class Insert:
         if slot >= len(self.params) or not self.h:
             return
         key = self.params[slot][0]
-        self._lib().sh_fx_set(self.h, key.encode(), ("%.4f" % value).encode())
+        self._lib().sh_fx_set(self.h, key.encode(), ("%.4f" % self._curve(key, value)).encode())
 
     def restore(self, slot):
         """An LFO lets go of setting `slot`: back to the page's value."""
