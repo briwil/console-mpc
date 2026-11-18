@@ -427,6 +427,30 @@ class MoveSynth:
         self.T.engine.seq_changed()
         popup.show(self.T, self.which(), label + " CHANCE", self.chance_text(key))
 
+    def second_abs(self, val):
+        """K2 is a pot: while the CHANCE pad is picked on a fraction, its position (0-127, end to end) IS the second chance, 0-100 %.
+        True when this took the knob."""
+        if not self.selected or self.sel is None or self.sel >= len(self.pad_items()) or self.pad_items()[self.sel][0] != "chance":
+            return False
+        nts = self._notes_of(self.selected[0])
+        if not nts or not sequencer.is_fraction(nts[0][1].chance):
+            popup.show(self.T, self.which(), "CHANCE", "PICK 1:2 ETC FIRST")
+            return True
+        pct = int(round(max(0, min(127, val)) * 100 / 127.0))
+        self._adj = True
+        with self.seq.lock:
+            for i in self.selected:
+                for _n, nt in self._notes_of(i):
+                    if sequencer.is_fraction(nt.chance):
+                        if pct < 100:
+                            nt.comp["chance_p"] = pct
+                        else:
+                            nt.comp.pop("chance_p", None)
+                        nt.comp.pop("chance_pm", None)
+        self.T.engine.seq_changed()
+        popup.show(self.T, self.which(), "CHANCE", self.chance_text("chance"))
+        return True
+
     def which(self):
         return "STEP %d" % (self.selected[0] + 1) if len(self.selected) == 1 else "%d STEPS" % len(self.selected)
 

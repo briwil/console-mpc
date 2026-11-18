@@ -131,6 +131,30 @@ def synth_click(T):
     ms.sel = None
 
 
+def seq_k2_chance(T, num, val):
+    """Steps selected, the CHANCE pad picked on a fraction (1:2 ...): K2 (CC 116: its position; CC 72: its clicks) sets the second chance
+    from where the pot is, end to end 0-100 %. True when it was used here."""
+    if num not in (116, 72) or T.fx_page or T.inst_page or T.song_page or not T.seq_page or not T.engine:
+        return False
+    if T.punch.active() or T.auto.active():
+        return False
+    ms = T.msyn if T.synth_shown() else T.mseq
+    if not ms.active() or not ms.selected or ms.sel is None:
+        return False
+    try:
+        if ms.pad_items()[ms.sel][0] != "chance":
+            return False
+    except IndexError:
+        return False
+    T._pot_abs_at = getattr(T, "_pot_abs_at", {})
+    if num == 116:
+        T._pot_abs_at[72] = time.monotonic()
+        return ms.second_abs(val)
+    if not val:
+        return True
+    return time.monotonic() - T._pot_abs_at.get(72, -9.0) < 0.15          # (K2's clicks follow its position: not used)
+
+
 def on_mixer(T):
     try:
         import native
@@ -648,6 +672,12 @@ def install(MoveBoard, pad_velocity=None):
             if val:
                 erase(T)
             return
+        try:
+            if seq_k2_chance(T, num, val):                                      # the sequencers: K2 on a fraction's CHANCE = a pot, 0-100 %
+                return
+        except Exception:                                                       # noqa: BLE001
+            import traceback
+            print("K2 chance:", traceback.format_exc())
         try:
             if mixer_pots(T, num, val):                                         # the mixer: K1-K3 / FADER need a KNOB FX pad held
                 return

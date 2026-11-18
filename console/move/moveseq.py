@@ -245,6 +245,32 @@ class MoveSeq:
         e.seq_changed()
         popup.show(self.T, self.which(), label + " CHANCE", self.chance_text(key))
 
+    def second_abs(self, val):
+        """K2 is a pot: while the CHANCE pad is picked on a fraction, its position (0-127, end to end) IS the second chance, 0-100 %.
+        True when this took the knob."""
+        if self.held is None or self.sel is None or self.sel >= len(self.pad_items()) or self.pad_items()[self.sel][0] != "chance":
+            return False
+        if not sequencer.is_fraction(self.held_step().chance):
+            popup.show(self.T, self.which(), "CHANCE", "PICK 1:2 ETC FIRST")
+            return True
+        pct = int(round(max(0, min(127, val)) * 100 / 127.0))
+        self._adj = True
+        sp, seq, e = self.sp, self.seq, self.T.engine
+        sp._edit(("knob2", self.sel, self.held))
+        with seq.lock:
+            for j in self.selected:
+                if j < seq.lane(sp.lane).length:
+                    st = seq.step(sp.lane, j)
+                    if sequencer.is_fraction(st.chance):
+                        if pct < 100:
+                            st.comp["chance_p"] = pct
+                        else:
+                            st.comp.pop("chance_p", None)
+                        st.comp.pop("chance_pm", None)
+        e.seq_changed()
+        popup.show(self.T, self.which(), "CHANCE", self.chance_text("chance"))
+        return True
+
     def step_pad(self, p):
         """A pad while a step is held: pick that setting (it's on), or the picked one again: off."""
         if self.held is None:
