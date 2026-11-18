@@ -1,3 +1,8 @@
+## 0.0.25
+
+- Sampler page: a small waveform of the drum's sample above the settings (BLEND with two samples: the first; RANDOM on: the sample that played last).
+- The Sampler's sound library is now built for the MPC and shipped (it reports which sample RANDOM played).
+
 ## 0.0.24
 
 - TAPESCAM: Wobble is gentler at the bottom (squared on its way in: the module jumped to 5% depth at the first percent). The number shown, and the top, are unchanged.
