@@ -29,6 +29,7 @@ LABELS = dict(seqpage.STEP_LABELS, rate="RATE", hits="EUCLID", rotate="SHIFT")
 STEP_PADS = [("vel", "VELOCITY"), ("chance", "CHANCE"), ("ratchet", "MULTIPLY"), ("pulse", "PULSE"),
              ("hold", "HOLD"), ("jump", "JUMP"), ("rand", "RANDOM"), ("rup", "RAMP UP"), ("rdown", "RAMP DOWN"),
              ("nudge", "NUDGE")]
+TAP = 0.5                  # a pad let go sooner than this (seconds), with nothing turned: its setting goes off
 CKEYS = ("ratchet", "pulse", "hold", "jump", "rand", "rup", "rdown", "nudge")   # the components knob 3 gives a chance
 RATCHETS = [1, 2, 3, 4, 5, 6, 7, 8, 0]            # MULTIPLY's values in knob order (0: random)
 SEMI = 2                                          # knob clicks of a drum's pitch setting per semitone (a guess)
@@ -201,6 +202,7 @@ class MoveSeq:
         key, label = self.pad_items()[self.sel]
         if key not in CKEYS and key != "chance":
             return
+        self._adj = True
         one = knobgate.gate(("compchance", key), delta, shift)
         if not one:
             return
@@ -240,6 +242,7 @@ class MoveSeq:
         sp, seq, e = self.sp, self.seq, self.T.engine
         lane, i = sp.lane, self.held
         sp._edit(("pad", p, i, time.monotonic()))
+        self._down_at, self._adj = time.monotonic(), False        # (let go quickly with nothing turned: the setting goes off)
         off = self.sel == p
         was_set = self.engaged(key)
         for j in self.selected:
@@ -254,6 +257,17 @@ class MoveSeq:
 
     def which(self):
         return "STEP %d" % (self.held + 1) if len(self.selected) == 1 else "%d STEPS" % len(self.selected)
+
+    def pad_up(self, p):
+        """A step-setting pad let go: its setting stops showing (all the settings again). Tapped quickly, with nothing turned
+        meanwhile: it is switched off. Held a while: it keeps what it was set to."""
+        if self.sel != p:
+            return
+        items = self.pad_items()
+        if (p < len(items) and time.monotonic() - getattr(self, "_down_at", 0) < TAP and not getattr(self, "_adj", False)
+                and self.engaged(items[p][0])):
+            self.step_pad(p)                                  # (the picked pad again: off)
+        self.sel = None
 
     def _pad_one(self, lane, i, p, key, off):
         """Tapping a pad only picks it (to see what it is); it's set when knob 1 turns. Picked again: off."""
@@ -279,6 +293,7 @@ class MoveSeq:
     def set_selected(self, delta, shift):
         """Knob 1 while a step is held and a pad picked: that setting."""
         key, label = self.pad_items()[self.sel]
+        self._adj = True
         sp, seq, e = self.sp, self.seq, self.T.engine
         lane, i = sp.lane, self.held
         clicks = self.T.knob_clicks(1, delta, shift)

@@ -1285,8 +1285,8 @@ def handle(name, T, m, e):
             ms.step_pad(name[1])
         return
     if isinstance(name, tuple) and name[0] == "STEP_PAD_UP":
-        if ms.active() and ms.sel == name[1]:
-            ms.sel = None                                   # let go: all the step settings again
+        if ms.active():
+            ms.pad_up(name[1])                              # let go: all the step settings again (a quick tap: off)
         return
     if isinstance(name, tuple) and name[0] == "PICK_LANE":
         if ms.held is None and e and e.drums and name[1] < e.drums.lanes:

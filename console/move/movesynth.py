@@ -29,6 +29,7 @@ STEP_PADS = [("vel", "VELOCITY"), ("chance", "CHANCE"), ("ratchet", "MULTIPLY"),
              ("rdown", "RAMP DOWN")]
 PATH_ONLY = ("pulse", "hold", "jump")             # these change the order the steps play in: PER NOTE only
 COMPS = ("pulse", "hold", "jump", "rand", "rup", "rdown")
+TAP = 0.5                  # a pad let go sooner than this (seconds), with nothing turned: its setting goes off
 CKEYS = ("ratchet", "nudge") + COMPS               # the components knob 3 gives a chance
 LANE_KNOBS = ["length", "rate", "type", "lane", "key", "scale"]
 LABELS = {"length": "LENGTH", "rate": "RATE", "type": "TYPE", "lane": "NOTE LEN", "key": "KEY", "scale": "SCALE"}
@@ -262,7 +263,11 @@ class MoveSynth:
         if not vel:
             self.pads_down.pop(p, None)
             if self.selected and self.sel == p:
-                self.sel = None                                 # a step setting shows while its pad is held; let go: all the settings again
+                items = self.pad_items()                        # a step setting shows while its pad is held; let go: all the settings again
+                if (p < len(items) and time.monotonic() - getattr(self, "_down_at", 0) < TAP
+                        and not getattr(self, "_adj", False) and self.engaged(items[p][0])):
+                    self._step_pad(p)                           # a quick tap with nothing turned: the setting goes off
+                self.sel = None
                 return False
             rec = self.rec.pop(p, None)
             if rec and self.T.engine.playing:                    # a recorded note lasts as long as you held the pad
@@ -384,6 +389,7 @@ class MoveSynth:
         key, label = self.pad_items()[self.sel]
         if key not in CKEYS and key != "chance":
             return
+        self._adj = True
         one = knobgate.gate(("synchance", key), delta, shift)
         if not one:
             return
@@ -452,6 +458,7 @@ class MoveSynth:
                 self.T.say("%s: PER NOTE ONLY (KNOB 3 ON THE LANE PAGE)" % label, 3)
                 return
             self.sel = p
+            self._down_at, self._adj = time.monotonic(), False
             popup.show(self.T, self.which(), label, self.item_value(key), "KNOB 1")
 
     # ------------------------------------------------------------ knobs 1-8 lock the sound page on the selected steps
@@ -545,6 +552,7 @@ class MoveSynth:
 
     def set_selected(self, delta, shift):
         key, label = self.pad_items()[self.sel]
+        self._adj = True
         seq, e = self.seq, self.T.engine
         clicks = delta
         if key in ("chance", "ratchet", "nudge") + COMPS or (not isinstance(key, str) and knobgate.is_choice(self.d, key)):
