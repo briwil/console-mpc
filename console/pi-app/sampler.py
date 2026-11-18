@@ -261,7 +261,12 @@ class Sampler:
         library tells: sw_get "pick"); otherwise the first sample set (BLEND with two: the first one)."""
         try:
             if self.random_on(v):
-                w = max((self._live or self._lib).sw_get(("pick%d" % (v + 1)).encode()), -1)
+                w, newest = -1, -1
+                for lib in {id(x): x for x in (self._lib, self._live) if x}.values():    # (the sequencer's copy and the pads' copy)
+                    at = lib.sw_get(("pickat%d" % (v + 1)).encode())
+                    got = lib.sw_get(("pick%d" % (v + 1)).encode())
+                    if got >= 0 and at >= 0 and (newest < 0 or (at - newest) & 0x3fffffff < 0x20000000):
+                        w, newest = got, at
                 if w >= 0:
                     i = self.values[sample_param(v, w)]
                     if 0 < i <= len(self.files):

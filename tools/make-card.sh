@@ -24,6 +24,7 @@ tar xzf "$BRIDGE" -C "$T/console"                       # -> console/mpc/ (bridg
 [ -f "$T/console/mpc/boot.sh" ] || { echo "the bridge archive has no mpc/boot.sh"; exit 1; }
 [ -f "$T/console/mpc/libconsolecore.so" ] && cp "$T/console/mpc/libconsolecore.so" "$T/console/pi-app/core/libconsolecore.so"        # (our sound core and module host: they hand the audio input to the GUITAR instrument)
 [ -f "$T/console/mpc/libschwunghost.so" ] && cp "$T/console/mpc/libschwunghost.so" "$T/console/pi-app/schwung/libschwunghost.so"
+[ -f "$T/console/mpc/libsampler.so" ] && cp "$T/console/mpc/libsampler.so" "$T/console/pi-app/drums/sampler/libsampler.so"        # (the Sampler: it reports the sample RANDOM played last)
 [ -f "$T/console/mpc/vst2fx.so" ] && { cp "$T/console/mpc/vst2fx.so" "$T/console/pi-app/schwung/modules/stompbox/vst2fx.so"; cp "$T/console/mpc/vst2fx.so" "$T/console/pi-app/schwung/modules/guitar/dsp.so"; }     # (the VST2 plugin host: STOMPBOX in the insert list, and the GUITAR instrument)
 if [ -f "$T/console/mpc/vst2fx.so" ]; then             # every plug-in module gets the host (an effect: vst2fx.so; an instrument: dsp.so)
   for m in "$T"/console/pi-app/schwung/modules/*/; do

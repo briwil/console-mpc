@@ -8,6 +8,7 @@
  * ringing sample); 3-5 are silent. RANDOM on: each hit plays one of the loaded samples 1-5, picked at random,
  * and BLEND is ignored. solo<drum> n (1-5, not saved): the sample browser's preview plays only sample n. */
 #include <math.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -15,7 +16,7 @@
 #define VOICES 16
 #define SAMPLES 5
 typedef struct { float *x; int n; int on; double pos; } player_t;      /* one sample of a drum, playing */
-typedef struct { player_t p[SAMPLES]; double rate; float gain; int age, fade, pick; float mixed[SAMPLES]; } voice_t;
+typedef struct { player_t p[SAMPLES]; double rate; float gain; int age, fade, pick, at; float mixed[SAMPLES]; } voice_t;
                                                          /* mixed: last block's BLEND gains; pick: RANDOM's sample */
 static voice_t V[VOICES];
 static int level[VOICES], pitch[VOICES], start[VOICES], decay[VOICES], blend[VOICES], rnd[VOICES], solo[VOICES];
@@ -71,6 +72,7 @@ int sw_get(const char *key)
     if (!strcmp(name, "blend")) return blend[v];
     if (!strcmp(name, "random")) return rnd[v];
     if (!strcmp(name, "pick")) return V[v].pick;           /* the sample the last hit played (RANDOM on), else -1 */
+    if (!strcmp(name, "pickat")) return V[v].at;           /* when that hit was (ms, wraps): the sequencer and the pads each have a copy of this library */
     return -1;
 }
 
@@ -125,6 +127,7 @@ void sw_trigger(int voice, int velocity)
     p->rate = pow(2.0, ((pitch[voice] - 64) / 2.0) / 12.0);
     p->gain = (level[voice] / 127.0f) * (velocity / 127.0f);
     p->age = 0;
+    { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); p->at = (int)((ts.tv_sec * 1000LL + ts.tv_nsec / 1000000) & 0x3fffffff); }
     if (p->pick >= 0) {
         for (int w = 0; w < SAMPLES; w++) p->mixed[w] = w == p->pick ? 1.f : 0.f;
     } else gains(voice, p->mixed);                                  /* (no glide in from an old BLEND) */
