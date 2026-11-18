@@ -551,7 +551,10 @@ def install(MoveBoard, pad_velocity=None):
         if num == 102:                                                          # what the pads are now (bridge/mapping.h): named for a second
             try:
                 if not on_tape(T) and not T.inst_page and not T.song_page:
-                    T.pad_label = (time.monotonic() + 1.0, {1: "PADS", 2: "KNOB FX", 3: "SEQ", 4: "STEP SETTINGS"}.get(val, ""))   # (a pop-up in the middle of the screen: native.py)
+                    name = {1: "PADS", 2: "KNOB FX", 3: "SEQ", 4: "STEP SETTINGS"}.get(val, "")
+                    if T.fx_page and val != 2:                                  # the mixer / FX pages: their pads are only ever knobs (no PADS, SEQ ...)
+                        name = ""
+                    T.pad_label = (time.monotonic() + 1.0, name)   # (a pop-up in the middle of the screen: native.py)
             except Exception:                                                   # noqa: BLE001
                 pass
             return
