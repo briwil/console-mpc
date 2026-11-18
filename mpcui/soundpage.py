@@ -195,6 +195,7 @@ def _wave_mask(path, W=WAVE_W, H=WAVE_H):
             import sampler
             x = sampler.read_wav(path)
             if x is None or not len(x):
+                print("wave: could not read", path)
                 return
             if len(x) < W:
                 x = np.pad(x, (0, W - len(x)))
@@ -208,12 +209,15 @@ def _wave_mask(path, W=WAVE_W, H=WAVE_H):
             rows = np.arange(H)[:, None]
             WAVE[key] = (rows >= np.minimum(top, bot - 0)[None, :]) & (rows <= np.maximum(bot, top + 1)[None, :])
         except Exception:                                           # noqa: BLE001
+            import traceback
+            print("wave: could not draw %s:" % path, traceback.format_exc())
             WAVE[key] = None
     import threading
     threading.Thread(target=work, daemon=True).start()
     return None
 
 
+SEEN = {}
 SMALL = (14, 100, 248, 40)                                          # the Sampler's small waveform: x, y, width, height (above the settings, clear of the frame)
 
 
@@ -223,7 +227,12 @@ def _small_wave(d, voice):
         path = d.wave_path(voice)
         x0, y0, w, h = SMALL
         m = _wave_mask(path, w, h) if path else None
+        if SEEN.get(voice) != (path, m is not None):
+            SEEN[voice] = (path, m is not None)
+            print("wave: drum %d  file %s  picture %s" % (voice + 1, path, "ready" if m is not None else "not yet"))
     except Exception:                                               # noqa: BLE001
+        import traceback
+        print("wave:", traceback.format_exc())
         return None
     if m is None:
         return None
