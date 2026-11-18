@@ -70,8 +70,10 @@ def numeric(key, delta):
     """A number knob: the clicks to apply now (0 until SPEED clicks have come the same way)."""
     now = time.monotonic()
     total, last = _acc.get(key, (0, 0.0))
-    if now - last > PAUSE or (total and (total > 0) != (delta > 0)):
-        total = 0
+    fresh = now - last > PAUSE or (total and (total > 0) != (delta > 0))
+    if fresh:
+        _acc[key] = (0, now)
+        return 1 if delta > 0 else -1          # the first click of a turn changes the value at once; the rest are counted
     total += delta
     n = int(abs(total) // SPEED)
     if n:
