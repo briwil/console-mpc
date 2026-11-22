@@ -30,6 +30,9 @@ takeover() {
   sleep 2
 }
 
+# Started by SampleBoot (/run/sampleboot exists): it has already stopped the stock app and used the panel, and the stock app is not
+# started again. Waiting for it to start (the code below) would wait for nothing: take over at once.
+[ -d /run/sampleboot ] && CONSOLE_TOOK_OVER=1
 if [ -z "${CONSOLE_TOOK_OVER:-}" ]; then
   n=0
   while ! systemctl is-active --quiet ac50.service && [ $n -lt 90 ]; do sleep 1; n=$((n + 1)); done
