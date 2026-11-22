@@ -1,5 +1,6 @@
 /*
- * bootmenu.c - the startup menu: "PAD 1 = Console, PAD 2 = stock MPC", a few seconds, then the stock app.
+ * bootmenu.c - the start-up check: waits for the control panel, then starts Console (no choice to make; the stock app
+ * is one Shift + STOP away, see exitmenu.py). If the panel stays silent: exit 12, or the stock app on timeout.
  *
  *   bootmenu [seconds]      exit code 10 = Console, 11 = stock MPC app (also on timeout or any problem)
  *
@@ -270,15 +271,8 @@ static void draw(int secs_left)
     rect(0, 0, 320, 240, 0x00101418);
     text(24, 20, "STARTUP", 4, 0x00E8B04B);
     rect(24, 62, 272, 3, 0x00E8B04B);
-    text(24, 90, "PAD 1  CONSOLE", 3, 0x00FFFFFF);
-    text(24, 130, "PAD 2  MPC", 3, 0x00FFFFFF);
-    char m[40];
-#ifdef HOST_TEST
-    snprintf(m, sizeof m, "MPC STARTS IN %d", secs_left);
-#else
-    snprintf(m, sizeof m, "MPC STARTS IN %d", secs_left);
-#endif
-    text(24, 190, m, 2, 0x008899AA);
+    text(24, 100, "STARTING CONSOLE", 3, 0x00FFFFFF);
+    (void)secs_left;
 }
 
 /* When the panel stays silent: put what we know into the log (what the writes returned, the port's own status, where we run). */
@@ -325,9 +319,7 @@ int main(int argc, char **argv)
     fb_open();
     midi_open();
     panel_hello();
-    pad_led(0, 0, 110, 20);
-    pad_led(1, 70, 70, 70);
-    for (int p = 2; p < 16; p++) pad_led(p, 0, 0, 0);
+    for (int p = 0; p < 16; p++) pad_led(p, 0, 0, 0);
     int choice = 11, last = -1;
     uint8_t st = 0;
     int need = 0, n = 0, heard = 0;
@@ -342,12 +334,11 @@ int main(int argc, char **argv)
         if (left != last) { last = left; draw(left); flush(); }
         uint8_t buf[64];
         int k = midi_read(buf, sizeof buf), picked = 0;
-        if (k > 0) heard = 1;
+        if (k > 0) { heard = 1; picked = 10; }          /* no choice any more: the panel answered, so Console starts (the menu is in Console: Shift + STOP) */
         if (silent > 0 && !heard && t >= silent * 50) { silent_report(); choice = 12; break; }
         if (!heard && t > 0 && t % 50 == 0) {       /* silent so far: the panel may still be starting up: say hello again, every second */
             panel_hello();
-            pad_led(0, 0, 110, 20); pad_led(1, 70, 70, 70);
-            for (int p = 2; p < 16; p++) pad_led(p, 0, 0, 0);
+            for (int p = 0; p < 16; p++) pad_led(p, 0, 0, 0);
         }
         for (int i = 0; i < k; i++) {
             uint8_t b = buf[i];
@@ -357,7 +348,7 @@ int main(int argc, char **argv)
             d[n++] = b;
             if (n < need) continue;
             n = 0;
-            if (st == 0x99 && d[1] > 0) { if (d[0] == 37) picked = 10; else if (d[0] == 36) picked = 11; }
+            if (st == 0x99 && d[1] > 0) { (void)d; }
         }
         if (picked == 10) {
             choice = 10;

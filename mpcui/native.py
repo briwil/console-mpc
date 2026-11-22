@@ -385,6 +385,13 @@ def publish():
         except Exception:
             import traceback
             print("arp pop-up error:\n" + traceback.format_exc(), flush=True)
+    try:
+        import exitmenu
+        canvas.ox = 0
+        exitmenu.draw(canvas, W, H)                  # Shift + STOP: the leave-Console menu, over the page
+    except Exception:
+        import traceback
+        print("exit menu draw error:\n" + traceback.format_exc(), flush=True)
     if canvas.styled:
         canvas.ox = 0
         canvas.rect(0, 0, OX, H, SIDE_L)

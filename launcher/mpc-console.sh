@@ -51,5 +51,12 @@ while :; do
   [ "$CODE" = 75 ] && [ ! -f "$C/STOP" ] || break      # 75 = the app wants a restart
 done
 rm -f "$C/STOP" /tmp/console-native.rgb /tmp/console-pagemode
+if [ -f "$C/SHUTDOWN" ]; then          # chosen in Console's leave menu: switch the Sample off (the stock app is not started)
+  rm -f "$C/SHUTDOWN"
+  echo "Console ended (exit code $CODE). Shutting down."
+  sync
+  systemctl poweroff || poweroff
+  exit 0
+fi
 restore
 echo "Console ended (exit code $CODE). The stock MPC app is starting again. Log: $C/app.log"

@@ -264,5 +264,11 @@ try:
 except Exception:
     import traceback
     print("Shift + knobs is off:\n" + traceback.format_exc(), flush=True)
+try:
+    import exitmenu
+    main.__globals__["quit_hook"] = exitmenu.hook       # Shift + STOP: back to the MPC OS / shut down / cancel
+except Exception:
+    import traceback
+    print("exit menu is off:\n" + traceback.format_exc(), flush=True)
 main.__globals__["handle"] = _handle
 main()

@@ -823,6 +823,13 @@ def main():
             while not keys.empty():
                 name = keys.get()
                 crashlog.action(name)
+                if quit_hook is not None:                 # the MPC: Shift + STOP opens a menu (back to the MPC OS / shut down)
+                    verdict = quit_hook(name)
+                    if verdict == "eat":
+                        continue
+                    if verdict == "quit":
+                        quit_now = True
+                        break
                 if name == "QUIT":
                     quit_now = True
                     break
@@ -947,6 +954,9 @@ def main():
         elif m.restart:
             print("Restarting with the new version...")
             sys.exit(moveupdater.RESTART_CODE)
+
+
+quit_hook = None          # set by mpc_app.py (exitmenu.hook)
 
 
 def menus_open(m):
