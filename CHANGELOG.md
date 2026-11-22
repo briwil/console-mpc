@@ -1,3 +1,8 @@
+## 0.0.26
+
+- Start-up: Console no longer asks Console or MPC. It starts once the control panel is ready (SampleBoot is where you choose a system).
+- Shift + STOP opens a leave menu: BACK TO MPC OS, SHUT DOWN or CANCEL. Turn the wheel, push to choose. Console saves first.
+
 ## 0.0.25
 
 - Sampler page: a small waveform of the drum's sample above the settings (BLEND with two samples: the first; RANDOM on: the sample that played last).
