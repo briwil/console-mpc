@@ -1,3 +1,7 @@
+## 0.0.27
+
+- Started from SampleBoot, Console now starts at once (it waited for the stock app, which SampleBoot has already stopped, and never got going).
+
 ## 0.0.26
 
 - Start-up: Console no longer asks Console or MPC. It starts once the control panel is ready (SampleBoot is where you choose a system).
