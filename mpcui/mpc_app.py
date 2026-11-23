@@ -155,6 +155,7 @@ G = runpy.run_path(APP_PY, run_name="console_app")
 if _STRESS:
     G["main"].__globals__["STRESS_MINUTES"] = _STRESS      # (where main() looks it up)
 main = G["main"]
+_BOARD_BASE = {k: getattr(G["MoveBoard"], k) for k in ("cc", "note", "pad")}   # (before the wrappers below: the leave menu uses these)
 try:
     import padhello
     padhello.install(main.__globals__)                   # start-up on the pads: 2 seconds of random colours (no HELLO letters)
@@ -269,6 +270,24 @@ except Exception:
 try:
     import exitmenu
     main.__globals__["quit_hook"] = exitmenu.hook       # Shift + STOP: back to the MPC OS / shut down / cancel
+    _MB = G["MoveBoard"]
+    _wrapped = {k: getattr(_MB, k) for k in ("cc", "note", "pad")}
+
+    def _menu_cc(self, num, val):
+        if exitmenu.is_open():
+            return _BOARD_BASE["cc"](self, num, val)    # the plain controls only: a page's own wheel handling (the sequencer's box) is skipped
+        return _wrapped["cc"](self, num, val)
+
+    def _menu_note(self, num, val):
+        if exitmenu.is_open():
+            return None                                 # pads and step buttons do nothing while the leave menu is up
+        return _wrapped["note"](self, num, val)
+
+    def _menu_pad(self, p, vel):
+        if exitmenu.is_open():
+            return None
+        return _wrapped["pad"](self, p, vel)
+    _MB.cc, _MB.note, _MB.pad = _menu_cc, _menu_note, _menu_pad
 except Exception:
     import traceback
     print("exit menu is off:\n" + traceback.format_exc(), flush=True)
