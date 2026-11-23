@@ -1,3 +1,9 @@
+## 0.0.29
+
+- Screen recorder: also records every pad and button light. The After Effects script adds PAD n COLOR (looking like the real LED), PAD n LIT and a LIT slider for each button.
+- After Effects script: every control always gets a slider (untouched ones stay at 0), so expressions work with any recording.
+- PAD n PRESSURE follows the whole press: the hit's strength, higher while squeezed, 0 when let go.
+
 ## 0.0.28
 
 - Screen recorder: hold Shift in SETTINGS to show SCREEN REC. It records the screen, the sound and every control you touch to the card (ConsoleRecordings). tools/screenrec-convert.py on a Mac turns a recording into a PNG sequence, matching audio and an After Effects script with a slider for every control.
