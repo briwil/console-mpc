@@ -3,9 +3,12 @@
 # (same technique as test/build.sh: hand-declared functions + stand-in libraries to link against).
 set -e
 cd "$(dirname "$0")"
-CF="-O2 -fPIC -fno-stack-protector -ffreestanding -fvisibility=hidden -Wall -Wextra -Wno-unused-function -Wno-unused-parameter"
+# -mno-outline-atomics: atomic operations as plain instructions. Without it, newer clang calls helper functions
+# (__aarch64_cas4_acq_rel ...) that live in a compiler library we don't link, and the Sample can't load the library at all.
+CF="-O2 -fPIC -fno-stack-protector -ffreestanding -fvisibility=hidden -mno-outline-atomics -Wall -Wextra -Wno-unused-function -Wno-unused-parameter"
 clang --target=aarch64-linux-gnu $CF -c jackshim.c -o jackshim.o
 llvm-nm -u jackshim.o | awk '{print $2}' | sort -u > undef.txt
+if grep -q '^__aarch64_' undef.txt; then echo "jackshim.o needs compiler helper functions (see -mno-outline-atomics):"; grep '^__aarch64_' undef.txt; exit 1; fi
 grep '^snd_' undef.txt > undef_alsa.txt || true
 grep -v '^snd_' undef.txt > undef_libc.txt
 mkdir -p stubs
