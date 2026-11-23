@@ -1,3 +1,7 @@
+## 0.0.30
+
+- Fix: 0.0.29 didn't start (Console went back to the MPC OS after the start-up animation): the sound bridge was built in a way the Sample couldn't load.
+
 ## 0.0.29
 
 - Screen recorder: also records every pad and button light. The After Effects script adds PAD n COLOR (looking like the real LED), PAD n LIT and a LIT slider for each button.
