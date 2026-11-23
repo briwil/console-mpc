@@ -622,6 +622,8 @@ static void metro_mix(float *l, float *r)
     }
 }
 
+#include "screenrec.h"
+
 static int native_poll(void)
 {
     int fd = open(NATIVE_PATH, 0);
@@ -642,6 +644,7 @@ static int native_poll(void)
                 shadow[i] = ((uint32_t)nbuf[8 + i * 3] << 16) | ((uint32_t)nbuf[9 + i * 3] << 8) | nbuf[10 + i * 3];
             native_seq = seq;
             fb_flush();
+            rec_frame(shadow);
         }
     }
     close(fd);
@@ -654,6 +657,7 @@ static void *display_main(void *arg)
     while (running) {
         pagemode_poll();
         metro_poll();
+        rec_poll();
         if (native_poll()) { frame_new = -1; was_native = 1; usleep(16000); continue; }
         if (was_native) { was_native = 0; memset(shadow, 0, sizeof shadow); if (frame_last >= 0) frame_new = frame_last; }     /* back to the Move screen */
         int f = frame_new;
@@ -662,6 +666,7 @@ static void *display_main(void *arg)
             frame_new = -1;
             draw_move_display(frame[f]);
             fb_flush();
+            rec_frame(shadow);
         }
         usleep(16000);
     }
@@ -721,6 +726,7 @@ static void *audio_main(void *arg)
         int n;
         while ((n = hw_midi_read(raw, sizeof raw)) > 0) {
             heard = 1;
+            rec_midi(raw, n);
             for (int i = 0; i < n; i++) mpc_midi_byte(raw[i]);
         }
 #ifndef HOST_TEST
@@ -765,7 +771,10 @@ static void *audio_main(void *arg)
             if (r > 1.f) r = 1.f; else if (r < -1.f) r = -1.f;
             outbuf32[i * 2] = (int32_t)(l * 2147483520.f);
             outbuf32[i * 2 + 1] = (int32_t)(r * 2147483520.f);
+            if (ol) ol->audio[i] = l;
+            if (orr) orr->audio[i] = r;
         }
+        rec_audio(ol ? ol->audio : 0, orr ? orr->audio : 0, PERIOD);
         hw_audio_write(outbuf32, PERIOD);
     }
     return 0;
@@ -856,14 +865,17 @@ EXPORT int jack_activate(void *c)
     hw_fb_open();                                        /* no screen is not fatal */
     running = 1;
 #ifdef HOST_TEST
-    pthread_t a, d;
+    pthread_t a, d, w;
     pthread_create(&a, 0, audio_main, 0);
     pthread_create(&d, 0, display_main, 0);
+    rec_thread_started = pthread_create(&w, 0, rec_main, 0) == 0;
     audio_thread = (unsigned long)a;
     display_thread = (unsigned long)d;
+    rec_thread = (unsigned long)w;
 #else
     if (pthread_create(&audio_thread, 0, audio_main, 0)) return -3;
     pthread_create(&display_thread, 0, display_main, 0);
+    rec_thread_started = pthread_create(&rec_thread, 0, rec_main, 0) == 0;   /* the screen recorder's writer (idle until it is switched on) */
 #endif
     threads_started = 1;
     return 0;
@@ -877,10 +889,13 @@ EXPORT int jack_deactivate(void *c)
 #ifdef HOST_TEST
     pthread_join((pthread_t)audio_thread, 0);
     pthread_join((pthread_t)display_thread, 0);
+    if (rec_thread_started) pthread_join((pthread_t)rec_thread, 0);
 #else
     pthread_join(audio_thread, 0);
     pthread_join(display_thread, 0);
+    if (rec_thread_started) pthread_join(rec_thread, 0);           /* (it finishes a recording that was still going: Console was quit) */
 #endif
+    rec_thread_started = 0;
     threads_started = 0;
     for (int i = 0; i < 16; i++) mpc_pad_light(i, 0, 0, 0);
     return 0;

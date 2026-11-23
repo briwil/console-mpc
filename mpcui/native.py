@@ -796,6 +796,11 @@ def install(pages):
                 (namescan._log if job is namescan else leakhunt.say)(traceback.format_exc())
             return
         try:
+            import screenrec, menu as _mm
+            screenrec.tick(T, menu, on_settings(menu), _mm)          # Shift on SETTINGS reveals SCREEN REC
+        except Exception:
+            pass
+        try:
             card = T.pagefx.state() if getattr(T, "pagefx", None) is not None else None
             if card is None and T.engine and on_tape_page(T, menu):
                 (draw_tape if T.focus.track is None else draw_focus)(T)

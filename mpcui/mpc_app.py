@@ -48,6 +48,8 @@ try:
     nolink.install(_menu2)                                           # SETTINGS > SYNC: no Link on the MPC
     import inputsrc
     inputsrc.install_menu(_menu2)                                    # SETTINGS > INPUT: REAR / MIC / USB
+    import screenrec
+    screenrec.install(_menu2)                                        # SETTINGS > SCREEN REC (hidden until Shift is held there)
     import nobigscreen
     nobigscreen.install(_menu2)                                      # no extended screen (web page) and no EXTERNAL SCREEN row
     sys.path.insert(0, os.path.join(C, "pi-app", "schwung"))        # (the insert effects live there; drums.py adds it too, but later)

@@ -12,6 +12,10 @@ gcc -O1 -fPIC -shared "$CM/pi-app/core/core.c" -o "$OUT/libconsolecore_host.so" 
 gcc -O1 -g "$HERE/shim_test.c" -o "$OUT/shim_test" -ldl
 gcc -O1 -g -DRETRIG_TEST "$HERE/shim_test.c" -o "$OUT/retrig_test" -ldl
 "$OUT/shim_test" "$OUT/libjack_mpc_host.so" "$OUT/libconsolecore_host.so"
+# the screen recorder: record, then convert the recording as on a Mac
+gcc -O1 -g "$HERE/rec_test.c" -o "$OUT/rec_test" -ldl
+"$OUT/rec_test" "$OUT/libjack_mpc_host.so" "$OUT/rec"
+python3 "$HERE/../../tools/screenrec-convert.py" "$OUT/rec" --fps 30 --scale 1
 "$OUT/retrig_test" "$OUT/libjack_mpc_retrig.so" "$OUT/libconsolecore_host.so"
 python3 "$HERE/countin_test.py"
 if python3 -c "import numpy, PIL" 2>/dev/null; then
