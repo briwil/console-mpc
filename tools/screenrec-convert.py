@@ -13,8 +13,8 @@ Writes, into <recording folder>/ae/ :
 
 The sliders:
     PAD 1 ... PAD 16          velocity as a percentage while held, 0 when let go
-    PAD n PRESSURE            extra squeeze on a held pad (percentage; 0 for a plain hit). The panel sends only a few readings
-                              per squeeze, so these keyframes are linear (they glide); everything else jumps (hold keyframes)
+    PAD n PRESSURE            how hard the pad is pressed: the hit's velocity at the hit, higher while you squeeze harder,
+                              0 when let go (percentage; linear keyframes, so it glides between the panel's few readings)
     buttons                   1 while held, 0 when let go
     K1 K2 K3 FADER VOLUME     the knob's position as a percentage (fully left / down = 0, fully right / up = 100)
     WHEEL                     the wheel's rotation in degrees, adding up as it turns (right = more); --wheel-degrees per click
@@ -121,11 +121,12 @@ def read_controls(path, wheel_degrees):
                 pad = "PAD %d" % (PADNOTES.index(a) + 1)
                 if kind == 0x90 and v > 0:
                     put(pad, t, round(v / 127 * 100, 2))
+                    put(pad + " PRESSURE", t, ("hit", round(v / 127 * 100, 2)))
                 elif kind == 0x80 or (kind == 0x90 and v == 0):
                     put(pad, t, 0)
-                    put(pad + " PRESSURE", t, 0)
+                    put(pad + " PRESSURE", t, ("off", 0))
                 elif kind == 0xA0:
-                    put(pad + " PRESSURE", t, round(v / 127 * 100, 2))
+                    put(pad + " PRESSURE", t, ("squeeze", round(v / 127 * 100, 2)))
             elif ch == 0:
                 if kind == 0x90 or kind == 0x80:
                     name = BUTTONS.get(a, "BUTTON %02X" % a)
@@ -233,6 +234,38 @@ JSX = r"""// Console screen recording -> After Effects. Made by screenrec-conver
 """
 
 
+def pressure_keys(events, t0, fps):
+    """A pad's pressure as one curve: up to the hit's velocity at the hit, higher while it is squeezed harder (never below
+    the hit while held), back to 0 when let go. Linear keyframes, with a key a frame before each change so the curve
+    stays flat while held and doesn't creep from one hit to the next."""
+    one = 1.0 / fps
+    keys, level, base, held = [], 0.0, 0.0, False
+
+    def add(sec, v):
+        sec = round(max(0.0, sec), 4)
+        while keys and keys[-1][0] >= sec:               # (several at one moment: the last one counts)
+            keys.pop()
+        keys.append((sec, v))
+
+    for t, (what, v) in events:
+        sec = (t - t0) / 1e9
+        if what == "hit":
+            add(sec - one, 0)
+            level, base, held = v, v, True
+            add(sec, level)
+        elif what == "squeeze" and held:
+            new = max(v, base)                             # (a plain hit reads 0 here: the hit's own strength stays)
+            if new != level:
+                add(sec - one / 2, level)
+                level = new
+                add(sec, level)
+        elif what == "off" and held:
+            add(sec - one, level)
+            level, held = 0.0, False
+            add(sec, 0)
+    return keys
+
+
 def every_control():
     """The sliders, in the order they're added: pads, pad pressures, knobs, the wheel, then the buttons."""
     return (["PAD %d" % i for i in range(1, 17)] + ["PAD %d PRESSURE" % i for i in range(1, 17)]
@@ -300,6 +333,10 @@ def main():
     names = sorted(controls, key=order_key)
     js = {"fps": a.fps, "seconds": round((end - t0) / 1e9, 3), "order": names, "start": {}, "controls": {}}
     for name in names:
+        if name.endswith(" PRESSURE"):
+            js["controls"][name] = pressure_keys(controls[name], t0, a.fps)
+            js["start"][name] = 0
+            continue
         keys = []
         for t, v in controls[name]:
             k = round(max(0, t - t0) / 1e9, 4)
