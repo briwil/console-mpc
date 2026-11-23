@@ -13,7 +13,8 @@ Writes, into <recording folder>/ae/ :
 
 The sliders:
     PAD 1 ... PAD 16          velocity as a percentage while held, 0 when let go
-    PAD n PRESSURE            how hard a held pad is pressed (percentage)
+    PAD n PRESSURE            extra squeeze on a held pad (percentage; 0 for a plain hit). The panel sends only a few readings
+                              per squeeze, so these keyframes are linear (they glide); everything else jumps (hold keyframes)
     buttons                   1 while held, 0 when let go
     K1 K2 K3 FADER VOLUME     the knob's position as a percentage (fully left / down = 0, fully right / up = 100)
     WHEEL                     the wheel's rotation in degrees, adding up as it turns (right = more); --wheel-degrees per click
@@ -223,7 +224,8 @@ JSX = r"""// Console screen recording -> After Effects. Made by screenrec-conver
         if (keys[0][0] > 0) { times.push(0); vals.push(DATA.start[name]); }
         for (var k = 0; k < keys.length; k++) { times.push(keys[k][0]); vals.push(keys[k][1]); }
         p.setValuesAtTimes(times, vals);
-        for (var k2 = 1; k2 <= p.numKeys; k2++) p.setInterpolationTypeAtKey(k2, KeyframeInterpolationType.HOLD, KeyframeInterpolationType.HOLD);
+        var how = name.indexOf("PRESSURE") >= 0 ? KeyframeInterpolationType.LINEAR : KeyframeInterpolationType.HOLD;   // pressure glides between readings (the panel only sends a few)
+        for (var k2 = 1; k2 <= p.numKeys; k2++) p.setInterpolationTypeAtKey(k2, how, how);
     }
     app.endUndoGroup();
     alert("Added " + DATA.order.length + " controls to \"MPC Controls\".");
