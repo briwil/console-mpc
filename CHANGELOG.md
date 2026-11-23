@@ -1,3 +1,9 @@
+## 0.0.28
+
+- Screen recorder: hold Shift in SETTINGS to show SCREEN REC. It records the screen, the sound and every control you touch to the card (ConsoleRecordings). tools/screenrec-convert.py on a Mac turns a recording into a PNG sequence, matching audio and an After Effects script with a slider for every control.
+- Shift + STOP on the welcome screen now shows the leave menu (it was hidden behind it).
+- While the leave menu is up, the wheel only moves the menu (it also moved the sequencer's box behind it).
+
 ## 0.0.27
 
 - Started from SampleBoot, Console now starts at once (it waited for the stock app, which SampleBoot has already stopped, and never got going).
