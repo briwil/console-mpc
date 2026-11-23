@@ -18,7 +18,7 @@ The sliders:
     K1 K2 K3 FADER VOLUME     the knob's position as a percentage (fully left / down = 0, fully right / up = 100)
     WHEEL                     the wheel's rotation in degrees, adding up as it turns (right = more); --wheel-degrees per click
     WHEEL CLICKS              the same, as a count of clicks
-Only controls that were touched get a slider.
+Every control gets a slider (untouched ones stay at 0), so the same expressions work with any recording.
 
 Uses only Python's standard library (ffmpeg is optional).
 """
@@ -219,6 +219,7 @@ JSX = r"""// Console screen recording -> After Effects. Made by screenrec-conver
         s.name = name;
         var p = s.property(1);
         var times = [], vals = [];
+        if (!keys.length) { p.setValue(DATA.start[name]); continue; }     // (not touched in this recording: stays 0, no keyframes)
         if (keys[0][0] > 0) { times.push(0); vals.push(DATA.start[name]); }
         for (var k = 0; k < keys.length; k++) { times.push(keys[k][0]); vals.push(keys[k][1]); }
         p.setValuesAtTimes(times, vals);
@@ -230,15 +231,15 @@ JSX = r"""// Console screen recording -> After Effects. Made by screenrec-conver
 """
 
 
+def every_control():
+    """The sliders, in the order they're added: pads, pad pressures, knobs, the wheel, then the buttons."""
+    return (["PAD %d" % i for i in range(1, 17)] + ["PAD %d PRESSURE" % i for i in range(1, 17)]
+            + list(KNOBS.values()) + ["WHEEL", "WHEEL CLICKS"] + list(BUTTONS.values()))
+
+
 def order_key(name):
-    if name.startswith("PAD "):
-        parts = name.split()
-        return (0, int(parts[1]), len(parts))
-    if name in KNOBS.values():
-        return (1, list(KNOBS.values()).index(name), 0)
-    if name.startswith("WHEEL"):
-        return (2, 0 if name == "WHEEL" else 1, 0)
-    return (3, 0, name)
+    every = every_control()
+    return (0, every.index(name), "") if name in every else (1, 0, name)
 
 
 def main():
@@ -292,6 +293,8 @@ def main():
     if os.path.exists(wav) and timing.get("audio_start_ns"):
         have_audio = bool(audio(wav, os.path.join(out, "audio.wav"), t0, timing["audio_start_ns"]))
 
+    for name in every_control():
+        controls.setdefault(name, [])                     # every control gets a slider, touched or not, so expressions always find it
     names = sorted(controls, key=order_key)
     js = {"fps": a.fps, "seconds": round((end - t0) / 1e9, 3), "order": names, "start": {}, "controls": {}}
     for name in names:
