@@ -366,6 +366,12 @@ def show_intro_now():
 def publish():
     global _seq, _last
     if _intro_draw():
+        try:
+            import exitmenu
+            canvas.ox = 0
+            exitmenu.draw(canvas, W, H)                  # Shift + STOP on the welcome screen: the leave menu over it
+        except Exception:
+            pass
         _write_frame()
         return
     try:
