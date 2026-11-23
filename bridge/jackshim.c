@@ -439,14 +439,18 @@ static void to_console(const uint8_t *m, int n)
     npend++;
 }
 
+static void rec_light(int kind, int a, int r, int g, int b);          /* the screen recorder (screenrec.h) logs every light */
+
 static void mpc_pad_light(int pad, int r, int g, int b)
 {
+    rec_light('P', pad, r, g, b);
     uint8_t m[12] = { 0xF0, 0x47, 0x7F, 0x5C, 0x65, 0x00, 0x04, (uint8_t)pad, (uint8_t)r, (uint8_t)g, (uint8_t)b, 0xF7 };
     hw_midi_write(m, 12);
 }
 
 static void mpc_btn_light(int note, int on)
 {
+    rec_light('B', note, on ? 2 : 0, 0, 0);
     uint8_t m[3] = { 0xB0, (uint8_t)note, (uint8_t)(on ? 0x02 : 0x00) };   /* 0 off, 1 lit, 2 brighter (7F is not "on" for most buttons) */
     hw_midi_write(m, 3);
 }

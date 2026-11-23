@@ -84,5 +84,6 @@ int main(int argc, char **argv)
     CHECK(a > 58 + 44100 * 8 / 2, "audio.wav has about a second of sound");
     CHECK(c > 0, "controls.txt has the panel's messages");
     CHECK(t > 0, "timing.txt is written");
+    CHECK(fsize(dir, "lights.txt") > 16 * 10, "lights.txt has every pad's light at the start");
     return failures ? 1 : 0;
 }

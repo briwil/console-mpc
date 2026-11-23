@@ -9,6 +9,9 @@
  *                  The first frame is whole; after that only the pixels that changed (nearby changes are merged into one run).
  *   audio.wav      what you hear (Console's output, after the metronome): 32-bit float, stereo, 44100 Hz.
  *   controls.txt   every message from the control panel (pads, buttons, knobs, wheel, fader): "time byte byte ...", in hex.
+ *   lights.txt     every light Console sends to the panel: "time P pad red green blue" (pad 0-15, 0-127 each) or
+ *                  "time B note level" (a button's light, by its note number; 0 = off). The first lines are the lights as
+ *                  they were when the recording started.
  *   timing.txt     when the audio starts, and anything that was dropped (written when the recording ends).
  *
  * tools/screenrec-convert.py (on a Mac) turns these into a video and a controls file for After Effects.
@@ -41,6 +44,13 @@ static volatile unsigned long long rec_a_lost;
 struct rec_msg { long long t; unsigned char n; unsigned char b[47]; };
 static struct rec_msg rec_mring[REC_MRING];
 static volatile unsigned rec_mw, rec_mr;
+
+struct rec_lt { long long t; unsigned char kind, a, r, g, b; volatile unsigned char ready; };
+#define REC_LRING 4096
+static struct rec_lt rec_lring[REC_LRING];
+static volatile unsigned rec_lw, rec_lr;      /* lights: written from any thread (reserved with compare-and-swap), read by rec_main */
+static unsigned long rec_l_lost;
+static int rec_fd_l = -1;
 
 static uint8_t rec_frames[REC_FSLOTS][320 * 240 * 3];
 static long long rec_ftime[REC_FSLOTS];
@@ -89,6 +99,20 @@ static void rec_midi(const uint8_t *b, int n)
         __atomic_store_n(&rec_mw, w + 1, __ATOMIC_RELEASE);
         b += k; n -= k;
     }
+}
+
+/* ---- any thread: a light was sent to the panel */
+static void rec_light(int kind, int a, int r, int g, int b)
+{
+    if (!rec_on) return;
+    unsigned w;
+    do {
+        w = __atomic_load_n(&rec_lw, __ATOMIC_RELAXED);
+        if (w - __atomic_load_n(&rec_lr, __ATOMIC_ACQUIRE) >= REC_LRING) { rec_l_lost++; return; }
+    } while (!__atomic_compare_exchange_n(&rec_lw, &w, w + 1, 0, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED));
+    struct rec_lt *e = &rec_lring[w & (REC_LRING - 1)];
+    e->t = rec_now(); e->kind = (unsigned char)kind; e->a = (unsigned char)a; e->r = (unsigned char)r; e->g = (unsigned char)g; e->b = (unsigned char)b;
+    __atomic_store_n(&e->ready, 1, __ATOMIC_RELEASE);
 }
 
 /* ---- the screen thread: the frame just shown (shadow: 0x00RRGGBB per pixel) */
@@ -154,6 +178,17 @@ static int rec_dec(char *o, unsigned long long v)
 static void rec_u32(uint8_t *o, uint32_t v) { o[0] = (uint8_t)v; o[1] = (uint8_t)(v >> 8); o[2] = (uint8_t)(v >> 16); o[3] = (uint8_t)(v >> 24); }
 static void rec_u64(uint8_t *o, unsigned long long v) { rec_u32(o, (uint32_t)v); rec_u32(o + 4, (uint32_t)(v >> 32)); }
 
+static void rec_light_line(long long t, int kind, int a, int r, int g, int b)
+{
+    char line[96]; int k = rec_dec(line, (unsigned long long)t);
+    line[k++] = ' '; line[k++] = (char)kind; line[k++] = ' ';
+    k += rec_dec(line + k, (unsigned long long)a); line[k++] = ' ';
+    k += rec_dec(line + k, (unsigned long long)r);
+    if (kind == 'P') { line[k++] = ' '; k += rec_dec(line + k, (unsigned long long)g); line[k++] = ' '; k += rec_dec(line + k, (unsigned long long)b); }
+    line[k++] = '\n';
+    rec_put(rec_fd_l, line, (unsigned long)k);
+}
+
 static unsigned long long rec_a_frames;
 
 static void rec_wav_header(unsigned long long frames)
@@ -179,11 +214,13 @@ static void rec_start(void)
     rec_fd_v = rec_open("screen.cvr");
     rec_fd_a = rec_open("audio.wav");
     rec_fd_c = rec_open("controls.txt");
-    if (rec_fd_v < 0 || rec_fd_a < 0 || rec_fd_c < 0) {
+    rec_fd_l = rec_open("lights.txt");
+    if (rec_fd_v < 0 || rec_fd_a < 0 || rec_fd_c < 0 || rec_fd_l < 0) {
         if (rec_fd_v >= 0) close(rec_fd_v);
         if (rec_fd_a >= 0) close(rec_fd_a);
         if (rec_fd_c >= 0) close(rec_fd_c);
-        rec_fd_v = rec_fd_a = rec_fd_c = -1;
+        if (rec_fd_l >= 0) close(rec_fd_l);
+        rec_fd_v = rec_fd_a = rec_fd_c = rec_fd_l = -1;
         rec_fail = 1;
         rec_want = 0;
         return;
@@ -192,7 +229,15 @@ static void rec_start(void)
     rec_put(rec_fd_v, h, 8);
     rec_a_frames = 0;
     rec_wav_header(0);
-    rec_aw = rec_ar = 0; rec_mw = rec_mr = 0; rec_fw = rec_fr = 0;
+    rec_aw = rec_ar = 0; rec_mw = rec_mr = 0; rec_fw = rec_fr = 0; rec_lw = rec_lr = 0; rec_l_lost = 0;
+    {                                                         /* the lights as they are now (after this, only changes come) */
+        long long t = rec_now();
+        for (int i = 0; i < 16; i++) {
+            int c = shown_rgb[i] < 0 ? 0 : shown_rgb[i];
+            rec_light_line(t, 'P', i, (c >> 16) & 255, (c >> 8) & 255, c & 255);
+        }
+        for (int n = 0; n < 128; n++) if (shown_btn[n]) rec_light_line(t, 'B', n, shown_btn[n] == 2 ? 2 : 0, 0, 0);
+    }
     rec_a_t0 = 0; rec_a_lost = 0; rec_f_dropped = rec_f_written = 0; rec_have_prev = 0;
     rec_kick = 1;
     __atomic_store_n(&rec_on, 1, __ATOMIC_RELEASE);
@@ -227,6 +272,18 @@ static int rec_drain(void)
             rec_put(rec_fd_c, line, (unsigned long)k);
             mr++; did = 1;
             __atomic_store_n(&rec_mr, mr, __ATOMIC_RELEASE);
+        }
+    }
+    /* the lights */
+    {
+        unsigned lw = __atomic_load_n(&rec_lw, __ATOMIC_ACQUIRE), lr = rec_lr;
+        while (lr != lw) {
+            struct rec_lt *e = &rec_lring[lr & (REC_LRING - 1)];
+            if (!__atomic_load_n(&e->ready, __ATOMIC_ACQUIRE)) break;          /* (still being filled in: next time) */
+            rec_light_line(e->t, e->kind, e->a, e->r, e->g, e->b);
+            e->ready = 0;
+            lr++; did = 1;
+            __atomic_store_n(&rec_lr, lr, __ATOMIC_RELEASE);
         }
     }
     /* the screen: only what changed since the last frame (runs closer than 16 pixels are one run) */
@@ -281,19 +338,20 @@ static void rec_stop(void)
     int fd = rec_open("timing.txt");
     if (fd >= 0) {
         char b[256]; int k = 0;
-        static const char a[] = "audio_start_ns ", f1[] = "\naudio_frames ", f2[] = "\naudio_lost_frames ", f3[] = "\nframes_written ", f4[] = "\nframes_dropped ";
+        static const char a[] = "audio_start_ns ", f1[] = "\naudio_frames ", f2[] = "\naudio_lost_frames ", f3[] = "\nframes_written ", f4[] = "\nframes_dropped ", f5[] = "\nlights_lost ";
         memcpy(b + k, a, sizeof a - 1); k += sizeof a - 1; k += rec_dec(b + k, (unsigned long long)rec_a_t0);
         memcpy(b + k, f1, sizeof f1 - 1); k += sizeof f1 - 1; k += rec_dec(b + k, rec_a_frames);
         memcpy(b + k, f2, sizeof f2 - 1); k += sizeof f2 - 1; k += rec_dec(b + k, rec_a_lost);
         memcpy(b + k, f3, sizeof f3 - 1); k += sizeof f3 - 1; k += rec_dec(b + k, rec_f_written);
         memcpy(b + k, f4, sizeof f4 - 1); k += sizeof f4 - 1; k += rec_dec(b + k, rec_f_dropped);
+        memcpy(b + k, f5, sizeof f5 - 1); k += sizeof f5 - 1; k += rec_dec(b + k, rec_l_lost);
         b[k++] = '\n';
         rec_put(fd, b, (unsigned long)k);
         fsync(fd); close(fd);
     }
-    fsync(rec_fd_v); fsync(rec_fd_a); fsync(rec_fd_c);
-    close(rec_fd_v); close(rec_fd_a); close(rec_fd_c);
-    rec_fd_v = rec_fd_a = rec_fd_c = -1;
+    fsync(rec_fd_v); fsync(rec_fd_a); fsync(rec_fd_c); fsync(rec_fd_l);
+    close(rec_fd_v); close(rec_fd_a); close(rec_fd_c); close(rec_fd_l);
+    rec_fd_v = rec_fd_a = rec_fd_c = rec_fd_l = -1;
 }
 
 static void *rec_main(void *arg)

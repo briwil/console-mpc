@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Turns a Console screen recording (a folder from the card's ConsoleRecordings) into things After Effects can use.
 
-    python3 screenrec-convert.py <recording folder> [--fps 60] [--scale 4] [--wheel-degrees 15]
+    python3 screenrec-convert.py <recording folder> [--fps 60] [--scale 4] [--wheel-degrees 15] [--led-gamma 0.6]
 
 Writes, into <recording folder>/ae/ :
     frames/000000.png ...     the screen as a PNG sequence at --fps (import as a PNG sequence at the same frame rate)
@@ -19,7 +19,12 @@ The sliders:
     K1 K2 K3 FADER VOLUME     the knob's position as a percentage (fully left / down = 0, fully right / up = 100)
     WHEEL                     the wheel's rotation in degrees, adding up as it turns (right = more); --wheel-degrees per click
     WHEEL CLICKS              the same, as a count of clicks
-Every control gets a slider (untouched ones stay at 0), so the same expressions work with any recording.
+    PAD n COLOR               (a Color Control) the pad's light, made to look like the real LED: low levels lifted, bright
+                              ones a little washed out; black when off. --led-gamma sets the lift (1 = the raw values)
+    PAD n LIT                 how bright the pad's light is, 0-100 (0 = off)
+    <button> LIT              a button's light: 1 on, 0 off (the panel's button lights have no colour)
+Every control gets one (untouched ones stay at 0), so the same expressions work with any recording.
+Recordings made before the lights were recorded (no lights.txt) get the light controls too, all off.
 
 Uses only Python's standard library (ffmpeg is optional).
 """
@@ -142,6 +147,34 @@ def read_controls(path, wheel_degrees):
     return tracks
 
 
+def led_look(r, g, b, gamma):
+    """The panel's 0-127 per colour -> what the LED looks like, 0-1 per colour (and its brightness, 0-100)."""
+    c = [(v / 127.0) ** gamma if v > 0 else 0.0 for v in (r, g, b)]
+    m = max(c)
+    c = [x + (m - x) * 0.25 * m for x in c]              # bright LEDs look a little whiter than their colour
+    return [round(x, 4) for x in c], round(m * 100, 2)
+
+
+def read_lights(path, gamma):
+    """{name: [(time_ns, value)]}: PAD n COLOR ([r, g, b] 0-1), PAD n LIT (0-100), <button> LIT (0 / 1)."""
+    tracks = {}
+    if not os.path.exists(path):
+        return tracks
+    for line in open(path):
+        p = line.split()
+        if len(p) < 4:
+            continue
+        t, kind, a = int(p[0]), p[1], int(p[2])
+        if kind == "P" and len(p) >= 6 and 0 <= a < 16:
+            col, lit = led_look(int(p[3]), int(p[4]), int(p[5]), gamma)
+            tracks.setdefault("PAD %d COLOR" % (a + 1), []).append((t, col))
+            tracks.setdefault("PAD %d LIT" % (a + 1), []).append((t, lit))
+        elif kind == "B":
+            name = BUTTONS.get(a, "BUTTON %02X" % a) + " LIT"
+            tracks.setdefault(name, []).append((t, 1 if int(p[3]) > 0 else 0))
+    return tracks
+
+
 def read_timing(path):
     out = {}
     if os.path.exists(path):
@@ -205,6 +238,9 @@ JSX = r"""// Console screen recording -> After Effects. Made by screenrec-conver
 // or a knob drawing's Rotation (K1 at 0-100 % -> -135..135 degrees):
 //     linear(thisComp.layer("MPC Controls").effect("K1")("Slider"), 0, 100, -135, 135)
 // or the wheel:  thisComp.layer("MPC Controls").effect("WHEEL")("Slider")
+// a pad shape's Fill Color:  thisComp.layer("MPC Controls").effect("PAD 1 COLOR")("Color")
+// its glow / opacity:        thisComp.layer("MPC Controls").effect("PAD 1 LIT")("Slider")
+// a button's light:          thisComp.layer("MPC Controls").effect("PLAY LIT")("Slider") * 100
 (function () {
     var DATA = __DATA__;
     var comp = app.project.activeItem;
@@ -217,19 +253,21 @@ JSX = r"""// Console screen recording -> After Effects. Made by screenrec-conver
     for (var i = 0; i < DATA.order.length; i++) {
         var name = DATA.order[i];
         var keys = DATA.controls[name];
-        var s = fx.addProperty("ADBE Slider Control");
+        var isColor = name.indexOf(" COLOR") >= 0;
+        var s = fx.addProperty(isColor ? "ADBE Color Control" : "ADBE Slider Control");
         s.name = name;
         var p = s.property(1);
         var times = [], vals = [];
-        if (!keys.length) { p.setValue(DATA.start[name]); continue; }     // (not touched in this recording: stays 0, no keyframes)
-        if (keys[0][0] > 0) { times.push(0); vals.push(DATA.start[name]); }
-        for (var k = 0; k < keys.length; k++) { times.push(keys[k][0]); vals.push(keys[k][1]); }
+        var start = isColor ? [0, 0, 0, 1] : DATA.start[name];
+        if (!keys.length) { p.setValue(start); continue; }               // (not touched in this recording: stays 0, no keyframes)
+        if (keys[0][0] > 0) { times.push(0); vals.push(start); }
+        for (var k = 0; k < keys.length; k++) { times.push(keys[k][0]); vals.push(isColor ? [keys[k][1][0], keys[k][1][1], keys[k][1][2], 1] : keys[k][1]); }
         p.setValuesAtTimes(times, vals);
         var how = name.indexOf("PRESSURE") >= 0 ? KeyframeInterpolationType.LINEAR : KeyframeInterpolationType.HOLD;   // pressure glides between readings (the panel only sends a few)
         for (var k2 = 1; k2 <= p.numKeys; k2++) p.setInterpolationTypeAtKey(k2, how, how);
     }
     app.endUndoGroup();
-    alert("Added " + DATA.order.length + " controls to \"MPC Controls\".");
+    alert("Added " + DATA.order.length + " controls and lights to \"MPC Controls\".");
 })();
 """
 
@@ -269,7 +307,9 @@ def pressure_keys(events, t0, fps):
 def every_control():
     """The sliders, in the order they're added: pads, pad pressures, knobs, the wheel, then the buttons."""
     return (["PAD %d" % i for i in range(1, 17)] + ["PAD %d PRESSURE" % i for i in range(1, 17)]
-            + list(KNOBS.values()) + ["WHEEL", "WHEEL CLICKS"] + list(BUTTONS.values()))
+            + list(KNOBS.values()) + ["WHEEL", "WHEEL CLICKS"] + list(BUTTONS.values())
+            + ["PAD %d COLOR" % i for i in range(1, 17)] + ["PAD %d LIT" % i for i in range(1, 17)]
+            + [b + " LIT" for b in BUTTONS.values()])
 
 
 def order_key(name):
@@ -283,6 +323,7 @@ def main():
     ap.add_argument("--fps", type=float, default=60)
     ap.add_argument("--scale", type=int, default=4, help="pixel size of the PNGs (4 = 1280x960, sharp pixels)")
     ap.add_argument("--wheel-degrees", type=float, default=15, help="degrees per wheel click (default 15)")
+    ap.add_argument("--led-gamma", type=float, default=0.6, help="how much dim pad lights are lifted to look like the LED (1 = raw values; default 0.6)")
     a = ap.parse_args()
     src = a.folder
     out = os.path.join(src, "ae")
@@ -292,6 +333,7 @@ def main():
     timing = read_timing(os.path.join(src, "timing.txt"))
     t0 = frames[0][0]
     controls = read_controls(os.path.join(src, "controls.txt"), a.wheel_degrees)
+    controls.update(read_lights(os.path.join(src, "lights.txt"), a.led_gamma))   # the pad and button lights Console sent
     a_frames = timing.get("audio_frames", 0)
     end = frames[-1][0]
     if timing.get("audio_start_ns") and a_frames:
