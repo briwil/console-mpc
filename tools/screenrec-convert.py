@@ -19,9 +19,9 @@ The sliders:
     K1 K2 K3 FADER VOLUME     the knob's position as a percentage (fully left / down = 0, fully right / up = 100)
     WHEEL                     the wheel's rotation in degrees, adding up as it turns (right = more); --wheel-degrees per click
     WHEEL CLICKS              the same, as a count of clicks
-    PAD n COLOR               (a Color Control) the pad's light, made to look like the real LED: low levels lifted, bright
-                              ones a little washed out; black when off. --led-gamma sets the lift (1 = the raw values)
-    PAD n LIT                 how bright the pad's light is, 0-100 (0 = off)
+    PAD n COLOR               (a Color Control) the pad's light, made to look like the real LED: low levels lifted;
+                              black when off. --led-gamma sets the lift (1 = the raw values)
+    PAD n LIT                 100 when the pad shows a colour, 0 when it's dark or only the faint idle blue (for Opacity)
     <button> LIT              a button's light: 1 on, 0 off (the panel's button lights have no colour)
 Every control gets one (untouched ones stay at 0), so the same expressions work with any recording.
 Recordings made before the lights were recorded (no lights.txt) get the light controls too, all off.
@@ -148,11 +148,13 @@ def read_controls(path, wheel_degrees):
 
 
 def led_look(r, g, b, gamma):
-    """The panel's 0-127 per colour -> what the LED looks like, 0-1 per colour (and its brightness, 0-100)."""
+    """The panel's 0-127 per colour -> what the LED looks like, 0-1 per colour; and LIT: 100 when the pad shows a colour,
+    0 when it is dark or only the faint idle blue Console leaves so the pads can be found (no channel above 14)."""
     c = [(v / 127.0) ** gamma if v > 0 else 0.0 for v in (r, g, b)]
     m = max(c)
-    c = [x + (m - x) * 0.25 * m for x in c]              # bright LEDs look a little whiter than their colour
-    return [round(x, 4) for x in c], round(m * 100, 2)
+    c = [x + (m - x) * 0.08 * m for x in c]              # (a touch whiter when bright, like the real LED; colours stay clear)
+    lit = 100 if max(r, g, b) > 14 else 0
+    return [round(x, 4) for x in c], lit
 
 
 def read_lights(path, gamma):
