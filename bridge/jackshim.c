@@ -530,7 +530,7 @@ static void pagemode_poll(void)
         if (two[i] == 'y') page_linear = 1;
         else if (two[i] == 'n' && i + 1 < n && two[i + 1] >= '0' && two[i + 1] <= '8') { knobs_n = two[i + 1] - '0'; i++; }
     }
-    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A' || ch == 'W'); page_song = (ch == 'W'); page_song_n = (ch == 'W' && n >= 2 && two[1] >= '0' && two[1] <= '9') ? two[1] - '0' : 8; page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N' || ch == 'Q' || ch == 'R'); page_sound = (ch == 'Q' || ch == 'R'); page_retrig = (ch == 'Q' || ch == 'P'); page_seq = (ch == 'S' || ch == 'P' || ch == 'U' || ch == 'B' || ch == 'V'); page_padsn = (ch == 'X') ? 5 : (ch == 'Z') ? 3 : 0; page_popn = (ch == 'U') ? 7 : (ch == 'B') ? 2 : page_padsn ? page_padsn : knobs_n; page_arp = (ch == 'U' || ch == 'B' || page_padsn > 0); page_k1 = (ch == 'Q'); }
+    if (n >= 1) { page_tape = (ch == 'T' || ch == 'A' || ch == 'W'); page_song = (ch == 'W'); page_song_n = (ch == 'W' && n >= 2 && two[1] >= '0' && two[1] <= '9') ? two[1] - '0' : 8; page_tapeonly = (ch == 'A'); page_param = (ch == 'P'); page_nostep = (ch == 'N' || ch == 'Q' || ch == 'R'); page_sound = (ch == 'Q' || ch == 'R'); page_retrig = (ch == 'Q' || ch == 'P'); page_seq = (ch == 'S' || ch == 'P' || ch == 'U' || ch == 'B' || ch == 'V'); page_padsn = (ch == 'X') ? 5 : (ch == 'Z') ? 4 : 0; page_popn = (ch == 'U') ? 7 : (ch == 'B') ? 3 : page_padsn ? page_padsn : knobs_n; page_arp = (ch == 'U' || ch == 'B' || page_padsn > 0); page_k1 = (ch == 'Q'); }
 }
 
 /* ---- the metronome: /tmp/console-metro = "on volume bpm*100 beats-per-bar t0_ns" (Console writes it while recording; t0 = a bar's start on CLOCK_MONOTONIC) ---- */

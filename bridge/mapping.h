@@ -60,7 +60,7 @@ static const uint8_t MPC_PADNOTE[16] = { 37, 36, 42, 82, 40, 38, 46, 44, 48, 47,
 static int step_mode, right_bank, knob_mode;
 static volatile int page_tape;              /* Console's tape page is showing (written by the screen thread): the pads are step buttons there */
 static volatile int page_tapeonly;          /* the tape recorder page itself (not the instrument list, song or mixer): its own button layout */
-static volatile int page_padsn;            /* the PADS pop-up is up (page mode "X" = 5 settings, "Z" = 3): like the ARP pop-up, but only pads 1-n are knobs, the rest of 1-8 are off */
+static volatile int page_padsn;            /* the PADS pop-up is up (page mode "X" = 5 settings, "Z" = 4: a drum machine's OCTAVE, VELOCITY, CURVE, SEQUENCER): like the ARP pop-up, but only pads 1-n are knobs, the rest of 1-8 are off */
 static volatile int page_popn = 8;             /* how many of pads 1-8 are settings in a pop-up (ARP 7, ARP 2: 2, PADS 5 / 3); the rest are off (0 = not a pop-up) */
 static volatile int page_arp;               /* the ARP pop-up is up (page mode "U"): KNOB FX comes on by itself, pads 9-16 play notes (orange) */
 static volatile int page_k1;                /* a sound page (Q): K1 is also sent as its absolute position */

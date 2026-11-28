@@ -268,6 +268,14 @@ except Exception:
     import traceback
     print("Shift + knobs is off:\n" + traceback.format_exc(), flush=True)
 try:
+    import endless, endlesspage, movelfo as _movelfo, pots as _pots
+    endless.install_engine()                                       # ENDLESS: the OP-1's Endless sequencer, per instrument
+    endlesspage.install_pickers(_movelfo, _pots)                   # ... picked in ARP 2 (synths) / PADS (drum machines)
+    endlesspage.install_board(G["MoveBoard"], G)                   # ... its page's keys, and the pads that transpose it
+except Exception:
+    import traceback
+    print("ENDLESS is off:\n" + traceback.format_exc(), flush=True)
+try:
     import exitmenu
     main.__globals__["quit_hook"] = exitmenu.hook       # Shift + STOP: back to the MPC OS / shut down / cancel
     _MB = G["MoveBoard"]
